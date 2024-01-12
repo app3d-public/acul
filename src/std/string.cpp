@@ -1,4 +1,4 @@
-#include "string.hpp"
+#include <core/std/string.hpp>
 
 std::u16string convertUTF8toUTF16(const std::string &src)
 {

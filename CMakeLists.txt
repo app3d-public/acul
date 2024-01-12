@@ -53,6 +53,7 @@ gather_sources(${PROJECT_NAME} RECURSE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/"
 )
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
 find_package(TBB REQUIRED)

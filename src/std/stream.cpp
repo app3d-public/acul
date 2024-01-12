@@ -1,4 +1,4 @@
-#include "stream.hpp"
+#include <core/std/stream.hpp>
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>

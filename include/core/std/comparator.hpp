@@ -23,7 +23,7 @@ namespace comparators
     };
 } // namespace comparators
 
-
+// Template class, designed to store key-value pairs where key comparison is case-insensitive.
 template <typename F, typename S>
 class CaseInsensitiveMap
 {
@@ -53,16 +53,22 @@ public:
         return it != _data.cend() ? it : cend();
     }
 
+    // Method to insert a key-value pair into the map.
     void insert(const F &key, const Array<S> &value) { _data[key] = value; }
 
+    // Method to erase a key-value pair from the map by its key.
     void erase(const F &key) { _data.erase(key); }
 
+    // Clears all key-value pairs from the map.
     void clear() { _data.clear(); }
 
+    // Check if the map is empty.
     bool empty() const { return _data.empty(); }
 
+    // Returns the number of key-value pairs in the map.
     size_t size() const { return _data.size(); }
 
+    // Method to insert a value into the array associated with a key, or create a new array if the key doesn't exist.
     void emplace(const F &key, const S &value)
     {
         auto it = _data.find(key);

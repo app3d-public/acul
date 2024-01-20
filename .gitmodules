@@ -1,0 +1,3 @@
+[submodule "src/deps/external/half"]
+	path = src/deps/external/half
+	url = gitea@git.local:root/half.git

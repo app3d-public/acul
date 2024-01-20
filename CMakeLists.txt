@@ -1,8 +1,4 @@
 cmake_minimum_required(VERSION 3.17)
-project(app3d-core
-    VERSION 0.0.1
-    LANGUAGES CXX
-    DESCRIPTION "App3d Core Lib")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fexperimental-library")
 add_definitions(-D_LIBCPP_NO_VCRUNTIME)
@@ -49,12 +45,21 @@ function(gather_sources target_name)
     set(SOURCE_FILES ${SOURCE_FILES} PARENT_SCOPE) # Устанавливаем переменную на уровне родителя
 endfunction()
 
-gather_sources(${PROJECT_NAME} RECURSE 
+gather_sources("app3d-core" RECURSE 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/"
 )
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
-add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/deps/external/half/include")
+add_library("app3d-core" SHARED ${SOURCE_FILES})
 
 find_package(TBB REQUIRED)
-target_link_libraries(${PROJECT_NAME} TBB::tbb)
+target_link_libraries("app3d-core" TBB::tbb)
+
+set_target_properties("app3d-core"
+    PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS YES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)

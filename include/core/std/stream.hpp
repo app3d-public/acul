@@ -1,5 +1,5 @@
-#ifndef UTILS_STREAM_H
-#define UTILS_STREAM_H
+#ifndef APP_CORE_STD_STREAM_H
+#define APP_CORE_STD_STREAM_H
 
 #include <cstdint>
 #include <stdexcept>

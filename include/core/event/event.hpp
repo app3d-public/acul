@@ -37,52 +37,48 @@ class BaseEventListener
 {
 public:
     virtual ~BaseEventListener() = default;
-
-    // Event this listener is subscribed to.
-    Event listenedEvent;
 };
 
 // Template class for listeners specific to a type of event.
-template <typename TEvent>
+template <typename E>
 class EventListener : public BaseEventListener
 {
-    std::function<void(TEvent &)> _listener;
+    std::function<void(E &)> _listener;
 
 public:
-    EventListener(std::function<void(TEvent &)> listener) : _listener(listener) {}
+    EventListener(std::function<void(E &)> listener) : _listener(listener) {}
 
     // Invokes the listener function with the event.
-    void invoke(TEvent &event) { _listener(event); }
+    void invoke(E &event) { _listener(event); }
 };
 
 // Manages event listeners and dispatches events to them.
 class EventManager
 {
 public:
-    using ListenerIterator = Array<std::shared_ptr<BaseEventListener>>::iterator;
+    using iterator = Array<std::shared_ptr<BaseEventListener>>::iterator;
 
 private:
-    std::unordered_map<Event, Array<std::shared_ptr<BaseEventListener>>> _listeners;
+    std::unordered_map<std::string, Array<std::shared_ptr<BaseEventListener>>> _listeners;
 
 public:
     // Adds a listener for a specific type of event and returns an iterator to it.
-    template <typename TEvent>
-    ListenerIterator addListener(const TEvent &event, std::function<void(TEvent &)> listener)
+    template <typename E>
+    iterator addListener(const std::string &event, std::function<void(E &)> listener)
     {
-        static_assert(std::is_base_of<Event, TEvent>::value, "TEvent must inherit from Event");
-        auto eventListener = std::make_shared<EventListener<TEvent>>(listener);
-        eventListener->listenedEvent = event;
+        static_assert(std::is_base_of<Event, E>::value, "E must inherit from Event");
+        auto eventListener = std::make_shared<EventListener<E>>(listener);
         _listeners[event].push_back(eventListener);
-        return std::prev(_listeners[event].end()); // Возвращаем итератор на только что добавленный слушатель
+        return std::prev(_listeners[event].end());
     }
 
     // Checks if any listener exists for a specific event.
-    bool exist(const Event &event) const { return _listeners.count(event) > 0; }
+    bool exist(const std::string &event) const { return _listeners.count(event) > 0; }
 
     // Removes a listener using its iterator.
-    void removeListener(ListenerIterator listenerIter)
+    void removeListener(iterator listenerIter, const std::string &event)
     {
-        auto it = _listeners.find((*listenerIter)->listenedEvent);
+        auto it = _listeners.find(event);
         if (it != _listeners.end())
             it->second.erase(listenerIter);
     }
@@ -95,19 +91,41 @@ public:
     }
 
     // Emits an event, invoking all listeners subscribed to this event.
-    template <typename TEvent, typename = std::enable_if_t<std::is_base_of_v<Event, TEvent>>>
-    void emit(TEvent &event)
+    template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+    void emit(E &event)
     {
+        auto it = _listeners.find(event.name());
+        if (it != _listeners.end())
+        {
+            for (const auto &baseListener : it->second)
+            {
+                auto listener = std::static_pointer_cast<EventListener<E>>(baseListener);
+                listener->invoke(event);
+            }
+        }
+    }
+
+    template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+    Array<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
+    {
+        Array<std::shared_ptr<EventListener<E>>> result;
         auto it = _listeners.find(event);
         if (it != _listeners.end())
         {
             for (const auto &baseListener : it->second)
             {
-                auto listener = std::static_pointer_cast<EventListener<TEvent>>(baseListener);
-                listener->invoke(event);
+                auto listener = std::static_pointer_cast<EventListener<E>>(baseListener);
+                result.push_back(listener);
             }
         }
+        return result;
     }
+};
+
+struct ListenerInfo
+{
+    EventManager::iterator listenerIter;
+    std::string eventName;
 };
 
 // Abstract base class for registries that manage event listener bindings.
@@ -117,8 +135,10 @@ public:
     virtual ~ListenerRegistry() = default;
 
     // Adds an iterator to a listener to the internal collection.
-    void addListenerID(EventManager::ListenerIterator id) { _listeners.push_back(id); }
-
+    void addListenerID(EventManager::iterator id, const std::string &eventName)
+    {
+        _listeners.push_back(ListenerInfo(id, eventName));
+    }
     // Pure virtual method to bind listeners to events. Must be implemented by
     // derived classes.
     virtual void bindListeners(EventManager &eventManager) = 0;
@@ -126,14 +146,13 @@ public:
     // Unbinds all listeners managed by this registry from the event manager.
     void unbindListeners(EventManager &eventManager)
     {
-        // logInfo("Unbinding listeners");
-        for (auto &id : _listeners)
-            eventManager.removeListener(id);
+        for (auto &info : _listeners)
+            eventManager.removeListener(info.listenerIter, info.eventName);
         _listeners.clear();
     }
 
 private:
-    Array<EventManager::ListenerIterator> _listeners;
+    Array<ListenerInfo> _listeners;
 };
 
 // Helper class to bind listeners to events in an EventManager.
@@ -150,20 +169,19 @@ public:
     }
 
     // Binds a listener to an event of a specific type.
-    template <typename TEvent, typename TFunc, typename = std::enable_if_t<std::is_base_of_v<Event, TEvent>>>
-    void bind(const TEvent &event, TFunc listener)
+    template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+    void bind(const std::string &event, F listener)
     {
-        auto id = _eventManager.addListener<TEvent>(event, listener);
-        _registry.addListenerID(id);
+        auto id = _eventManager.addListener<E>(event, listener);
+        _registry.addListenerID(id, event);
     }
 
     // Binds a listener to an event by its name.
-    template <typename TFunc>
-    void bind(const std::string &eventName, TFunc listener)
+    template <typename E, typename F>
+    void bind(const std::string &event, F listener)
     {
-        Event event(eventName);
-        auto id = _eventManager.addListener<Event>(event, listener);
-        _registry.addListenerID(id);
+        auto id = _eventManager.addListener<E>(event, listener);
+        _registry.addListenerID(id, event);
     }
 
     // Binds a listener to a list of events of a specific type.
@@ -171,7 +189,7 @@ public:
     void bindList(const Array<std::string> &eventNames, std::function<void(TEvent &)> listener)
     {
         for (const auto &eventName : eventNames)
-            bind(TEvent(eventName), listener);
+            bind(eventName, listener);
     }
 };
 

@@ -34,6 +34,7 @@ std::u16string convertUTF8toUTF16(const std::string &src);
 std::string convertUTF16toUTF8(const std::u16string &src);
 
 std::u16string trim(const std::u16string &inputStr, size_t max = std::numeric_limits<size_t>::max());
+
 std::string trim(const std::string &inputStr, size_t max = std::numeric_limits<size_t>::max());
 
 /**

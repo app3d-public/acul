@@ -122,18 +122,23 @@ public:
     template <typename F>
     auto addTask(F &&task, bool notify = true)
     {
-        std::shared_ptr<ITask> taskPtr;
         if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, std::shared_ptr<ITask>>::value)
         {
             using R = std::invoke_result_t<F>;
-            taskPtr = std::make_shared<Task<R>>(std::forward<F>(task));
+            auto taskPtr = std::make_shared<Task<R>>(std::forward<F>(task));
+            _tasks.push(taskPtr);
+            if (notify)
+                notifyAll();
+            return taskPtr; // Возвращает std::shared_ptr<Task<R>>
         }
         else
-            taskPtr = std::forward<F>(task);
-        _tasks.push(taskPtr);
-        if (notify)
-            notifyAll();
-        return taskPtr;
+        {
+            auto taskPtr = std::forward<F>(task);
+            _tasks.push(taskPtr);
+            if (notify)
+                notifyAll();
+            return taskPtr; // Возвращает std::shared_ptr<ITask>
+        }
     }
 
     /// \brief Perform the task processing in the worker thread.

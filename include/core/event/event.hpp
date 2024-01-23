@@ -176,14 +176,6 @@ public:
         _registry.addListenerID(id, event);
     }
 
-    // Binds a listener to an event by its name.
-    template <typename E, typename F>
-    void bind(const std::string &event, F listener)
-    {
-        auto id = _eventManager.addListener<E>(event, listener);
-        _registry.addListenerID(id, event);
-    }
-
     // Binds a listener to a list of events of a specific type.
     template <typename TEvent>
     void bindList(const Array<std::string> &eventNames, std::function<void(TEvent &)> listener)

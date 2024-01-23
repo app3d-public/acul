@@ -49,6 +49,10 @@ public:
 
     explicit constexpr operator MaskType() const noexcept { return _mask; }
 
+    friend constexpr bool operator==(const Flags &lhs, const Flags &rhs) noexcept { return lhs._mask == rhs._mask; }
+
+    constexpr MaskType getMask() const noexcept { return _mask; }
+
 private:
     MaskType _mask;
 };

@@ -45,9 +45,9 @@ public:
         return *this;
     }
 
-    explicit constexpr operator bool() const noexcept { return _mask != 0; }
+    constexpr operator bool() const noexcept { return _mask != 0; }
 
-    explicit constexpr operator MaskType() const noexcept { return _mask; }
+    constexpr operator MaskType() const noexcept { return _mask; }
 
     friend constexpr bool operator==(const Flags &lhs, const Flags &rhs) noexcept { return lhs._mask == rhs._mask; }
 

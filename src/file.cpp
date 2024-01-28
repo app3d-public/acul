@@ -33,7 +33,7 @@ namespace io
             return true;
         }
 
-        bool writeBinary(const std::string &filename, char *buffer, size_t size)
+        bool writeBinary(const std::string &filename, const char *buffer, size_t size)
         {
             std::ofstream file(filename, std::ios::binary | std::ios::trunc);
             if (!file)

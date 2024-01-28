@@ -1,5 +1,4 @@
 #include <core/task.hpp>
-#include <memory>
 #include <mutex>
 
 void ThreadPool::threadsCount(unsigned int count) { _threadsCount = count; }

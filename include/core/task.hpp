@@ -163,7 +163,7 @@ class ThreadPool
 {
 public:
     ThreadPool() : _threadsCount(std::thread::hardware_concurrency()) {}
-    ThreadPool(unsigned int count) : _threadsCount(count) {}
+    explicit ThreadPool(unsigned int count) : _threadsCount(count) {}
 
     /// @brief Stop all worker threads
     void stopThreads();
@@ -188,7 +188,7 @@ private:
 class TaskManager : public TaskQueue
 {
 public:
-    TaskManager(ThreadPool &threadPool) : _threadPool(threadPool) {}
+    explicit TaskManager(ThreadPool &threadPool) : _threadPool(threadPool) {}
     ~TaskManager();
 
     /// \brief Perform the task processing in the worker thread.

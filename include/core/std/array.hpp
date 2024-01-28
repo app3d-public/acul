@@ -1,16 +1,9 @@
 #ifndef APP_CORE_STD_ARRAY_H
 #define APP_CORE_STD_ARRAY_H
 
-#include <__memory/allocator.h>
 #include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
 #include <iterator>
 #include <memory>
-#include <new>
-#include <stdexcept>
 #include <type_traits>
 
 template <typename T>
@@ -100,7 +93,7 @@ public:
 
     Array() : _size(0), _capacity(0), _data(nullptr) {}
 
-    Array(size_t size) : _size(size), _capacity(size)
+    explicit Array(size_t size) : _size(size), _capacity(size)
     {
         _data = (T *)malloc(_size * sizeof(T));
         if constexpr (!std::is_trivially_destructible_v<T>)
@@ -195,7 +188,7 @@ public:
                 std::memcpy(_data, other._data, _size * sizeof(T));
             else
                 for (size_t i = 0; i < _size; ++i)
-                    new (&_data[i]) T(other._data[i]); // Используем placement new для копирования
+                    new (&_data[i]) T(other._data[i]);
         }
         return *this;
     }

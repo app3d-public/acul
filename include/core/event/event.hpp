@@ -11,7 +11,7 @@ class Event
 public:
     virtual ~Event() = default;
 
-    Event(const std::string &name = "") : _name(name) {}
+    explicit Event(const std::string &name = "") : _name(name) {}
 
     bool operator==(const Event &event) const { return event._name == _name; }
     bool operator!=(const Event &event) const { return !(*this == event); }
@@ -46,7 +46,7 @@ class EventListener : public BaseEventListener
     std::function<void(E &)> _listener;
 
 public:
-    EventListener(std::function<void(E &)> listener) : _listener(listener) {}
+    explicit EventListener(std::function<void(E &)> listener) : _listener(listener) {}
 
     // Invokes the listener function with the event.
     void invoke(E &event) { _listener(event); }
@@ -146,7 +146,7 @@ public:
     // Unbinds all listeners managed by this registry from the event manager.
     void unbindListeners(EventManager &eventManager)
     {
-        for (auto &info : _listeners)
+        for (const auto &info : _listeners)
             eventManager.removeListener(info.listenerIter, info.eventName);
         _listeners.clear();
     }

@@ -1,7 +1,6 @@
 #ifndef APP_CORE_STD_COMPARATOR_H
 #define APP_CORE_STD_COMPARATOR_H
 
-#include <cstddef>
 #include <map>
 #include <string>
 #include "array.hpp"

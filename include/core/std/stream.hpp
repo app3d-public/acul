@@ -27,7 +27,7 @@ public:
      *
      * @param data Binary data to initialize the stream with.
      */
-    BinStream(Array<char> &&data) : _data(std::move(data)), _pos(0) {}
+    explicit BinStream(Array<char> &&data) : _data(std::move(data)), _pos(0) {}
 
     /**
      * @brief Writes a value of type T to the stream.

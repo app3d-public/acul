@@ -1,6 +1,5 @@
 #include <core/log.hpp>
 #include <ctime>
-#include <memory>
 #include <regex>
 #include <thread>
 

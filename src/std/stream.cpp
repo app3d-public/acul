@@ -1,7 +1,4 @@
 #include <core/std/stream.hpp>
-#include <cstdio>
-#include <cstring>
-#include <stdexcept>
 
 BinStream &BinStream::write(const char *data, size_t size)
 {

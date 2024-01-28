@@ -7,7 +7,6 @@
 #include <string>
 #include <thread>
 #include "../std/array.hpp"
-
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -38,7 +37,7 @@ namespace io
          * @param size The size of the data.
          * @return True if the file was successfully written, false otherwise.
          **/
-        bool writeBinary(const std::string &filename, char *buffer, size_t size);
+        bool writeBinary(const std::string &filename, const char *buffer, size_t size);
 
         /**
          * Reads a file using memory mapping, which maps the content of a file into

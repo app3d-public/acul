@@ -153,7 +153,7 @@ namespace logging
     class ConsoleLogger : public Logger
     {
     public:
-        ConsoleLogger(const std::string &name) : Logger(name) {}
+        explicit ConsoleLogger(const std::string &name) : Logger(name) {}
 
         std::ostream &stream() override { return std::cout; }
 

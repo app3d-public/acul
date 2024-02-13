@@ -148,7 +148,7 @@ namespace events
         void bindEvent(std::initializer_list<std::string> events, F listener)
         {
             for (const auto &event : events)
-                bind<E>(event, listener);
+                bindEvent<E>(event, listener);
         }
 
     private:

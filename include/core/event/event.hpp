@@ -9,21 +9,30 @@
 
 namespace events
 {
-    class Event
+    class IEvent
     {
     public:
-        virtual ~Event() = default;
+        virtual ~IEvent() = default;
 
-        explicit Event(const std::string &name = "") : _name(name) {}
+        explicit IEvent(const std::string &name = "") : _name(name) {}
 
-        bool operator==(const Event &event) const { return event._name == _name; }
-        bool operator!=(const Event &event) const { return !(*this == event); }
+        bool operator==(const IEvent &event) const { return event._name == _name; }
+        bool operator!=(const IEvent &event) const { return !(*this == event); }
 
         std::string name() const { return _name; }
         void name(const std::string &name) { _name = name; }
 
     private:
         std::string _name;
+    };
+
+    template <typename T>
+    struct Event : IEvent
+    {
+    public:
+        T data;
+
+        explicit Event(const std::string &name = "", T data = T()) : IEvent(name), data(data) {}
     };
 
     // Base class for event listeners.
@@ -60,7 +69,7 @@ namespace events
         template <typename E>
         iterator addListener(const std::string &event, std::function<void(E &)> listener)
         {
-            static_assert(std::is_base_of<Event, E>::value, "E must inherit from Event");
+            static_assert(std::is_base_of<IEvent, E>::value, "E must inherit from Event");
             auto eventListener = std::make_shared<EventListener<E>>(listener);
             _listeners[event].push_back(eventListener);
             return std::prev(_listeners[event].end());
@@ -72,15 +81,15 @@ namespace events
         // Removes a listener using its iterator.
         void removeListener(iterator listenerIter, const std::string &event);
 
-        // Emits an event by its name.
-        void emit(const std::string &eventName)
+        template <typename E = IEvent, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>, typename... Args>
+        void emit(const std::string &eventName, Args &&...args)
         {
-            Event event(eventName);
+            E event(eventName, std::forward<Args>(args)...);
             emit(event);
         }
 
         // Emits an event, invoking all listeners subscribed to this event.
-        template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E = IEvent, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void emit(E &event)
         {
             auto it = _listeners.find(event.name());
@@ -94,7 +103,7 @@ namespace events
             }
         }
 
-        template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         Array<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
         {
             Array<std::shared_ptr<EventListener<E>>> result;
@@ -136,7 +145,7 @@ namespace events
         void unbindListeners();
 
         // Binds a listener to an event of a specific type.
-        template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E = IEvent, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void bindEvent(const std::string &event, std::function<void(E &)> listener)
         {
             auto id = mng.addListener<E>(event, listener);
@@ -144,7 +153,7 @@ namespace events
         }
 
         // Binds a listener to a list of events of a specific type.
-        template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E = IEvent, typename F, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void bindEvent(std::initializer_list<std::string> events, F listener)
         {
             for (const auto &event : events)
@@ -159,9 +168,9 @@ namespace events
 namespace std
 {
     template <>
-    struct hash<events::Event>
+    struct hash<events::IEvent>
     {
-        size_t operator()(const events::Event &event) const { return hash<string>{}(event.name()); }
+        size_t operator()(const events::IEvent &event) const { return hash<string>{}(event.name()); }
     };
 } // namespace std
 

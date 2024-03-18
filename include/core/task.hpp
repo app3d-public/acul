@@ -152,6 +152,12 @@ public:
         }
     }
 
+    void await()
+    {
+        while (!_tasks.empty())
+            std::this_thread::yield();
+    }
+
 protected:
     tbb::concurrent_queue<std::shared_ptr<ITask>> _tasks; // Используем lock-free очередь
     std::mutex _taskMutex;
@@ -193,12 +199,6 @@ public:
 
     /// \brief Perform the task processing in the worker thread.
     void taskWorkerThread() override;
-
-    void await()
-    {
-        while (!_tasks.empty())
-            std::this_thread::yield();
-    }
 
 private:
     ThreadPool &_threadPool;

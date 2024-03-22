@@ -21,11 +21,12 @@ void TaskManager::taskWorkerThread()
 {
     while (_running)
     {
-        std::shared_ptr<ITask> task;
+        ITask* task;
         if (_tasks.try_pop(task))
         {
             task->onRun();
             task->onFetch();
+            delete task;
         }
         else
         {
@@ -58,11 +59,11 @@ void TaskManagerSync::taskWorkerThread()
 {
     while (_running)
     {
-        std::shared_ptr<ITask> task;
+        ITask* task;
         if (_tasks.try_pop(task))
         {
             task->onRun();
-            _fetchTasks.push(task); // Добавляем задачу в очередь обработки
+            _fetchTasks.push(task);
         }
         else
         {
@@ -83,9 +84,12 @@ void TaskManagerSync::fetchTaskWorkerThread()
 {
     while (_fetchRunning)
     {
-        std::shared_ptr<ITask> task;
+        ITask* task;
         if (_fetchTasks.try_pop(task))
+        {
             task->onFetch();
+            delete task;
+        }
         else
         {
             std::unique_lock<std::mutex> lock(_fetchTasksMutex);

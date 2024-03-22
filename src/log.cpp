@@ -9,12 +9,10 @@ namespace logging
     {
         using namespace std::chrono;
 
-        // Получение времени с точностью до наносекунд
         auto now = system_clock::now();
         auto now_ns = now.time_since_epoch();
         long long ns = duration_cast<nanoseconds>(now_ns).count() % 1000000000;
 
-        // Преобразование в std::tm
         time_t time_t_now = system_clock::to_time_t(now);
         std::tm tm_now;
 
@@ -24,7 +22,7 @@ namespace logging
         localtime_r(&time_t_now, &tm_now);
 #endif
 
-        return stringFormat("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
+        return format("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
                             tm_now.tm_mday, tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
     }
 
@@ -154,9 +152,12 @@ namespace logging
     {
         while (_running)
         {
-            std::shared_ptr<ITask> task;
+            ITask* task;
             if (_tasks.try_pop(task))
+            {
                 task->onRun();
+                delete task;
+            }
             else
             {
                 std::unique_lock<std::mutex> lock(_taskMutex);

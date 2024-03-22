@@ -13,7 +13,7 @@ namespace
      * Original source: https://stackoverflow.com/a/26221725/11722
      */
     template <typename... Args>
-    std::string stringFormatInternal(const std::string &format, Args &&...args)
+    std::string formatInternal(const std::string &format, Args &&...args)
     {
         const auto size = snprintf(nullptr, 0, format.c_str(), std::forward<Args>(args)...) + 1;
         if (size <= 0)
@@ -57,9 +57,9 @@ auto convert(T &&t)
  * @return The formatted string.
  */
 template <typename... Args>
-std::string stringFormat(const std::string& fmt, Args &&...args)
+std::string format(const std::string& fmt, Args &&...args)
 {
-    return stringFormatInternal(fmt, convert(std::forward<Args>(args))...);
+    return formatInternal(fmt, convert(std::forward<Args>(args))...);
 }
 
 /**

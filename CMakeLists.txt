@@ -30,19 +30,19 @@ function(gather_sources target_name)
         endif()
 
         if(WIN32)
-            list(FILTER APP_MODULE_SRC EXCLUDE REGEX "_linux\\.cpp$")
+            list(FILTER APP_MODULE_SRC EXCLUDE REGEX "@linux\\.cpp$")
         else()
-            list(FILTER APP_MODULE_SRC EXCLUDE REGEX "_win32\\.cpp$")
+            list(FILTER APP_MODULE_SRC EXCLUDE REGEX "@win32\\.cpp$")
 
             if(APPLE)
-                list(FILTER APP_MODULE_SRC EXCLUDE REGEX "_linux\\.cpp$")
+                list(FILTER APP_MODULE_SRC EXCLUDE REGEX "@linux\\.cpp$")
             endif(APPLE)
         endif(WIN32)
 
         list(APPEND SOURCE_FILES ${APP_MODULE_SRC})
     endforeach()
 
-    set(SOURCE_FILES ${SOURCE_FILES} PARENT_SCOPE) # Устанавливаем переменную на уровне родителя
+    set(SOURCE_FILES ${SOURCE_FILES} PARENT_SCOPE)
 endfunction()
 
 gather_sources("app3d-core" RECURSE 

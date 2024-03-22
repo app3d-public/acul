@@ -4,10 +4,9 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
-#include <memory>
-#include <tbb/concurrent_queue.h>
+#include <oneapi/tbb/concurrent_queue.h>
 #include <thread>
-#include "std/array.hpp"
+#include <core/std/array.hpp>
 
 // Interface for a generic task. It provides a structure for task execution and fetching results.
 class ITask
@@ -20,16 +19,16 @@ public:
 
 // Class for a specific task type, inheriting from ITask
 template <typename T>
-class Task : public std::enable_shared_from_this<Task<T>>, public ITask
+class Task : public ITask
 {
 public:
     explicit Task(std::function<T()> handler) : _onRun(handler) {}
 
     // Method to set a callback function for post-execution logic and return a shared pointer to the task.
-    std::shared_ptr<Task<T>> onFetch(std::function<void(T)> fetch)
+    Task<T> *onFetch(std::function<void(T)> fetch)
     {
         _onFetch = fetch;
-        return this->shared_from_this();
+        return this;
     }
 
     // Method to execute the task's logic and set the promise value.
@@ -63,7 +62,7 @@ private:
 
 // Class for a specific task type, inheriting from ITask
 template <>
-class Task<void> : public ITask, public std::enable_shared_from_this<Task<void>>
+class Task<void> : public ITask
 {
 public:
     explicit Task(std::function<void()> handler) : _onRun(handler) {}
@@ -71,10 +70,10 @@ public:
     virtual ~Task() = default;
 
     // Method to set a callback function for post-execution logic and return a shared pointer to the task.
-    std::shared_ptr<Task<void>> onFetch(std::function<void()> fetch)
+    Task<void> *onFetch(std::function<void()> fetch)
     {
         _onFetch = fetch;
-        return this->shared_from_this();
+        return this;
     }
 
     // Method to execute the task's logic and set the promise value.
@@ -122,22 +121,22 @@ public:
     template <typename F>
     auto addTask(F &&task, bool notify = true)
     {
-        if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, std::shared_ptr<ITask>>::value)
+        if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, ITask*>::value)
         {
             using R = std::invoke_result_t<F>;
-            auto taskPtr = std::make_shared<Task<R>>(std::forward<F>(task));
-            _tasks.push(taskPtr);
+            auto ptr = new Task<R>(std::forward<F>(task));
+            _tasks.push(ptr);
             if (notify)
                 notifyAll();
-            return taskPtr; // Возвращает std::shared_ptr<Task<R>>
+            return ptr;
         }
         else
         {
-            auto taskPtr = std::forward<F>(task);
-            _tasks.push(taskPtr);
+            auto ptr = std::forward<F>(task);
+            _tasks.push(ptr);
             if (notify)
                 notifyAll();
-            return taskPtr; // Возвращает std::shared_ptr<ITask>
+            return ptr;
         }
     }
 
@@ -159,7 +158,7 @@ public:
     }
 
 protected:
-    tbb::concurrent_queue<std::shared_ptr<ITask>> _tasks; // Используем lock-free очередь
+    oneapi::tbb::concurrent_queue<ITask*> _tasks;
     std::mutex _taskMutex;
     std::condition_variable _taskAvailable;
 };
@@ -230,7 +229,7 @@ private:
     std::atomic<bool> _fetchRunning{true};
     std::thread _executionThread;
     std::thread _fetchThread;
-    tbb::concurrent_queue<std::shared_ptr<ITask>> _fetchTasks;
+    oneapi::tbb::concurrent_queue<ITask*> _fetchTasks;
     std::condition_variable _tasksEmpty;
     std::condition_variable _fetchTasksEmpty;
     std::mutex _fetchTasksMutex;

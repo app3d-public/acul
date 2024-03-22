@@ -2,7 +2,10 @@
 #define CORE_STD_BASIC_TYPES_H
 
 #include <cstdint>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <half.hpp>
+#pragma GCC diagnostic pop
 
 using i8 = int8_t;
 using i16 = int16_t;

@@ -102,7 +102,7 @@ namespace logging
     std::string formatMessage(const std::string &message, Args &&...args)
     {
         if constexpr (sizeof...(Args) > 0)
-            return format(message, std::forward<Args>(args)...);
+            return f(message, std::forward<Args>(args)...);
         else
             return message;
     }

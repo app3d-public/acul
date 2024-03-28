@@ -372,10 +372,9 @@ public:
         if (pos >= begin() && pos < end())
         {
             std::ptrdiff_t index = pos - begin();
-            _data[index].~T();
             std::move(_data + index + 1, _data + _size, _data + index);
-
             --_size;
+            _data[_size].~T();
             return iterator(_data + index);
         }
         return end();

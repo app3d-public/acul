@@ -57,7 +57,7 @@ auto convert(T &&t)
  * @return The formatted string.
  */
 template <typename... Args>
-std::string format(const std::string& fmt, Args &&...args)
+std::string f(const std::string& fmt, Args &&...args)
 {
     return formatInternal(fmt, convert(std::forward<Args>(args))...);
 }

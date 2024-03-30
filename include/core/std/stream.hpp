@@ -1,7 +1,6 @@
 #ifndef APP_CORE_STD_STREAM_H
 #define APP_CORE_STD_STREAM_H
 
-#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include "array.hpp"
@@ -54,9 +53,9 @@ public:
      */
     BinStream &write(const std::string &str)
     {
-        uint16_t length = static_cast<uint16_t>(str.size());
-        write(length);
-        return write(str.data(), length);
+        _data.insert(_data.end(), str.begin(), str.end());
+        _data.push_back('\0');
+        return *this;
     }
 
     /**
@@ -90,10 +89,14 @@ public:
      */
     BinStream &read(std::string &str)
     {
-        uint16_t length;
-        read(length);
-        str.resize(length);
-        read(&str[0], length);
+        str.clear(); // Очистка строки перед заполнением
+        while (_pos < _data.size())
+        {
+            char ch = _data[_pos++];
+            if (ch == '\0')
+                break;
+            str += ch;
+        }
         return *this;
     }
 

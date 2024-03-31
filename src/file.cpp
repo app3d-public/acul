@@ -8,17 +8,13 @@ namespace io
     {
         bool readBinary(const std::string &filename, Array<char> &buffer)
         {
-#ifdef _WIN32
-            std::u16string u16path = convertUTF8toUTF16(filename);
-            std::wstring wpath(u16path.begin(), u16path.end());
-            FILE *file = _wfopen(wpath.c_str(), L"rb");
-#else
             FILE *file = fopen(filename.c_str(), "rb");
-#endif
-
             if (!file)
             {
-                logError("Failed to open file: " + filename);
+                if (!std::filesystem::exists(filename))
+                    logError("File does not exist: " + filename);
+                else
+                    logError("Failed to open file: " + filename);
                 return false;
             }
 

@@ -1,6 +1,7 @@
 #ifndef APP_CORE_STD_STREAM_H
 #define APP_CORE_STD_STREAM_H
 
+#include <glm/glm.hpp>
 #include <stdexcept>
 #include <string>
 #include "array.hpp"
@@ -58,6 +59,30 @@ public:
         return *this;
     }
 
+    BinStream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
+
+    BinStream &write(const glm::vec3 &vec) { return write(vec.x).write(vec.y).write(vec.z); }
+
+    BinStream &write(const glm::mat4 &mat)
+    {
+        return write(mat[0][0])
+            .write(mat[0][1])
+            .write(mat[0][2])
+            .write(mat[0][3])
+            .write(mat[1][0])
+            .write(mat[1][1])
+            .write(mat[1][2])
+            .write(mat[1][3])
+            .write(mat[2][0])
+            .write(mat[2][1])
+            .write(mat[2][2])
+            .write(mat[2][3])
+            .write(mat[3][0])
+            .write(mat[3][1])
+            .write(mat[3][2])
+            .write(mat[3][3]);
+    }
+
     /**
      * @brief Reads a value of type T from the stream.
      *
@@ -82,14 +107,12 @@ public:
     /**
      * @brief Reads a string from the stream.
      *
-     * The length of the string is read first, followed by the string data.
-     *
      * @param str Reference where the read string will be stored.
      * @return Reference to the stream to support chained calls.
      */
     BinStream &read(std::string &str)
     {
-        str.clear(); // Очистка строки перед заполнением
+        str.clear();
         while (_pos < _data.size())
         {
             char ch = _data[_pos++];
@@ -98,6 +121,29 @@ public:
             str += ch;
         }
         return *this;
+    }
+
+    BinStream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
+    BinStream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
+
+    BinStream &read(glm::mat4 &mat)
+    {
+        return read(mat[0][0])
+            .read(mat[0][1])
+            .read(mat[0][2])
+            .read(mat[0][3])
+            .read(mat[1][0])
+            .read(mat[1][1])
+            .read(mat[1][2])
+            .read(mat[1][3])
+            .read(mat[2][0])
+            .read(mat[2][1])
+            .read(mat[2][2])
+            .read(mat[2][3])
+            .read(mat[3][0])
+            .read(mat[3][1])
+            .read(mat[3][2])
+            .read(mat[3][3]);
     }
 
     /**

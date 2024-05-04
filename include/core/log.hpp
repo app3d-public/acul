@@ -1,14 +1,14 @@
 #ifndef APP_CORE_LOG_H
 #define APP_CORE_LOG_H
 
+#include <core/api.hpp>
 #include <fstream>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <unordered_map>
-#include "std/array.hpp"
+#include "std/basic_types.hpp"
 #include "std/string.hpp"
 #include "task.hpp"
 
@@ -96,7 +96,7 @@ namespace logging
         std::string handle(const LogMessageData &context) const override { return std::string(colors::reset); }
     };
 
-    using TokenHandlerList = Array<std::shared_ptr<TokenHandler>>;
+    using TokenHandlerList = DArray<std::shared_ptr<TokenHandler>>;
 
     template <typename... Args>
     std::string formatMessage(const std::string &message, Args &&...args)
@@ -107,7 +107,7 @@ namespace logging
             return message;
     }
 
-    class Logger
+    class APPLIB_API Logger
     {
     public:
         Logger(const std::string &name) : _name(name), _tokens(std::make_shared<TokenHandlerList>()) {}
@@ -134,7 +134,7 @@ namespace logging
         std::shared_ptr<TokenHandlerList> _tokens;
     };
 
-    class FileLogger : public Logger
+    class APPLIB_API FileLogger : public Logger
     {
     public:
         FileLogger(const std::string &name, const std::string &path, std::ios_base::openmode flags);
@@ -169,7 +169,7 @@ namespace logging
         /// \brief Get the singleton instance of the LogTaskManager.
         ///
         /// \return The singleton instance of the LogTaskManager.
-        static LogTaskManager &getSingleton();
+        static APPLIB_API LogTaskManager &global();
 
         /// \brief Perform the task processing in the worker thread.
         void taskWorkerThread() override;
@@ -195,14 +195,14 @@ namespace logging
      * different log levels. The LogManager is a singleton class, meaning only one instance of it can exist in the
      * application.
      */
-    class LogManager
+    class APPLIB_API LogManager
     {
     public:
         /**
          * @brief Gets the singleton instance of the LogManager.
          * @return The singleton instance of the LogManager.
          */
-        static LogManager &getSingleton();
+        static APPLIB_API LogManager &global();
 
         /**
          * @brief Adds a logger with the specified name and file path.
@@ -235,12 +235,10 @@ namespace logging
         template <typename... Args>
         void log(const std::shared_ptr<Logger> &logger, LogLevel level, const std::string &message, Args &&...args)
         {
-            if (!logger)
-                return;
-            static LogTaskManager &logManager = LogTaskManager::getSingleton();
+            if (!logger) return;
+            static LogTaskManager &logManager = LogTaskManager::global();
             logManager.addTask([logger, level, message, ... args{std::forward<Args>(args)}]() {
-                if (level > logger->level())
-                    return;
+                if (level > logger->level()) return;
                 std::thread::id thread_id = std::this_thread::get_id();
                 std::string parsed_str = logger->getParsedStr({level, message, thread_id});
                 logger->write(formatMessage(parsed_str, args...));
@@ -267,9 +265,8 @@ namespace logging
                                      Args &&...args)
         {
             auto logger_it = _loggers.find(logger);
-            if (logger_it == _loggers.end())
-                return std::future<void>();
-            static LogTaskManager &logManager = LogTaskManager::getSingleton();
+            if (logger_it == _loggers.end()) return std::future<void>();
+            static LogTaskManager &logManager = LogTaskManager::global();
 
             auto prom = std::make_shared<std::promise<void>>();
             auto result = prom->get_future();
@@ -296,27 +293,24 @@ namespace logging
         LogManager() = default;
         LogManager &operator=(const LogManager &) = delete;
 
-        std::unordered_map<std::string, std::shared_ptr<Logger>> _loggers;
+        HashMap<std::string, std::shared_ptr<Logger>> _loggers;
         std::shared_ptr<Logger> _defaultLogger;
     };
 
-    inline std::shared_ptr<Logger> getLogger(const std::string &name)
-    {
-        return LogManager::getSingleton().getLogger(name);
-    }
+    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return LogManager::global().getLogger(name); }
 } // namespace logging
 
 #define DEFINE_LOG_FUNCTION(level)                                                                              \
     template <typename... Args>                                                                                 \
     void log##level(const std::shared_ptr<logging::Logger> &logger, const std::string &message, Args &&...args) \
     {                                                                                                           \
-        static logging::LogManager &manager = logging::LogManager::getSingleton();                              \
+        static logging::LogManager &manager = logging::LogManager::global();                                    \
         manager.log(logger, LogLevel::level, message, std::forward<Args>(args)...);                             \
     }                                                                                                           \
     template <typename... Args>                                                                                 \
     void log##level(const std::string &message, Args &&...args)                                                 \
     {                                                                                                           \
-        static logging::LogManager &manager = logging::LogManager::getSingleton();                              \
+        static logging::LogManager &manager = logging::LogManager::global();                                    \
         manager.log(LogLevel::level, message, std::forward<Args>(args)...);                                     \
     }
 

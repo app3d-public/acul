@@ -1,6 +1,7 @@
 #ifndef APP_CORE_STD_STRING_H
 #define APP_CORE_STD_STRING_H
 
+#include <core/api.hpp>
 #include <glm/glm.hpp>
 #include <memory>
 #include <stdexcept>
@@ -16,8 +17,7 @@ namespace
     std::string formatInternal(const std::string &format, Args &&...args)
     {
         const auto size = snprintf(nullptr, 0, format.c_str(), std::forward<Args>(args)...) + 1;
-        if (size <= 0)
-            throw std::runtime_error("Error during formatting.");
+        if (size <= 0) throw std::runtime_error("Error during formatting.");
 
         std::unique_ptr<char[]> buf(new char[size]);
         snprintf(buf.get(), size, format.c_str(), args...);
@@ -27,15 +27,15 @@ namespace
 
 /// @brief Convert string in UTF-8 encoding to string in UTF-16 encoding
 /// @param src String in UTF-8 encoding
-std::u16string convertUTF8toUTF16(const std::string &src);
+APPLIB_API std::u16string convertUTF8toUTF16(const std::string &src);
 
 /// @brief Convert string in UTF-16 encoding to string in UTF-8 encoding
 /// @param src String in UTF-16 encoding
-std::string convertUTF16toUTF8(const std::u16string &src);
+APPLIB_API std::string convertUTF16toUTF8(const std::u16string &src);
 
-std::u16string trim(const std::u16string &inputStr, size_t max = std::numeric_limits<size_t>::max());
+APPLIB_API std::u16string trim(const std::u16string &inputStr, size_t max = std::numeric_limits<size_t>::max());
 
-std::string trim(const std::string &inputStr, size_t max = std::numeric_limits<size_t>::max());
+APPLIB_API std::string trim(const std::string &inputStr, size_t max = std::numeric_limits<size_t>::max());
 
 /**
  * Convert all std::strings to const char* using constexpr if (C++17)
@@ -57,7 +57,7 @@ auto convert(T &&t)
  * @return The formatted string.
  */
 template <typename... Args>
-std::string f(const std::string& fmt, Args &&...args)
+std::string f(const std::string &fmt, Args &&...args)
 {
     return formatInternal(fmt, convert(std::forward<Args>(args))...);
 }
@@ -69,7 +69,7 @@ std::string f(const std::string& fmt, Args &&...args)
  * @param bufferSize Buffer size
  * @return The number of characters written
  */
-int iToStr(int value, char *buffer, size_t bufferSize);
+APPLIB_API int iToStr(int value, char *buffer, size_t bufferSize);
 
 /**
  * @brief Converts the float to the C-style string
@@ -78,7 +78,7 @@ int iToStr(int value, char *buffer, size_t bufferSize);
  * @param bufferSize Buffer size
  * @return The number of characters written
  **/
-int fToStr(float value, char *buffer, size_t bufferSize, int precision);
+APPLIB_API int fToStr(float value, char *buffer, size_t bufferSize, int precision);
 
 /**
  * @brief Converts the 2-dimensional vector to the C-style string
@@ -87,7 +87,7 @@ int fToStr(float value, char *buffer, size_t bufferSize, int precision);
  * @param bufferSize Buffer size
  * @return The number of characters written
  **/
-int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offset);
+APPLIB_API int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offset);
 
 /**
  * @brief Converts the 3-dimensional vector to the C-style string
@@ -96,7 +96,7 @@ int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offs
  * @param bufferSize Buffer size
  * @return The number of characters written
  **/
-int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offset);
+APPLIB_API int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offset);
 
 /**
  * @brief Deserialize the C-style string to the integer
@@ -104,7 +104,7 @@ int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offs
  * @param value Destination value
  * @return True if successful. Otherwise false
  **/
-bool strToI(const char *&str, int &value);
+APPLIB_API bool strToI(const char *&str, int &value);
 
 /**
  * @brief Deserialize the C-style string to the float
@@ -112,7 +112,7 @@ bool strToI(const char *&str, int &value);
  * @param value Destination value
  * @return True if successful. Otherwise false
  **/
-bool strToF(const char *&str, float &value);
+APPLIB_API bool strToF(const char *&str, float &value);
 
 /**
  * @brief Deserialize the C-style string to the 2-dimensional vector.
@@ -132,10 +132,8 @@ inline bool strToV2(const char *&str, glm::vec2 &vec) { return strToF(str, vec.x
  **/
 inline void strToV2Optional(const char *&str, glm::vec2 &vec)
 {
-    if (!strToF(str, vec.x))
-        return;
-    if (!strToF(str, vec.y))
-        return;
+    if (!strToF(str, vec.x)) return;
+    if (!strToF(str, vec.y)) return;
 }
 
 /**
@@ -159,19 +157,16 @@ inline bool strToV3(const char *&str, glm::vec3 &vec)
  **/
 inline void strToV3Optional(const char *&str, glm::vec3 &vec)
 {
-    if (!strToF(str, vec.x))
-        return;
-    if (!strToF(str, vec.y))
-        return;
-    if (!strToF(str, vec.z))
-        return;
+    if (!strToF(str, vec.x)) return;
+    if (!strToF(str, vec.y)) return;
+    if (!strToF(str, vec.z)) return;
 }
 
 /**
  * @brief Extracts a substring from the input string, from the first space character to the last one.
  */
-std::string getStrRange(const char *&str);
+APPLIB_API std::string getStrRange(const char *&str);
 
-std::string trimEnd(const std::string &str);
+APPLIB_API std::string trimEnd(const std::string &str);
 
 #endif

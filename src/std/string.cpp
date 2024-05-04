@@ -93,7 +93,7 @@ int iToStr(int value, char *buffer, size_t bufferSize)
 
     char *ptr = buffer;
 
-    // Обработка знака числа
+    // Sign
     if (value < 0)
     {
         *ptr = '-';
@@ -102,7 +102,7 @@ int iToStr(int value, char *buffer, size_t bufferSize)
         bufferSize--;
     }
 
-    // Обработка случая, когда значение равно нулю
+    // If zero
     if (value == 0)
     {
         if (bufferSize >= 2)
@@ -115,7 +115,6 @@ int iToStr(int value, char *buffer, size_t bufferSize)
             return 0;
     }
 
-    // Преобразование целой части числа
     int numDigits = 0;
     int tempValue = value;
     while (tempValue > 0)
@@ -188,7 +187,6 @@ int fToStr(float value, char *buffer, size_t bufferSize, int precision)
             return 0;
     }
 
-    // Преобразование целой части числа
     float tempValue = value;
     int numDigits = 0;
     if (tempValue >= 1)

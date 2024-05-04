@@ -1,9 +1,9 @@
 #ifndef APP_CORE_STD_COMPARATOR_H
 #define APP_CORE_STD_COMPARATOR_H
 
-#include <map>
 #include <string>
-#include "array.hpp"
+#include "basic_types.hpp"
+#include "darray.hpp"
 
 namespace comparators
 {
@@ -27,13 +27,13 @@ template <typename F, typename S>
 class CaseInsensitiveMap
 {
 public:
-    using value_type = std::map<F, Array<S>, comparators::CaseInsensitiveComparator>;
+    using value_type = Map<F, DArray<S>, comparators::CaseInsensitiveComparator>;
     using reference = value_type &;
     using const_reference = const value_type &;
     using pointer = value_type *;
     using const_pointer = const value_type *;
-    using iterator = typename std::map<F, Array<S>, comparators::CaseInsensitiveComparator>::iterator;
-    using const_iterator = typename std::map<F, Array<S>, comparators::CaseInsensitiveComparator>::const_iterator;
+    using iterator = typename Map<F, DArray<S>, comparators::CaseInsensitiveComparator>::iterator;
+    using const_iterator = typename Map<F, DArray<S>, comparators::CaseInsensitiveComparator>::const_iterator;
 
     iterator begin() { return iterator(_data.begin()); }
     iterator end() { return iterator(_data.end()); }
@@ -53,7 +53,7 @@ public:
     }
 
     // Method to insert a key-value pair into the map.
-    void insert(const F &key, const Array<S> &value) { _data[key] = value; }
+    void insert(const F &key, const DArray<S> &value) { _data[key] = value; }
 
     // Method to erase a key-value pair from the map by its key.
     void erase(const F &key) { _data.erase(key); }
@@ -74,7 +74,7 @@ public:
         if (it != _data.end())
             it->second.push_back(value);
         else
-            _data[key] = Array<S>{value};
+            _data[key] = DArray<S>{value};
     }
 
 private:

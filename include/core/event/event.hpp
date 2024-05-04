@@ -1,14 +1,14 @@
 #ifndef APP_CORE_EVENT_H
 #define APP_CORE_EVENT_H
 
+#include <core/api.hpp>
 #include <any>
 #include <cassert>
+#include <core/std/basic_types.hpp>
+#include <core/std/darray.hpp>
 #include <functional>
 #include <initializer_list>
-#include <queue>
 #include <string>
-#include <unordered_map>
-#include "../std/array.hpp"
 
 namespace events
 {
@@ -67,10 +67,10 @@ namespace events
     };
 
     // Manages event listeners and dispatches events to them.
-    extern class EventManager
+    extern APPLIB_API class EventManager
     {
     public:
-        using iterator = Array<std::shared_ptr<BaseEventListener>>::iterator;
+        using iterator = DArray<std::shared_ptr<BaseEventListener>>::iterator;
 
         // Adds a listener for a specific type of event and returns an iterator to it.
         template <typename E>
@@ -113,9 +113,9 @@ namespace events
         }
 
         template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
-        Array<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
+        DArray<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
         {
-            Array<std::shared_ptr<EventListener<E>>> result;
+            DArray<std::shared_ptr<EventListener<E>>> result;
             auto it = _listeners.find(event);
             if (it != _listeners.end())
             {
@@ -138,8 +138,8 @@ namespace events
         }
 
     private:
-        std::unordered_map<std::string, Array<std::shared_ptr<BaseEventListener>>> _listeners;
-        std::queue<Event> _pendingEvents;
+        HashMap<std::string, DArray<std::shared_ptr<BaseEventListener>>> _listeners;
+        Queue<Event> _pendingEvents;
     } mng;
 
     struct ListenerInfo
@@ -149,7 +149,7 @@ namespace events
     };
 
     // Abstract base class for registries that manage event listener bindings.
-    class ListenerRegistry
+    class APPLIB_API ListenerRegistry
     {
     public:
         virtual ~ListenerRegistry() { unbindListeners(); }
@@ -175,12 +175,11 @@ namespace events
         template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
         void bindEvent(std::initializer_list<std::string> events, F listener)
         {
-            for (const auto &event : events)
-                bindEvent<E>(event, listener);
+            for (const auto &event : events) bindEvent<E>(event, listener);
         }
 
     private:
-        Array<ListenerInfo> _listeners;
+        DArray<ListenerInfo> _listeners;
     };
 } // namespace events
 

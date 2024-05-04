@@ -3,7 +3,8 @@
 
 #include <stdexcept>
 #include <string>
-#include "array.hpp"
+#include <core/std/darray.hpp>
+#include <core/api.hpp>
 
 /**
  * @brief Utility class for binary stream manipulation.
@@ -13,7 +14,7 @@
  * random access. It's suitable for serializing and deserializing complex data structures
  * in binary format.
  */
-class BinStream
+class APPLIB_API BinStream
 {
 public:
     /**
@@ -26,7 +27,7 @@ public:
      *
      * @param data Binary data to initialize the stream with.
      */
-    explicit BinStream(Array<char> &&data) : _data(std::move(data)), _pos(0) {}
+    explicit BinStream(DArray<char> &&data) : _data(std::move(data)), _pos(0) {}
 
     /**
      * @brief Writes a value of type T to the stream.
@@ -149,7 +150,7 @@ public:
     size_t size() const { return _data.size(); }
 
 private:
-    Array<char> _data;
+    DArray<char> _data;
     size_t _pos;
 };
 

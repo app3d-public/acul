@@ -13,15 +13,14 @@ void ThreadPool::prepareWorkerThreads(TaskQueue *taskQueue)
 void ThreadPool::stopThreads()
 {
     for (auto &thread : _threads)
-        if (thread.joinable())
-            thread.join();
+        if (thread.joinable()) thread.join();
 }
 
 void TaskManager::taskWorkerThread()
 {
     while (_running)
     {
-        ITask* task;
+        ITask *task;
         if (_tasks.try_pop(task))
         {
             task->onRun();
@@ -36,11 +35,17 @@ void TaskManager::taskWorkerThread()
     }
 }
 
-TaskManager::~TaskManager()
+TaskManager &TaskManager::global()
+{
+    static TaskManager singleton;
+    return singleton;
+}
+
+void TaskManager::destroy()
 {
     _running = false;
     notifyAll();
-    _threadPool.stopThreads();
+    if (_threadPool) _threadPool->stopThreads();
 }
 
 TaskManagerSync::TaskManagerSync()
@@ -49,7 +54,7 @@ TaskManagerSync::TaskManagerSync()
     _fetchThread = std::thread(&TaskManagerSync::fetchTaskWorkerThread, this);
 }
 
-TaskManagerSync &TaskManagerSync::getSingleton()
+TaskManagerSync &TaskManagerSync::global()
 {
     static TaskManagerSync singleton;
     return singleton;
@@ -59,7 +64,7 @@ void TaskManagerSync::taskWorkerThread()
 {
     while (_running)
     {
-        ITask* task;
+        ITask *task;
         if (_tasks.try_pop(task))
         {
             task->onRun();
@@ -84,7 +89,7 @@ void TaskManagerSync::fetchTaskWorkerThread()
 {
     while (_fetchRunning)
     {
-        ITask* task;
+        ITask *task;
         if (_fetchTasks.try_pop(task))
         {
             task->onFetch();
@@ -114,9 +119,7 @@ void TaskManagerSync::await()
 TaskManagerSync::~TaskManagerSync()
 {
     _running = false;
-    if (_executionThread.joinable())
-        _executionThread.join();
+    if (_executionThread.joinable()) _executionThread.join();
     _fetchRunning = false;
-    if (_fetchThread.joinable())
-        _fetchThread.join();
+    if (_fetchThread.joinable()) _fetchThread.join();
 }

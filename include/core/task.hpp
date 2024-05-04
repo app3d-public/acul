@@ -6,14 +6,15 @@
 #include <future>
 #include <oneapi/tbb/concurrent_queue.h>
 #include <thread>
-#include <core/std/array.hpp>
+#include "api.hpp"
+#include "std/darray.hpp"
 
 // Interface for a generic task. It provides a structure for task execution and fetching results.
 class ITask
 {
 public:
-    virtual void onRun() = 0; // Method to define the task's execution logic.
-    virtual void onFetch(){}; // Optional method to define post-execution logic (e.g., processing results).
+    virtual void onRun() = 0;  // Method to define the task's execution logic.
+    virtual void onFetch() {}; // Optional method to define post-execution logic (e.g., processing results).
     virtual ~ITask() = default;
 };
 
@@ -41,8 +42,7 @@ public:
     // Method to execute post-task logic with the result.
     virtual void onFetch() override
     {
-        if (_onFetch)
-            _onFetch(_result);
+        if (_onFetch) _onFetch(_result);
         _fetchPromise.set_value(_result);
     }
 
@@ -121,21 +121,19 @@ public:
     template <typename F>
     auto addTask(F &&task, bool notify = true)
     {
-        if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, ITask*>::value)
+        if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, ITask *>::value)
         {
             using R = std::invoke_result_t<F>;
             auto ptr = new Task<R>(std::forward<F>(task));
             _tasks.push(ptr);
-            if (notify)
-                notifyAll();
+            if (notify) notifyAll();
             return ptr;
         }
         else
         {
             auto ptr = std::forward<F>(task);
             _tasks.push(ptr);
-            if (notify)
-                notifyAll();
+            if (notify) notifyAll();
             return ptr;
         }
     }
@@ -153,18 +151,17 @@ public:
 
     void await()
     {
-        while (!_tasks.empty())
-            std::this_thread::yield();
+        while (!_tasks.empty()) std::this_thread::yield();
     }
 
 protected:
-    oneapi::tbb::concurrent_queue<ITask*> _tasks;
+    oneapi::tbb::concurrent_queue<ITask *> _tasks;
     std::mutex _taskMutex;
     std::condition_variable _taskAvailable;
 };
 
 /// @brief Represents a thread pool manager class
-class ThreadPool
+class APPLIB_API ThreadPool
 {
 public:
     ThreadPool() : _threadsCount(std::thread::hardware_concurrency()) {}
@@ -184,24 +181,29 @@ public:
 
 private:
     unsigned int _threadsCount;
-    Array<std::thread> _threads;
+    DArray<std::thread> _threads;
 };
 
 /// \brief Represents a task manager that handles task processing.
 ///
 /// It provides methods to perform task processing in worker threads and handle tasks with conditions.
-class TaskManager : public TaskQueue
+class APPLIB_API TaskManager : public TaskQueue
 {
 public:
-    explicit TaskManager(ThreadPool &threadPool) : _threadPool(threadPool) {}
-    ~TaskManager();
+    void destroy();
+
+    void threadPool(ThreadPool *pool) { _threadPool = pool; }
+
+    static TaskManager &global();
 
     /// \brief Perform the task processing in the worker thread.
     void taskWorkerThread() override;
 
 private:
-    ThreadPool &_threadPool;
-    std::atomic<bool> _running{true};
+    ThreadPool *_threadPool;
+    std::atomic<bool> _running;
+
+    TaskManager() : _threadPool(nullptr), _running(true) {}
 };
 
 class TaskManagerSync : public TaskQueue
@@ -210,7 +212,7 @@ public:
     /// \brief Get the singleton instance of the TaskManagerSync.
     ///
     /// \return The singleton instance of the TaskManagerSync.
-    static TaskManagerSync &getSingleton();
+    static TaskManagerSync &global();
 
     /// \brief Perform the task processing in the main worker thread.
     void taskWorkerThread() override;
@@ -229,7 +231,7 @@ private:
     std::atomic<bool> _fetchRunning{true};
     std::thread _executionThread;
     std::thread _fetchThread;
-    oneapi::tbb::concurrent_queue<ITask*> _fetchTasks;
+    oneapi::tbb::concurrent_queue<ITask *> _fetchTasks;
     std::condition_variable _tasksEmpty;
     std::condition_variable _fetchTasksEmpty;
     std::mutex _fetchTasksMutex;

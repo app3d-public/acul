@@ -1,15 +1,18 @@
 #ifndef CORE_MEM_H
 #define CORE_MEM_H
 
+#include <cassert>
+#include <core/api.hpp>
 #include <cstddef>
 #include <functional>
-#include <list>
 #include <memory>
-#include <queue>
+#include <oneapi/tbb/scalable_allocator.h>
+#include "../std/basic_types.hpp"
+#include "../std/list.hpp"
 
 inline size_t alignUp(size_t value, size_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
 
-class MemCache
+class APPLIB_API MemCache
 {
 public:
     virtual ~MemCache() = default;
@@ -18,7 +21,7 @@ public:
 };
 
 template <typename T>
-class SharedMemCache : public MemCache
+class APPLIB_API SharedMemCache : public MemCache
 {
 public:
     SharedMemCache(const std::shared_ptr<T> &ptr) : _ptr(ptr) {}
@@ -29,20 +32,17 @@ private:
     std::shared_ptr<T> _ptr;
 };
 
-class DisposalQueue
+class APPLIB_API DisposalQueue
 {
 public:
-    static DisposalQueue &getSingleton();
+    static APPLIB_API DisposalQueue &global();
 
-    void push(const std::list<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
+    void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
         _queue.push({cache, onWait});
     }
 
-    void push(MemCache *cache, const std::function<void()> &onWait = nullptr)
-    {
-        push(std::list<MemCache *>{cache}, onWait);
-    }
+    void push(MemCache *cache, const std::function<void()> &onWait = nullptr) { push(List<MemCache *>{cache}, onWait); }
 
     void releaseResources();
 
@@ -51,10 +51,10 @@ public:
 private:
     struct MemData
     {
-        std::list<MemCache *> cacheList;
+        List<MemCache *> cacheList;
         std::function<void()> onWait = nullptr;
     };
-    std::queue<MemData> _queue;
+    Queue<MemData> _queue;
 };
 
 template <typename T>

@@ -1,0 +1,622 @@
+#ifndef APP_CORE_STD_DArray_H
+#define APP_CORE_STD_DArray_H
+
+#define DARRAY_SBO_SIZE 4
+
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
+#include <iterator>
+#include <memory>
+#include <oneapi/tbb/scalable_allocator.h>
+#include <stdexcept>
+#include <type_traits>
+#include "../mem/allocator.hpp"
+
+template <typename T, template <typename> class Allocator = MemAllocator>
+class DArray
+{
+public:
+    using ArrayAllocator = Allocator<T>;
+    static ArrayAllocator allocator;
+    using value_type = T;
+    using reference = T &;
+    using const_reference = const T &;
+    using pointer = typename ArrayAllocator::pointer;
+    using const_pointer = const typename ArrayAllocator::pointer;
+    using size_type = size_t;
+
+    class Iterator;
+    class ReverseIterator;
+    using iterator = Iterator;
+    using const_iterator = const Iterator;
+    using reverse_iterator = ReverseIterator;
+    using const_reverse_iterator = const ReverseIterator;
+
+    DArray() noexcept : _size(0), _capacity(DARRAY_SBO_SIZE), _data(allocator.allocate(DARRAY_SBO_SIZE)) {
+    }
+
+    explicit DArray(size_type size) noexcept : _size(size), _capacity(size), _data(allocator.allocate(size))
+    {
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i);
+    }
+
+    DArray(size_type size, const_reference value) noexcept
+        : _size(size), _capacity(size), _data(allocator.allocate(size))
+    {
+        for (size_type i = 0; i < _size; ++i)
+            if constexpr (std::is_trivially_copyable_v<T>)
+                _data[i] = value;
+            else
+                allocator.construct(_data + i, value);
+    }
+
+    template <typename InputIt, typename = std::enable_if_t<!std::is_integral<InputIt>::value>>
+    DArray(InputIt first, InputIt last) : _size(0), _capacity(0), _data(nullptr)
+    {
+        _size = std::distance(first, last);
+        _data = allocator.allocate(_size);
+        if (_size > 0)
+        {
+            _capacity = _size;
+            size_type i = 0;
+            for (InputIt it = first; it != last; ++it, ++i)
+                if constexpr (std::is_trivially_constructible_v<T>)
+                    _data[i] = *it;
+                else
+                    allocator.construct(_data + i, *it);
+        }
+    }
+
+    ~DArray() noexcept
+    {
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+        allocator.deallocate(_data, _capacity);
+        _data = nullptr;
+    }
+
+    DArray(const DArray &other) noexcept
+        : _size(other._size), _capacity(other._size), _data(allocator.allocate(_capacity))
+    {
+        if (_size > 0)
+        {
+            if constexpr (std::is_trivially_copyable_v<T>)
+                std::memcpy(_data, other._data, _size * sizeof(T));
+            else
+                for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i, other._data[i]);
+        }
+    }
+
+    DArray(DArray &&other) noexcept : _size(other._size), _capacity(other._capacity), _data(other._data)
+    {
+        other._data = nullptr;
+        other._size = 0;
+        other._capacity = 0;
+    }
+
+    DArray(std::initializer_list<T> ilist) : _size(ilist.size()), _capacity(ilist.size())
+    {
+        _data = allocator.allocate(_size);
+        std::uninitialized_copy(ilist.begin(), ilist.end(), _data);
+    }
+
+    DArray &operator=(std::initializer_list<T> ilist) noexcept
+    {
+        if (_capacity < ilist.size())
+        {
+            pointer newData = allocator.allocate(ilist.size());
+            std::uninitialized_copy(ilist.begin(), ilist.end(), newData);
+            clear();
+            _data = newData;
+            _capacity = ilist.size();
+        }
+        else
+            std::copy(ilist.begin(), ilist.end(), _data);
+        _size = ilist.size();
+        return *this;
+    }
+
+    DArray &operator=(const DArray &other) noexcept
+    {
+        if (this != &other)
+        {
+            if constexpr (!std::is_trivially_destructible_v<T>)
+                for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+            _capacity = other._capacity;
+            const size_type oldSize = _size;
+            _size = other._size;
+            if (oldSize < _size) reallocate();
+            if constexpr (std::is_trivially_copyable_v<T>)
+                std::memcpy(_data, other._data, _size * sizeof(T));
+            else
+                for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i, other._data[i]);
+        }
+        return *this;
+    }
+
+    DArray &operator=(DArray &&other) noexcept
+    {
+        if (this != &other)
+        {
+            if constexpr (!std::is_trivially_destructible_v<T>)
+                for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+            allocator.deallocate(_data, _capacity);
+            _data = other._data;
+            _size = other._size;
+            _capacity = other._capacity;
+            other._data = nullptr;
+            other._size = 0;
+            other._capacity = 0;
+        }
+        return *this;
+    }
+
+    reference operator[](size_type index) { return _data[index]; }
+
+    const_reference operator[](size_type index) const { return _data[index]; }
+
+    bool operator==(const DArray &other) const
+    {
+        if (_size != other._size) return false;
+        for (size_type i = 0; i < _size; ++i)
+            if (_data[i] != other._data[i]) return false;
+        return true;
+    }
+
+    reference at(size_type index)
+    {
+        if (index >= _size) throw std::out_of_range("Index out of range");
+        return _data[index];
+    }
+
+    const_reference at(size_type index) const
+    {
+        if (index >= _size) throw std::out_of_range("Index out of range");
+        return _data[index];
+    }
+
+    reference front() { return *_data; }
+
+    const_reference front() const { return *_data; }
+
+    reference back() { return _data[_size - 1]; }
+
+    const_reference back() const { return _data[_size - 1]; }
+
+    iterator begin() noexcept { return iterator(_data); }
+
+    const_iterator begin() const noexcept { return iterator(_data); }
+
+    const_iterator cbegin() const noexcept { return iterator(_data); }
+
+    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+
+    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
+
+    iterator end() noexcept { return iterator(_data + _size); }
+
+    const_iterator end() const noexcept { return iterator(_data + _size); }
+
+    const_iterator cend() const noexcept { return iterator(_data + _size); }
+
+    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+
+    const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+
+    bool empty() const noexcept { return _size == 0; }
+
+    size_type size() const noexcept { return _size; }
+
+    size_type max_size() const noexcept { return allocator.max_size(); }
+
+    size_type capacity() const { return _capacity; }
+
+    const_pointer data() const { return _data; }
+    pointer data() { return _data; }
+
+    void reserve(size_type newCapacity)
+    {
+        if (newCapacity <= _capacity) return;
+        _capacity = newCapacity;
+        pointer newData = allocator.reallocate(_data, _capacity);
+        if (!newData) throw std::bad_alloc();
+        _data = newData;
+    }
+
+    void resize(size_type newSize)
+    {
+        if (newSize > _capacity)
+        {
+            _capacity = std::max(_capacity * 2, newSize);
+            pointer newData = allocator.allocate(_capacity);
+            if (!newData) throw std::bad_alloc();
+            if constexpr (std::is_trivially_copyable_v<T>)
+                std::memcpy(newData, _data, _size * sizeof(T));
+            else
+            {
+                for (size_type i = 0; i < _size; ++i)
+                {
+                    allocator.construct(newData + i, std::move(_data[i]));
+                    allocator.destroy(_data + i);
+                }
+            }
+            allocator.deallocate(_data, _capacity);
+            _data = newData;
+        }
+
+        if constexpr (!std::is_trivially_constructible_v<T>)
+        {
+            if (newSize > _size)
+                for (size_type i = _size; i < newSize; ++i) allocator.construct(_data + i);
+            else
+                for (size_type i = newSize; i < _size; ++i) allocator.destroy(_data + i);
+        }
+        _size = newSize;
+    }
+
+    void clear() noexcept
+    {
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+        _size = 0;
+    }
+
+    void push_back(const_reference value) noexcept
+    {
+        if (_size == _capacity) reallocate();
+        if constexpr (std::is_trivially_copyable_v<T>)
+            _data[_size] = value;
+        else
+            allocator.construct(_data + _size, value);
+        ++_size;
+    }
+
+    template <typename U>
+    void push_back(U &&value)
+    {
+        if (_size == _capacity) reallocate();
+        if constexpr (std::is_trivially_move_assignable_v<T>)
+            _data[_size] = std::forward<U>(value);
+        else
+        {
+            if ((_data + _size) == nullptr)
+            {
+                printf("size: %zu, capacity: %zu, data: %p\n", _size, _capacity, _data);
+                throw std::bad_alloc();
+            }
+            allocator.construct(_data + _size, std::forward<U>(value));
+        }
+        ++_size;
+    }
+
+    template <typename... Args>
+    void emplace_back(Args &&...args)
+    {
+        if (_size == _capacity) reallocate();
+        if constexpr (std::is_trivially_constructible_v<T>)
+            _data[_size] = T(std::forward<Args>(args)...);
+        else
+            allocator.construct(_data + _size, T(std::forward<Args>(args)...));
+        ++_size;
+    }
+
+    void pop_back() noexcept
+    {
+        if (_size == 0) return;
+        if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(_data + _size - 1);
+        --_size;
+    }
+
+    iterator erase(iterator pos);
+
+    iterator insert(iterator pos, const T &value);
+
+    template <typename InputIt>
+    void insert(iterator pos, InputIt first, InputIt last);
+
+    template <typename InputIt>
+    void assign(InputIt first, InputIt last)
+    {
+        size_type newSize = std::distance(first, last);
+        if (newSize > _capacity)
+        {
+            pointer newData = allocator.allocate(newSize);
+            std::uninitialized_copy(first, last, newData);
+            clear();
+            allocator.deallocate(_data, _capacity);
+            _data = newData;
+            _capacity = newSize;
+        }
+        else
+        {
+            if constexpr (!std::is_trivially_destructible<T>::value)
+                for (size_t i = newSize; i < _size; ++i) allocator.destroy(_data + i);
+            std::copy(first, last, _data);
+        }
+
+        _size = newSize;
+    }
+
+    void assign(std::initializer_list<T> ilist) { *this = ilist; }
+
+    void assign(size_type count, const_reference value)
+    {
+        if (count > _capacity)
+        {
+            pointer newData = allocator.allocate(count);
+            std::uninitialized_fill_n(newData, count, value);
+            clear();
+            allocator.deallocate(_data, _capacity);
+            _data = newData;
+            _capacity = count;
+        }
+        else
+            std::fill_n(_data, count, value);
+        _size = count;
+    }
+
+private:
+    size_type _size;
+    size_type _capacity;
+    pointer _data;
+
+    void reallocate()
+    {
+        _capacity = std::max(_capacity * 2, std::max((size_t)8UL, _capacity + 1));
+        pointer newData;
+        if constexpr (std::is_trivially_copyable_v<T>)
+        {
+            newData = allocator.reallocate(_data, _capacity);
+            if (!newData) throw std::bad_alloc();
+        }
+        else
+        {
+            newData = allocator.allocate(_capacity);
+            if (!newData) throw std::bad_alloc();
+            for (size_type i = 0; i < _size; ++i)
+            {
+                allocator.construct(newData + i, std::move(_data[i]));
+                allocator.destroy(_data + i);
+            }
+            allocator.deallocate(_data, _capacity);
+        }
+        _data = newData;
+    }
+
+    template <typename Iter, typename Dest>
+    void move_construct(Iter start, Iter end, Dest dest)
+    {
+        for (; start != end; ++start, ++dest) new (dest) T(std::move(*start));
+    }
+
+    template <typename Iter, typename Dest>
+    void copy_construct(Iter start, Iter end, Dest dest)
+    {
+        for (; start != end; ++start, ++dest) new (dest) T(*start);
+    }
+
+    template <typename Iter>
+    void move_elements_backward(Iter start, Iter end, Iter destEnd)
+    {
+        while (end != start) new (--destEnd) T(std::move(*--end));
+    }
+};
+
+template <typename T, template <typename> class Allocator>
+typename DArray<T, Allocator>::ArrayAllocator DArray<T, Allocator>::allocator{};
+
+template <typename T, template <typename> class Allocator>
+class DArray<T, Allocator>::Iterator
+{
+public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using pointer = DArray::pointer;
+    using reference = T &;
+    using const_reference = const T &;
+
+    Iterator(pointer ptr) : _ptr(ptr) {}
+
+    reference operator*() { return *_ptr; }
+    reference operator*() const { return *_ptr; }
+    pointer operator->() { return _ptr; }
+    pointer operator->() const { return _ptr; }
+
+    Iterator &operator++()
+    {
+        _ptr++;
+        return *this;
+    }
+    Iterator operator++(int)
+    {
+        Iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
+    Iterator &operator--()
+    {
+        _ptr--;
+        return *this;
+    }
+    Iterator operator--(int)
+    {
+        Iterator temp = *this;
+        --(*this);
+        return temp;
+    }
+
+    friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr; }
+    friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr; }
+
+    Iterator &operator+=(difference_type movement)
+    {
+        _ptr += movement;
+        return *this;
+    }
+    Iterator &operator-=(difference_type movement)
+    {
+        _ptr -= movement;
+        return *this;
+    }
+    Iterator operator+(difference_type movement) const { return Iterator(_ptr + movement); }
+    Iterator operator-(difference_type movement) const { return Iterator(_ptr - movement); }
+
+    difference_type operator-(const Iterator &other) const { return _ptr - other._ptr; }
+
+    friend bool operator<(const Iterator &a, const Iterator &b) { return a._ptr < b._ptr; }
+    friend bool operator>(const Iterator &a, const Iterator &b) { return a._ptr > b._ptr; }
+    friend bool operator<=(const Iterator &a, const Iterator &b) { return a._ptr <= b._ptr; }
+    friend bool operator>=(const Iterator &a, const Iterator &b) { return a._ptr >= b._ptr; }
+
+    reference operator[](difference_type offset) const { return *(*this + offset); }
+
+private:
+    pointer _ptr;
+};
+
+template <typename T, template <typename> class Allocator>
+DArray<T, Allocator>::iterator DArray<T, Allocator>::erase(iterator pos)
+{
+    if (pos >= begin() && pos < end())
+    {
+        std::ptrdiff_t index = pos - begin();
+        std::move(_data + index + 1, _data + _size, _data + index);
+        --_size;
+        if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(_data + _size);
+        return iterator(_data + index);
+    }
+    return end();
+}
+
+template <typename T, template <typename> class Allocator>
+DArray<T, Allocator>::iterator DArray<T, Allocator>::insert(Iterator pos, const T &value)
+{
+    if (pos < begin() || pos > end()) return end();
+    std::ptrdiff_t index = pos - begin();
+    if (_size == _capacity) reserve(_capacity == 0 ? 1 : _capacity * 2);
+    std::move_backward(_data + index, _data + _size, _data + _size + 1);
+    if constexpr (std::is_trivially_copyable_v<T>)
+        _data[index] = value;
+    else
+        allocator.construct(_data + index, value);
+    ++_size;
+    return iterator(_data + index);
+}
+
+template <typename T, template <typename> class Allocator>
+template <typename InputIt>
+void DArray<T, Allocator>::insert(iterator pos, InputIt first, InputIt last)
+{
+    size_type posIndex = pos - _data;
+    size_type insertCount = std::distance(first, last);
+    if (_size + insertCount > _capacity)
+    {
+        size_type newCapacity = std::max(_capacity * 2, _size + insertCount);
+        pointer newData = allocator.allocate(newCapacity);
+        if (!newData) throw std::bad_alloc();
+
+        move_construct(_data, _data + posIndex, newData);
+        copy_construct(first, last, newData + posIndex);
+        move_construct(_data + posIndex, _data + _size, newData + posIndex + insertCount);
+
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+        allocator.deallocate(_data, _capacity);
+        _data = newData;
+        _size += insertCount;
+        _capacity = newCapacity;
+    }
+    else
+    {
+        move_elements_backward(_data + posIndex, _data + _size, _data + posIndex + insertCount);
+        copy_construct(first, last, _data + posIndex);
+        _size += insertCount;
+    }
+}
+
+template <typename T, template <typename> class Allocator>
+class DArray<T, Allocator>::ReverseIterator
+{
+public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using pointer = typename Iterator::pointer;
+    using reference = typename Iterator::reference;
+
+    ReverseIterator(pointer ptr = nullptr) : _base(ptr) {}
+    explicit ReverseIterator(const Iterator &iter) : _base(iter) {}
+
+    ReverseIterator &operator++()
+    {
+        --_base;
+        return *this;
+    }
+
+    ReverseIterator operator++(int)
+    {
+        ReverseIterator tmp = *this;
+        --_base;
+        return tmp;
+    }
+
+    ReverseIterator &operator--()
+    {
+        ++_base;
+        return *this;
+    }
+
+    ReverseIterator operator--(int)
+    {
+        ReverseIterator tmp = *this;
+        ++_base;
+        return tmp;
+    }
+
+    reference operator*() const
+    {
+        Iterator tmp = _base;
+        return *--tmp;
+    }
+
+    pointer operator->() const
+    {
+        Iterator tmp = _base;
+        --tmp;
+        return tmp.operator->();
+    }
+
+    ReverseIterator &operator+=(difference_type n)
+    {
+        _base -= n;
+        return *this;
+    }
+
+    ReverseIterator operator+(difference_type n) const { return ReverseIterator(_base - n); }
+
+    ReverseIterator &operator-=(difference_type n)
+    {
+        _base += n;
+        return *this;
+    }
+
+    ReverseIterator operator-(difference_type n) const { return ReverseIterator(_base + n); }
+
+    difference_type operator-(const ReverseIterator &other) const { return other._base - _base; }
+
+    bool operator==(const ReverseIterator &other) const { return _base == other._base; }
+
+    bool operator!=(const ReverseIterator &other) const { return _base != other._base; }
+
+    reference operator[](difference_type n) const { return *(*this + n); }
+
+private:
+    Iterator _base;
+};
+
+#endif // APP_CORE_STD_DArray

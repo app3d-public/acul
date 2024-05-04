@@ -22,8 +22,8 @@ namespace logging
         localtime_r(&time_t_now, &tm_now);
 #endif
 
-        return f("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
-                            tm_now.tm_mday, tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
+        return f("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1, tm_now.tm_mday,
+                 tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
     }
 
     std::string ThreadIdTokenHandler::handle(const LogMessageData &context) const
@@ -83,14 +83,12 @@ namespace logging
 
     FileLogger::~FileLogger()
     {
-        if (_fs.is_open())
-            _fs.close();
+        if (_fs.is_open()) _fs.close();
     }
 
     void FileLogger::write(const std::string &message)
     {
-        if (_fs.is_open())
-            _fs << message << std::endl;
+        if (_fs.is_open()) _fs << message << std::endl;
     }
 
     void Logger::setPattern(const std::string &pattern)
@@ -100,7 +98,7 @@ namespace logging
         std::sregex_iterator it(pattern.begin(), pattern.end(), token_regex);
         std::sregex_iterator end;
 
-        std::size_t last_pos = 0;
+        size_t last_pos = 0;
         for (; it != end; ++it)
         {
             std::size_t pos = it->position();
@@ -110,7 +108,7 @@ namespace logging
                 _tokens->push_back(std::make_shared<TextTokenHandler>(text));
             }
 
-            std::unordered_map<std::string, std::shared_ptr<TokenHandler>> tokenHandlers = {
+            HashMap<std::string, std::shared_ptr<TokenHandler>> tokenHandlers = {
                 {"ascii_time", std::make_shared<TimeTokenHandler>()},
                 {"level_name", std::make_shared<LevelNameTokenHandler>()},
                 {"thread", std::make_shared<ThreadIdTokenHandler>()},
@@ -120,8 +118,7 @@ namespace logging
 
             std::string token = it->str(1);
             auto handlerIter = tokenHandlers.find(token);
-            if (handlerIter != tokenHandlers.end())
-                _tokens->push_back(handlerIter->second);
+            if (handlerIter != tokenHandlers.end()) _tokens->push_back(handlerIter->second);
 
             last_pos = pos + it->length();
         }
@@ -135,14 +132,13 @@ namespace logging
     std::string Logger::getParsedStr(const LogMessageData &context) const
     {
         std::stringstream ss;
-        for (auto &token : *_tokens)
-            ss << token->handle(context);
+        for (auto &token : *_tokens) ss << token->handle(context);
         return ss.str();
     }
 
     LogTaskManager::LogTaskManager() { _taskThread = std::thread(&LogTaskManager::taskWorkerThread, this); }
 
-    LogTaskManager &LogTaskManager::getSingleton()
+    LogTaskManager &LogTaskManager::global()
     {
         static LogTaskManager singleton;
         return singleton;
@@ -152,7 +148,7 @@ namespace logging
     {
         while (_running)
         {
-            ITask* task;
+            ITask *task;
             if (_tasks.try_pop(task))
             {
                 task->onRun();
@@ -176,7 +172,7 @@ namespace logging
         _taskThread.join();
     }
 
-    LogManager &LogManager::getSingleton()
+    LogManager &LogManager::global()
     {
         static LogManager singleton;
         return singleton;

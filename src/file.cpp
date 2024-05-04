@@ -1,12 +1,13 @@
 #include <core/file/file.hpp>
 #include <core/log.hpp>
 #include <core/std/string.hpp>
+#include <oneapi/tbb/enumerable_thread_specific.h>
 
 namespace io
 {
     namespace file
     {
-        bool readBinary(const std::string &filename, Array<char> &buffer)
+        bool readBinary(const std::string &filename, DArray<char> &buffer)
         {
             FILE *file = fopen(filename.c_str(), "rb");
             if (!file)
@@ -32,8 +33,7 @@ namespace io
         bool writeBinary(const std::string &filename, const char *buffer, size_t size)
         {
             std::ofstream file(filename, std::ios::binary | std::ios::trunc);
-            if (!file)
-                return false;
+            if (!file) return false;
 
             file.write(buffer, size);
             file.close();
@@ -99,6 +99,50 @@ namespace io
             return true;
         }
 
+        void fillLineBuffer(const char *data, size_t size, DArray<std::string_view> &dst)
+        {
+            size_t threadCount = tbb::this_task_arena::max_concurrency();
+            DArray<size_t> blockIndices(threadCount + 1);
+            DArray<size_t> lineCounts(threadCount, 0);
+
+            for (size_t i = 0; i < threadCount; ++i) { blockIndices[i] = i * (size / threadCount); }
+            blockIndices[threadCount] = size;
+
+            // Adjust each block to start at the beginning of a line
+            for (size_t i = 1; i < threadCount; ++i)
+            {
+                while (blockIndices[i] < size && data[blockIndices[i]] != '\n' && data[blockIndices[i]] != '\0')
+                    ++blockIndices[i];
+                if (blockIndices[i] < size) ++blockIndices[i]; // move past the newline
+            }
+
+            oneapi::tbb::enumerable_thread_specific<DArray<std::string_view>> local_results;
+            oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, threadCount),
+                                      [&](const tbb::blocked_range<size_t> &r) {
+                                          auto &local_dst = local_results.local();
+                                          for (size_t i = r.begin(); i != r.end(); ++i)
+                                          {
+                                              const char *blockStart = data + blockIndices[i];
+                                              const char *blockEnd = data + blockIndices[i + 1];
+                                              const char *lineStart = blockStart;
+                                              for (const char *p = blockStart; p < blockEnd; ++p)
+                                              {
+                                                  if (*p == '\n' || *p == '\0')
+                                                  {
+                                                      local_dst.emplace_back(lineStart, p - lineStart);
+                                                      lineStart = p + 1;
+                                                  }
+                                              }
+                                              // Handle the last line in the block
+                                              if (lineStart < blockEnd)
+                                                  local_dst.emplace_back(lineStart, blockEnd - lineStart);
+                                          }
+                                      });
+
+            // Combine all local results into the main vector
+            for (auto &local_vec : local_results) dst.insert(dst.end(), local_vec.begin(), local_vec.end());
+        }
+
         std::istream &safeGetline(std::istream &is, std::string &t)
         {
             t.clear();
@@ -120,13 +164,11 @@ namespace io
                     case '\n':
                         return is;
                     case '\r':
-                        if (sb->sgetc() == '\n')
-                            sb->sbumpc();
+                        if (sb->sgetc() == '\n') sb->sbumpc();
                         return is;
                     case std::streambuf::traits_type::eof():
                         // Also handle the case when the last line has no line ending
-                        if (t.empty())
-                            is.setstate(std::ios::eofbit);
+                        if (t.empty()) is.setstate(std::ios::eofbit);
                         return is;
                     default:
                         t += (char)c;
@@ -140,8 +182,7 @@ namespace io
             try
             {
                 std::filesystem::path targetDirPath = dst.parent_path();
-                if (!std::filesystem::exists(targetDirPath))
-                    std::filesystem::create_directories(targetDirPath);
+                if (!std::filesystem::exists(targetDirPath)) std::filesystem::create_directories(targetDirPath);
 
                 std::filesystem::copy(src, dst, options);
                 return true;

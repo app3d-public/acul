@@ -8,6 +8,7 @@
 #include <string_view>
 #include "../std/darray.hpp"
 #include "../api.hpp"
+#include "core/log.hpp"
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -48,7 +49,7 @@ namespace io
          * @param size Size of the data buffer
          * @param dst Dynamic array to store the parsed lines
          */
-        APPLIB_API void fillLineBuffer(const char *data, size_t size, DArray<std::string_view> &dst);
+        void fillLineBuffer(const char *data, size_t size, DArray<std::string_view> &dst);
 
         /**
          * Reads a file in blocks using in mutithread context, splits it into lines, and processes each line using a
@@ -105,6 +106,7 @@ namespace io
             {
                 DArray<std::string_view> lines;
                 fillLineBuffer(fileData, fileSize.QuadPart, lines);
+                logInfo("File lines: %d", lines.size());
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, lines.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
                                               for (size_t i = range.begin(); i != range.end(); ++i)
@@ -177,17 +179,6 @@ namespace io
          * otherwise.
          */
         APPLIB_API bool writeFileByBlock(const std::string &filename, const char *buffer, size_t blockSize, std::string &error);
-
-        /**
-         * @brief std::getline function implementation providing support for Windows &
-         * Unix line endings
-         * @see
-         * https://stackoverflow.com/questions/6089231/getting-std-ifstream-to-handle-lf-cr-and-crlf
-         * @param is Input stream
-         * @param t Dst std::string buffer
-         * @return Current stream
-         */
-        APPLIB_API std::istream &safeGetline(std::istream &is, std::string &t);
 
         /**
          * @brief Copy a file from source path to destination path.

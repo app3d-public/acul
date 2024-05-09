@@ -1,7 +1,7 @@
+#include <core/api.hpp>
 #include <core/std/darray.hpp>
 #include <cstddef>
 #include <string_view>
-#include <core/api.hpp>
 
 namespace io
 {
@@ -11,6 +11,7 @@ namespace io
         {
             const char *dataEnd = data + size;
             dst.reserve(size / 50);
+
             __m256i newline = _mm256_set1_epi8('\n');
             __m256i return_carriage = _mm256_set1_epi8('\r');
             const char *lineStart = data;
@@ -19,31 +20,49 @@ namespace io
             while (p < dataEnd)
             {
                 const char *next_p = (p + 32 <= dataEnd) ? p + 32 : dataEnd;
-                __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(p));
+
+                // Ensure aligned memory access (if necessary)
+                __m256i chunk = _mm256_loadu_si256((const __m256i *)p);
+
                 int mask_nl = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, newline));
                 int mask_cr = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, return_carriage));
                 int mask = mask_nl | mask_cr;
 
                 if (mask == 0)
-                    p = next_p;
-                else
                 {
-                    while (mask != 0)
-                    {
-                        int index = __builtin_ctz(mask); // Get index of first set bit
-                        const char *newlinePos = p + index;
-                        if (newlinePos >= dataEnd) break; // Stop if we reached the end of data
-
-                        if (newlinePos > lineStart) dst.emplace_back(lineStart, newlinePos - lineStart);
-                        lineStart = newlinePos + 1;
-                        p = newlinePos + 1;
-                        mask >>= (index + 1);
-                    }
+                    p = next_p;
                     continue;
                 }
 
-                if (next_p == dataEnd && lineStart < dataEnd) dst.emplace_back(lineStart, dataEnd - lineStart);
+                int i = 0;
+                while (mask != 0 && p < next_p)
+                {
+                    int index = __builtin_ctz(mask);
+                    const char *newlinePos = p + index;
+
+                    if (newlinePos > lineStart)
+                    {
+                        size_t lineLen = newlinePos - lineStart;
+                        if (lineLen > 0 && lineStart[lineLen - 1] == '\r') --lineLen;
+                        dst.emplace_back(lineStart, lineLen);
+                    }
+
+                    lineStart = newlinePos + 1; // Skip newline or carriage return
+                    p = newlinePos + 1;         // Advance pointer
+                    mask >>= (index + 1);
+                    ++i;
+                }
+
+                if (i < 32) p = next_p;
+            }
+
+            if (lineStart < dataEnd)
+            {
+                size_t lineLen = dataEnd - lineStart;
+                if (lineLen > 0 && lineStart[lineLen - 1] == '\r') --lineLen;
+                dst.emplace_back(lineStart, lineLen);
             }
         }
+
     } // namespace file
 } // namespace io

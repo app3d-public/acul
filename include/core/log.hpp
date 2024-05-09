@@ -157,7 +157,7 @@ namespace logging
 
         std::ostream &stream() override { return std::cout; }
 
-        void write(const std::string &message) override { std::cout << message << std::endl; }
+        void write(const std::string &message) override { std::cout << message; }
     };
 
     /// \brief Represents a task manager specifically for logging tasks.

@@ -88,7 +88,7 @@ namespace logging
 
     void FileLogger::write(const std::string &message)
     {
-        if (_fs.is_open()) _fs << message << std::endl;
+        if (_fs.is_open()) _fs << message;
     }
 
     void Logger::setPattern(const std::string &pattern)

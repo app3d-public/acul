@@ -6,9 +6,9 @@
 #include <oneapi/tbb/task_group.h>
 #include <string>
 #include <string_view>
-#include "../std/darray.hpp"
 #include "../api.hpp"
-#include "core/log.hpp"
+#include "../std/darray.hpp"
+
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -106,7 +106,6 @@ namespace io
             {
                 DArray<std::string_view> lines;
                 fillLineBuffer(fileData, fileSize.QuadPart, lines);
-                logInfo("File lines: %d", lines.size());
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, lines.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
                                               for (size_t i = range.begin(); i != range.end(); ++i)
@@ -178,7 +177,8 @@ namespace io
          * @return True if the data was successfully written to the file, false
          * otherwise.
          */
-        APPLIB_API bool writeFileByBlock(const std::string &filename, const char *buffer, size_t blockSize, std::string &error);
+        APPLIB_API bool writeFileByBlock(const std::string &filename, const char *buffer, size_t blockSize,
+                                         std::string &error);
 
         /**
          * @brief Copy a file from source path to destination path.
@@ -189,7 +189,7 @@ namespace io
          * @return true if the file is successfully copied, false otherwise.
          */
         APPLIB_API bool copyFile(const std::filesystem::path &src, const std::filesystem::path &dst,
-                      const std::filesystem::copy_options options);
+                                 const std::filesystem::copy_options options);
     } // namespace file
 } // namespace io
 

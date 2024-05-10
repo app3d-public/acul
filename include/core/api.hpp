@@ -14,5 +14,4 @@
 #else
     #define APPLIB_API API_IMPORT
 #endif
-
 #endif // APPLIB_API_H

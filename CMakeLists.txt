@@ -14,8 +14,12 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/deps/external/half/include")
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC -DAPPLIB_BUILD)
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
+if(USE_ASAN)
+    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif()
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 find_package(TBB REQUIRED)
 target_link_libraries(${PROJECT_NAME} TBB::tbb TBB::tbbmalloc)
 

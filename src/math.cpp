@@ -22,21 +22,21 @@ namespace math
 
 namespace glm
 {
-    bool operator<(const glm::vec3 &a, const glm::vec3 &b)
+    APPLIB_API bool operator<(const glm::vec3 &a, const glm::vec3 &b)
     {
         if (a.x != b.x) return a.x < b.x;
         if (a.y != b.y) return a.y < b.y;
         return a.z < b.z;
     }
 
-    bool operator==(const glm::vec3 &a, const glm::vec3 &b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    APPLIB_API bool operator==(const glm::vec3 &a, const glm::vec3 &b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
 
-    bool operator<(const glm::vec2 &a, const glm::vec2 &b)
+    APPLIB_API bool operator<(const glm::vec2 &a, const glm::vec2 &b)
     {
         if (a.x != b.x) return a.x < b.x;
         if (a.y != b.y) return a.y < b.y;
         return false;
     }
 
-    bool operator==(const glm::vec2 &a, const glm::vec2 &b) { return a.x == b.x && a.y == b.y; }
+    APPLIB_API bool operator==(const glm::vec2 &a, const glm::vec2 &b) { return a.x == b.x && a.y == b.y; }
 } // namespace glm

@@ -1,9 +1,9 @@
 #ifndef APP_CORE_EVENT_H
 #define APP_CORE_EVENT_H
 
-#include <core/api.hpp>
 #include <any>
 #include <cassert>
+#include <core/api.hpp>
 #include <core/std/basic_types.hpp>
 #include <core/std/darray.hpp>
 #include <functional>

@@ -89,15 +89,15 @@ namespace events
         void removeListener(iterator listenerIter, const std::string &event);
 
         template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>, typename... Args>
-        void emit(const std::string &eventName, Args &&...args)
+        void dispatch(const std::string &eventName, Args &&...args)
         {
             E event(eventName, std::forward<Args>(args)...);
-            emit(event);
+            dispatch(event);
         }
 
-        // Emits an event, invoking all listeners subscribed to this event.
+        // dispatchs an event, invoking all listeners subscribed to this event.
         template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
-        void emit(E &event)
+        void dispatch(E &event)
         {
             auto it = _listeners.find(event.name());
             if (it != _listeners.end())
@@ -132,7 +132,7 @@ namespace events
         {
             while (!_pendingEvents.empty())
             {
-                emit(_pendingEvents.front());
+                dispatch(_pendingEvents.front());
                 _pendingEvents.pop();
             }
         }

@@ -2,7 +2,6 @@
 #include <core/std/basic_types.hpp>
 #include <glm/glm.hpp>
 
-
 namespace math
 {
     APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, Point2D extent)
@@ -50,6 +49,16 @@ namespace math
         glm::vec3 intersection;
         if (intersectRayWithPlane(rayOrigin, rayDirection, planeNormal, 0.0f, intersection)) return -intersection;
         return {0.0f, 0.0f, 0.0f};
+    }
+
+    APPLIB_API f32 round10(f32 value)
+    {
+        if (value == 0) return 0;
+        f32 sign = (value > 0) ? 1.0f : -1.0f;
+        value = abs(value);
+        int exponent = static_cast<int>(round(log10(value)));
+        f32 base = pow(10, exponent);
+        return base * sign;
     }
 } // namespace math
 

@@ -19,7 +19,7 @@ namespace math
     // @return A pair of the ray's origin and direction
     APPLIB_API std::pair<glm::vec3, glm::vec3> createRay(const glm::vec2 &ndcPos, const glm::mat4 &viewInverse,
                                                          const glm::mat4 &projection);
-                                                         
+
     // Intersects a ray with a plane and computes the intersection point if it exists.
     // @param rayOrigin The origin of the ray
     // @param rayDirection The direction of the ray
@@ -44,6 +44,13 @@ namespace math
         Y,
         Z
     };
+
+    /**
+     * Rounds a floating-point number to the nearest power of 10.
+     * @param value The value to be rounded.
+     * @return The rounded value.
+     */
+    APPLIB_API f32 round10(f32 value);
 } // namespace math
 
 namespace glm

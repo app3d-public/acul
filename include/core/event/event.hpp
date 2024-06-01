@@ -69,10 +69,10 @@ namespace events
     struct ListenerInfo;
 
     // Manages event listeners and dispatches events to them.
-    extern APPLIB_API class EventManager
+    extern APPLIB_API class APPLIB_API EventManager
     {
     public:
-        using iterator = MultiMap<int, std::shared_ptr<BaseEventListener>>::iterator;
+        using iterator = MultiMap<int, BaseEventListener *>::iterator;
 
         HashMap<void *, DArray<ListenerInfo>> pointers;
 
@@ -81,7 +81,7 @@ namespace events
         iterator addListener(const std::string &event, std::function<void(E &)> listener, int priority = 5)
         {
             static_assert(std::is_base_of<Event, E>::value, "E must inherit from Event");
-            auto eventListener = std::make_shared<EventListener<E>>(listener);
+            auto eventListener = new EventListener<E>(listener);
             _listeners[event].emplace(priority, eventListener);
             return std::prev(_listeners[event].end());
         }
@@ -90,8 +90,12 @@ namespace events
         bool exist(const std::string &event) const { return _listeners.count(event) > 0; }
 
         // Removes a listener using its iterator.
-        void removeListener(iterator listenerIter, const std::string &event);
+        void removeListener(BaseEventListener *listener, const std::string &event);
 
+        // Dispatches an event by name, creating an event instance with the provided arguments.
+        // Parameters:
+        // - eventName: The name of the event to dispatch.
+        // - args: Arguments to pass to the event constructor.
         template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>, typename... Args>
         void dispatch(const std::string &eventName, Args &&...args)
         {
@@ -99,7 +103,7 @@ namespace events
             dispatch(event);
         }
 
-        // dispatchs an event, invoking all listeners subscribed to this event.
+        // Dispatchs an event, invoking all listeners subscribed to this event.
         template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
         void dispatch(E &event)
         {
@@ -108,7 +112,7 @@ namespace events
             {
                 for (const auto &pair : it->second)
                 {
-                    auto listener = std::static_pointer_cast<EventListener<E>>(pair.second);
+                    auto listener = static_cast<EventListener<E> *>(pair.second);
                     listener->invoke(event);
                 }
             }
@@ -116,22 +120,25 @@ namespace events
                 _pendingEvents.push(std::move(event));
         }
 
+        // Retrieves a list of all listeners registered for a specific event.
+        // Returns a dynamic array of pointers to listeners for the event.
         template <typename E>
-        DArray<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
+        DArray<EventListener<E> *> getListeners(const std::string &event)
         {
-            DArray<std::shared_ptr<EventListener<E>>> result;
+            DArray<EventListener<E> *> result;
             auto it = _listeners.find(event);
             if (it != _listeners.end())
             {
                 for (const auto &pair : it->second)
                 {
-                    auto listener = std::static_pointer_cast<EventListener<E>>(pair.second);
+                    auto listener = static_cast<EventListener<E> *>(pair.second);
                     result.push_back(listener);
                 }
             }
             return result;
         }
 
+        // Processes all events that are pending in the queue.
         void dispatchPendingEvents()
         {
             while (!_pendingEvents.empty())
@@ -141,25 +148,26 @@ namespace events
             }
         }
 
+        // Clears all registered listeners from the manager, ensuring all memory is properly freed.
+        void clear();
+
     private:
-        HashMap<std::string, MultiMap<int, std::shared_ptr<BaseEventListener>>> _listeners;
+        HashMap<std::string, MultiMap<int, BaseEventListener *>> _listeners;
         Queue<Event> _pendingEvents;
     } mng;
 
     struct ListenerInfo
     {
-        EventManager::iterator listenerIter;
+        BaseEventListener *listener;
         std::string eventName;
     };
-
-    inline void addListenerID(void *owner, EventManager::iterator id, const std::string &eventName);
 
     // Binds a listener to an event of a specific type.
     template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
     void bindEvent(void *owner, const std::string &event, std::function<void(E &)> listener, int priority = 5)
     {
         auto id = mng.addListener<E>(event, listener, priority);
-        mng.pointers[owner].emplace_back(id, event);
+        mng.pointers[owner].emplace_back(id->second, event);
     }
 
     // Binds a listener to a list of events of a specific type.

@@ -66,19 +66,23 @@ namespace events
         void invoke(E &event) { _listener(event); }
     };
 
+    struct ListenerInfo;
+
     // Manages event listeners and dispatches events to them.
     extern APPLIB_API class EventManager
     {
     public:
-        using iterator = DArray<std::shared_ptr<BaseEventListener>>::iterator;
+        using iterator = MultiMap<int, std::shared_ptr<BaseEventListener>>::iterator;
+
+        HashMap<void *, DArray<ListenerInfo>> pointers;
 
         // Adds a listener for a specific type of event and returns an iterator to it.
         template <typename E>
-        iterator addListener(const std::string &event, std::function<void(E &)> listener)
+        iterator addListener(const std::string &event, std::function<void(E &)> listener, int priority = 5)
         {
             static_assert(std::is_base_of<Event, E>::value, "E must inherit from Event");
             auto eventListener = std::make_shared<EventListener<E>>(listener);
-            _listeners[event].push_back(eventListener);
+            _listeners[event].emplace(priority, eventListener);
             return std::prev(_listeners[event].end());
         }
 
@@ -102,9 +106,9 @@ namespace events
             auto it = _listeners.find(event.name());
             if (it != _listeners.end())
             {
-                for (const auto &baseListener : it->second)
+                for (const auto &pair : it->second)
                 {
-                    auto listener = std::static_pointer_cast<EventListener<E>>(baseListener);
+                    auto listener = std::static_pointer_cast<EventListener<E>>(pair.second);
                     listener->invoke(event);
                 }
             }
@@ -112,16 +116,16 @@ namespace events
                 _pendingEvents.push(std::move(event));
         }
 
-        template <typename E, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E>
         DArray<std::shared_ptr<EventListener<E>>> getListeners(const std::string &event)
         {
             DArray<std::shared_ptr<EventListener<E>>> result;
             auto it = _listeners.find(event);
             if (it != _listeners.end())
             {
-                for (const auto &baseListener : it->second)
+                for (const auto &pair : it->second)
                 {
-                    auto listener = std::static_pointer_cast<EventListener<E>>(baseListener);
+                    auto listener = std::static_pointer_cast<EventListener<E>>(pair.second);
                     result.push_back(listener);
                 }
             }
@@ -138,7 +142,7 @@ namespace events
         }
 
     private:
-        HashMap<std::string, DArray<std::shared_ptr<BaseEventListener>>> _listeners;
+        HashMap<std::string, MultiMap<int, std::shared_ptr<BaseEventListener>>> _listeners;
         Queue<Event> _pendingEvents;
     } mng;
 
@@ -148,39 +152,28 @@ namespace events
         std::string eventName;
     };
 
-    // Abstract base class for registries that manage event listener bindings.
-    class APPLIB_API ListenerRegistry
+    inline void addListenerID(void *owner, EventManager::iterator id, const std::string &eventName);
+
+    // Binds a listener to an event of a specific type.
+    template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+    void bindEvent(void *owner, const std::string &event, std::function<void(E &)> listener, int priority = 5)
     {
-    public:
-        virtual ~ListenerRegistry() { unbindListeners(); }
+        auto id = mng.addListener<E>(event, listener, priority);
+        mng.pointers[owner].emplace_back(id, event);
+    }
 
-        // Adds an iterator to a listener to the internal collection.
-        void addListenerID(EventManager::iterator id, const std::string &eventName)
-        {
-            _listeners.push_back(ListenerInfo(id, eventName));
-        }
+    // Binds a listener to a list of events of a specific type.
+    template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+    void bindEvent(void *owner, std::initializer_list<std::string> events, F listener, int priority = 5)
+    {
+        for (const auto &event : events) bindEvent<E>(owner, event, listener, priority);
+    }
 
-        // Unbinds all listeners managed by this registry from the event manager.
-        void unbindListeners();
-
-        // Binds a listener to an event of a specific type.
-        template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
-        void bindEvent(const std::string &event, std::function<void(E &)> listener)
-        {
-            auto id = mng.addListener<E>(event, listener);
-            addListenerID(id, event);
-        }
-
-        // Binds a listener to a list of events of a specific type.
-        template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
-        void bindEvent(std::initializer_list<std::string> events, F listener)
-        {
-            for (const auto &event : events) bindEvent<E>(event, listener);
-        }
-
-    private:
-        DArray<ListenerInfo> _listeners;
-    };
+    /**
+    ** Unbinds all listeners managed by this registry from the event manager.
+    ** \param owner The owner of the listeners.
+    */
+    APPLIB_API void unbindListeners(void *owner);
 } // namespace events
 
 namespace std

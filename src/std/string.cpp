@@ -1,4 +1,5 @@
 #include <core/std/string.hpp>
+#include <cstdarg>
 
 std::u16string convertUTF8toUTF16(const std::string &src)
 {
@@ -66,17 +67,14 @@ std::u16string trim(const std::u16string &inputStr, size_t max)
             output += v;
             if (v != ' ')
             {
-                if (from == -1)
-                    from = output.size() - 1;
+                if (from == -1) from = output.size() - 1;
                 length = output.size() - 1;
             }
         }
     }
-    if (from == -1 || length == -1)
-        return u"";
+    if (from == -1 || length == -1) return u"";
     size_t to = length - from + 1;
-    if (to > max)
-        to = max;
+    if (to > max) to = max;
     return output.substr(from, to);
 }
 
@@ -86,10 +84,42 @@ std::string trim(const std::string &inputStr, size_t max)
     return convertUTF16toUTF8(u16string);
 }
 
+std::string f(const char *format, ...) noexcept
+{
+    std::string result;
+    va_list args;
+    va_start(args, format);
+    int size = snprintf(nullptr, 0, format, args) + 1;
+    if (size <= 1)
+        result = "";
+    else
+    {
+        std::unique_ptr<char[]> buf(new char[size]);
+        snprintf(buf.get(), size, format, args);
+        result = std::string(buf.get(), buf.get() + size - 1);
+    }
+    va_end(args);
+    return result;
+}
+
+std::string f(const char* format, va_list args) noexcept
+{
+    std::string result;
+    int size = vsnprintf(nullptr, 0, format, args) + 1;
+    if (size <= 1)
+        result = "";
+    else
+    {
+        std::unique_ptr<char[]> buf(new char[size]);
+        vsnprintf(buf.get(), size, format, args);
+        result = std::string(buf.get(), buf.get() + size - 1);
+    }
+    return result;
+}
+
 int iToStr(int value, char *buffer, size_t bufferSize)
 {
-    if (bufferSize < 2)
-        return 0;
+    if (bufferSize < 2) return 0;
 
     char *ptr = buffer;
 
@@ -108,7 +138,7 @@ int iToStr(int value, char *buffer, size_t bufferSize)
         if (bufferSize >= 2)
         {
             *ptr = '0';
-            ptr++;
+            ++ptr;
             return 1;
         }
         else
@@ -122,15 +152,13 @@ int iToStr(int value, char *buffer, size_t bufferSize)
         numDigits++;
         tempValue /= 10;
     }
-    if (numDigits > bufferSize - 1)
-        return 0;
+    if (numDigits > bufferSize - 1) return 0;
 
     // Reverse order array for storing digits
     char reverseOrder[numDigits];
 
     int i = 0;
-    do
-    {
+    do {
         reverseOrder[i++] = value % 10;
         value /= 10;
     } while (value);
@@ -146,8 +174,7 @@ int iToStr(int value, char *buffer, size_t bufferSize)
 
 int fToStr(float value, char *buffer, size_t bufferSize, int precision)
 {
-    if (bufferSize < 2)
-        return 0;
+    if (bufferSize < 2) return 0;
 
     char *ptr = buffer;
 
@@ -198,15 +225,13 @@ int fToStr(float value, char *buffer, size_t bufferSize, int precision)
         }
     }
     int intValue = (int)value;
-    if (numDigits > bufferSize - 1)
-        return 0;
+    if (numDigits > bufferSize - 1) return 0;
 
     // Reverse order array for storing digits
     char reverseOrder[numDigits];
 
     int i = 0;
-    do
-    {
+    do {
         reverseOrder[i++] = intValue % 10;
         intValue /= 10;
     } while (intValue);
@@ -218,11 +243,9 @@ int fToStr(float value, char *buffer, size_t bufferSize, int precision)
         ptr++;
     }
 
-    // Добавление десятичной точки, если есть дробная часть
     if (value - (int)value > 0 || precision > 0)
     {
-        if (bufferSize - numDigits - 2 < 0)
-            return 0;
+        if (bufferSize - numDigits - 2 < 0) return 0;
 
         *ptr = '.';
         ptr++;
@@ -255,8 +278,7 @@ int fToStr(float value, char *buffer, size_t bufferSize, int precision)
 int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offset)
 {
     int written = fToStr(vec.x, buffer + offset, bufferSize - offset, 5);
-    if (written == 0)
-        return 0;
+    if (written == 0) return 0;
     offset += written;
     if (offset < bufferSize - 1)
         buffer[offset++] = ' ';
@@ -264,8 +286,7 @@ int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offs
         return 0;
 
     written = fToStr(vec.y, buffer + offset, bufferSize - offset, 5);
-    if (written == 0)
-        return 0;
+    if (written == 0) return 0;
     offset += written;
 
     return offset;
@@ -274,8 +295,7 @@ int vec2ToStr(const glm::vec2 &vec, char *buffer, size_t bufferSize, size_t offs
 int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offset)
 {
     int written = fToStr(vec.x, buffer + offset, bufferSize - offset, 5);
-    if (written == 0)
-        return 0;
+    if (written == 0) return 0;
     offset += written;
     if (offset < bufferSize - 1)
         buffer[offset++] = ' ';
@@ -283,8 +303,7 @@ int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offs
         return 0;
 
     written = fToStr(vec.y, buffer + offset, bufferSize - offset, 5);
-    if (written == 0)
-        return 0;
+    if (written == 0) return 0;
     offset += written;
     if (offset < bufferSize - 1)
         buffer[offset++] = ' ';
@@ -292,8 +311,7 @@ int vec3ToStr(const glm::vec3 &vec, char *buffer, size_t bufferSize, size_t offs
         return 0;
 
     written = fToStr(vec.z, buffer + offset, bufferSize - offset, 5);
-    if (written == 0)
-        return 0;
+    if (written == 0) return 0;
     offset += written;
 
     return offset;
@@ -305,17 +323,14 @@ bool strToI(const char *&str, int &value)
     int sign = 1;
 
     // Skip white spaces
-    while (isspace(*ptr))
-        ++ptr;
+    while (isspace(*ptr)) ++ptr;
 
     // Check sign
-    if (*ptr == '-' || *ptr == '+')
-        sign = (*ptr++ == '-') ? -1 : 1;
+    if (*ptr == '-' || *ptr == '+') sign = (*ptr++ == '-') ? -1 : 1;
 
     // Parse integer part
     int result = 0;
-    while (isdigit(*ptr))
-        result = (result * 10) + (*ptr++ - '0');
+    while (isdigit(*ptr)) result = (result * 10) + (*ptr++ - '0');
 
     value = result * sign;
     str = ptr; // Update the input pointer
@@ -328,8 +343,7 @@ bool strToF(const char *&str, float &value)
     bool negative = false;
 
     // Skip white spaces
-    while (isspace(*ptr))
-        ptr++;
+    while (isspace(*ptr)) ptr++;
 
     // Check optional sign
     if (*ptr == '+')
@@ -341,8 +355,7 @@ bool strToF(const char *&str, float &value)
     }
 
     // Parse integer part
-    if (!isdigit(*ptr))
-        return false; // At least one digit is required
+    if (!isdigit(*ptr)) return false; // At least one digit is required
 
     float integerPart = 0.0;
     while (isdigit(*ptr))
@@ -381,8 +394,7 @@ bool strToF(const char *&str, float &value)
             ptr++;
         }
 
-        if (!isdigit(*ptr))
-            return false; // At least one digit is required
+        if (!isdigit(*ptr)) return false; // At least one digit is required
 
         while (isdigit(*ptr))
         {
@@ -391,8 +403,7 @@ bool strToF(const char *&str, float &value)
             ptr++;
         }
 
-        if (exponentNegative)
-            exponentPart = -exponentPart;
+        if (exponentNegative) exponentPart = -exponentPart;
     }
 
     float result = (integerPart + fractionalPart / fractionalDiv) * std::pow(10.0, exponentPart);
@@ -406,13 +417,11 @@ std::string getStrRange(const char *&str)
 {
     const char *begin = str;
     // Пропустить пробелы в начале
-    while (isspace(*begin))
-        ++begin;
+    while (isspace(*begin)) ++begin;
 
     const char *end = begin;
     // Найти конец строки (первый пробел или конец строки)
-    while (*end && !isspace(*end))
-        ++end;
+    while (*end && !isspace(*end)) ++end;
 
     str = end;
     // Возврат подстроки
@@ -422,7 +431,6 @@ std::string getStrRange(const char *&str)
 std::string trimEnd(const std::string &str)
 {
     const char *end = str.data() + str.size();
-    while (end != str.data() && !std::isprint(static_cast<unsigned char>(*(end - 1))))
-        --end;
+    while (end != str.data() && !std::isprint(static_cast<unsigned char>(*(end - 1)))) --end;
     return std::string(str.data(), end);
 }

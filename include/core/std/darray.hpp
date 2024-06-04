@@ -282,14 +282,7 @@ public:
         if constexpr (std::is_trivially_move_assignable_v<T>)
             _data[_size] = std::forward<U>(value);
         else
-        {
-            if ((_data + _size) == nullptr)
-            {
-                printf("size: %zu, capacity: %zu, data: %p\n", _size, _capacity, _data);
-                throw std::bad_alloc();
-            }
             allocator.construct(_data + _size, std::forward<U>(value));
-        }
         ++_size;
     }
 
@@ -429,7 +422,7 @@ public:
 
     Iterator &operator++()
     {
-        _ptr++;
+        ++_ptr;
         return *this;
     }
     Iterator operator++(int)
@@ -440,7 +433,7 @@ public:
     }
     Iterator &operator--()
     {
-        _ptr--;
+        --_ptr;
         return *this;
     }
     Iterator operator--(int)

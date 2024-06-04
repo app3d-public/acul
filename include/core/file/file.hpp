@@ -3,7 +3,7 @@
 
 #include <filesystem>
 #include <oneapi/tbb/parallel_for.h>
-#include <oneapi/tbb/task_group.h>
+#include <oneapi/tbb/blocked_range.h>
 #include <string>
 #include <string_view>
 #include "../api.hpp"

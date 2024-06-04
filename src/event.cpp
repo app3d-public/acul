@@ -1,4 +1,3 @@
-#include <cassert>
 #include <core/event/event.hpp>
 
 namespace events

@@ -1,12 +1,10 @@
 #ifndef CORE_MEM_H
 #define CORE_MEM_H
 
-#include <cassert>
 #include <core/api.hpp>
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <oneapi/tbb/scalable_allocator.h>
 #include "../std/basic_types.hpp"
 #include "../std/list.hpp"
 

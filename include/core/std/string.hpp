@@ -3,27 +3,7 @@
 
 #include <core/api.hpp>
 #include <glm/glm.hpp>
-#include <memory>
-#include <stdexcept>
 #include <string>
-
-namespace
-{
-    /**
-     * printf like formatting for C++ with std::string
-     * Original source: https://stackoverflow.com/a/26221725/11722
-     */
-    template <typename... Args>
-    std::string formatInternal(const std::string &format, Args &&...args)
-    {
-        const auto size = snprintf(nullptr, 0, format.c_str(), std::forward<Args>(args)...) + 1;
-        if (size <= 0) throw std::runtime_error("Error during formatting.");
-
-        std::unique_ptr<char[]> buf(new char[size]);
-        snprintf(buf.get(), size, format.c_str(), args...);
-        return std::string(buf.get(), buf.get() + size - 1);
-    }
-} // namespace
 
 /// @brief Convert string in UTF-8 encoding to string in UTF-16 encoding
 /// @param src String in UTF-8 encoding
@@ -38,29 +18,14 @@ APPLIB_API std::u16string trim(const std::u16string &inputStr, size_t max = std:
 APPLIB_API std::string trim(const std::string &inputStr, size_t max = std::numeric_limits<size_t>::max());
 
 /**
- * Convert all std::strings to const char* using constexpr if (C++17)
- */
-template <typename T>
-auto convert(T &&t)
-{
-    if constexpr (std::is_same<std::remove_cv_t<std::remove_reference_t<T>>, std::string>::value)
-        return std::forward<T>(t).c_str();
-    else
-        return std::forward<T>(t);
-}
-
-/**
  * @brief Formats a string using a format string and arguments.
- * @tparam Args The types of the arguments.
- * @param fmt The format string.
+ * @param format The format string.
  * @param args The arguments to format the string.
  * @return The formatted string.
  */
-template <typename... Args>
-std::string f(const std::string &fmt, Args &&...args)
-{
-    return formatInternal(fmt, convert(std::forward<Args>(args))...);
-}
+APPLIB_API std::string f(const char *format, ...) noexcept;
+
+APPLIB_API std::string f(const char* format, va_list args) noexcept;
 
 /**
  * @brief Converts the integer to the C-style string

@@ -3,74 +3,68 @@
 
 #include <core/api.hpp>
 #include <fstream>
-#include <future>
 #include <iostream>
 #include <memory>
+#include <oneapi/tbb/concurrent_queue.h>
 #include <string>
 #include <string_view>
 #include "std/basic_types.hpp"
-#include "std/string.hpp"
-#include "task.hpp"
-
-enum class LogLevel
-{
-    Fatal,
-    Error,
-    Warn,
-    Info,
-    Debug,
-    Trace
-};
+#include "std/darray.hpp"
 
 namespace logging
 {
-    struct LogMessageData
+    enum class Level
     {
-        LogLevel level;
-        const std::string &message;
-        std::thread::id thread_id;
+        Fatal,
+        Error,
+        Warn,
+        Info,
+        Debug,
+        Trace
     };
 
     class TokenHandler
     {
     public:
         virtual ~TokenHandler() = default;
-        virtual std::string handle(const LogMessageData &context) const = 0;
+        virtual void handle(Level level, const char *message, std::stringstream &ss) const = 0;
     };
 
-    class TextTokenHandler : public TokenHandler
+    using TokenHandlerList = DArray<std::shared_ptr<TokenHandler>>;
+
+    class TextTokenHandler final : public TokenHandler
     {
     public:
-        explicit TextTokenHandler(const std::string &text) : _text(text) {}
+        explicit TextTokenHandler(const std::string_view &text) : _text(text) {}
 
-        std::string handle(const LogMessageData &context) const override { return _text; }
+        void handle(Level level, const char *message, std::stringstream &ss) const override { ss << _text; }
 
     private:
-        std::string _text;
+        const std::string _text;
     };
 
-    class TimeTokenHandler : public TokenHandler
+    class TimeTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override;
+        void handle(Level level, const char *message, std::stringstream &ss) const override;
     };
 
-    class ThreadIdTokenHandler : public TokenHandler
+    class ThreadIdTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override;
+        void handle(Level level, const char *message, std::stringstream &ss) const override { ss << std::this_thread::get_id(); }
     };
 
-    class LevelNameTokenHandler : public TokenHandler
+    class LevelNameTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override;
+        void handle(Level level, const char *message, std::stringstream &ss) const override;
     };
 
-    class MessageTokenHandler : public TokenHandler
+    class MessageTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override { return context.message; }
+        void handle(Level level, const char *message, std::stringstream &ss) const override { ss << message; }
     };
 
     namespace colors
@@ -84,28 +78,17 @@ namespace logging
         constexpr std::string_view reset = "\x1b[0m";
     }; // namespace colors
 
-    class ColorizeTokenHandler : public TokenHandler
+    class ColorizeTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override;
+        void handle(Level level, const char *message, std::stringstream &ss) const override;
     };
 
-    class DecolorizeTokenHandler : public TokenHandler
+    class DecolorizeTokenHandler final : public TokenHandler
     {
     public:
-        std::string handle(const LogMessageData &context) const override { return std::string(colors::reset); }
+        void handle(Level level, const char *message, std::stringstream &ss) const override { ss << colors::reset; }
     };
-
-    using TokenHandlerList = DArray<std::shared_ptr<TokenHandler>>;
-
-    template <typename... Args>
-    std::string formatMessage(const std::string &message, Args &&...args)
-    {
-        if constexpr (sizeof...(Args) > 0)
-            return f(message, std::forward<Args>(args)...);
-        else
-            return message;
-    }
 
     class APPLIB_API Logger
     {
@@ -118,19 +101,17 @@ namespace logging
 
         std::string name() const { return _name; }
 
-        LogLevel level() const { return _level; }
-
-        void level(LogLevel level) { _level = level; }
-
         virtual std::ostream &stream() = 0;
 
         virtual void write(const std::string &message) = 0;
 
-        std::string getParsedStr(const LogMessageData &context) const;
+        void parseTokens(Level level, const char *message, std::stringstream &ss)
+        {
+            for (auto &token : *_tokens) token->handle(level, message, ss);
+        }
 
     private:
         std::string _name;
-        LogLevel _level{LogLevel::Error};
         std::shared_ptr<TokenHandlerList> _tokens;
     };
 
@@ -160,33 +141,6 @@ namespace logging
         void write(const std::string &message) override { std::cout << message; }
     };
 
-    /// \brief Represents a task manager specifically for logging tasks.
-    ///
-    /// This class reserves only one worker thread for logging tasks.
-    class LogTaskManager : public TaskQueue
-    {
-    public:
-        /// \brief Get the singleton instance of the LogTaskManager.
-        ///
-        /// \return The singleton instance of the LogTaskManager.
-        static APPLIB_API LogTaskManager &global();
-
-        /// \brief Perform the task processing in the worker thread.
-        void taskWorkerThread() override;
-
-        /// \brief Stop the worker threads for task processing.
-        void stopWorkerThreads();
-
-    private:
-        bool _running{true};
-        std::thread _taskThread;
-
-        LogTaskManager();
-        ~LogTaskManager();
-        LogTaskManager(const LogTaskManager &) = delete;
-        LogTaskManager &operator=(const LogTaskManager &) = delete;
-    };
-
     /**
      * @class LogManager
      * @brief Manages loggers for the application.
@@ -195,14 +149,10 @@ namespace logging
      * different log levels. The LogManager is a singleton class, meaning only one instance of it can exist in the
      * application.
      */
-    class APPLIB_API LogManager
+    extern APPLIB_API class APPLIB_API LogManager
     {
     public:
-        /**
-         * @brief Gets the singleton instance of the LogManager.
-         * @return The singleton instance of the LogManager.
-         */
-        static APPLIB_API LogManager &global();
+        LogManager();
 
         /**
          * @brief Adds a logger with the specified name and file path.
@@ -232,95 +182,49 @@ namespace logging
          */
         void removeLogger(const std::string &name);
 
-        template <typename... Args>
-        void log(const std::shared_ptr<Logger> &logger, LogLevel level, const std::string &message, Args &&...args)
-        {
-            if (!logger) return;
-            static LogTaskManager &logManager = LogTaskManager::global();
-            logManager.addTask([logger, level, message, ... args{std::forward<Args>(args)}]() {
-                if (level > logger->level()) return;
-                std::thread::id thread_id = std::this_thread::get_id();
-                std::string parsed_str = logger->getParsedStr({level, message, thread_id});
-                logger->write(formatMessage(parsed_str, args...));
-            });
-        }
-
-        template <typename... Args>
-        void log(LogLevel level, const std::string &message, Args &&...args)
-        {
-            log(_defaultLogger, level, message, std::forward<Args>(args)...);
-        }
-
-        /**
-         * @brief Logs a message with the specified log level for the specified logger and waits for the log to
-         * complete.
-         * @param logger The name of the logger to log the message to.
-         * @param level The log level of the message.
-         * @param message The message to log.
-         * @param args The additional arguments to format the log message.
-         * @return A future object that can be used to wait for the log to complete.
-         */
-        template <typename... Args>
-        std::future<void> logAndWait(const std::string &logger, LogLevel level, const std::string &message,
-                                     Args &&...args)
-        {
-            auto logger_it = _loggers.find(logger);
-            if (logger_it == _loggers.end()) return std::future<void>();
-            static LogTaskManager &logManager = LogTaskManager::global();
-
-            auto prom = std::make_shared<std::promise<void>>();
-            auto result = prom->get_future();
-
-            logManager.addTask([logger_it, level, message, prom, ... args{std::forward<Args>(args)}]() mutable {
-                if (level > logger_it->second->level())
-                {
-                    prom->set_value();
-                    return;
-                }
-                std::thread::id thread_id = std::this_thread::get_id();
-                std::string parsed_str = logger_it->second->getParsedStr({level, message, thread_id});
-                logger_it->second->write(formatMessage(parsed_str, args...));
-                prom->set_value();
-            });
-
-            return result;
-        }
+        __attribute__((format(printf, 4, 5))) APPLIB_API void log(const std::shared_ptr<Logger> &logger, Level level,
+                                                                  const char *message, ...);
 
         std::shared_ptr<Logger> defaultLogger() const { return _defaultLogger; }
         void defaultLogger(std::shared_ptr<Logger> logger) { _defaultLogger = logger; }
 
-    private:
-        LogManager() = default;
-        LogManager &operator=(const LogManager &) = delete;
+        Level level() const { return _level; }
 
+        void level(Level level) { _level = level; }
+
+        /// \brief Perform processing in the worker thread.
+        void workerThread();
+
+        /// \brief Stop the worker threads for task processing.
+        void stopWorkerThread();
+
+        void await()
+        {
+            while (!_logQueue.empty()) std::this_thread::yield();
+        }
+
+        void destroy();
+
+    private:
+        Level _level{Level::Error};
         HashMap<std::string, std::shared_ptr<Logger>> _loggers;
         std::shared_ptr<Logger> _defaultLogger;
-    };
+        bool _running{true};
+        std::thread _taskThread;
+        oneapi::tbb::concurrent_queue<std::pair<std::shared_ptr<Logger>, std::string>> _logQueue;
+        std::condition_variable _queueChanged;
+        std::mutex _queueMutex;
 
-    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return LogManager::global().getLogger(name); }
+    } mng;
+
+    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return mng.getLogger(name); }
 } // namespace logging
 
-#define DEFINE_LOG_FUNCTION(level)                                                                              \
-    template <typename... Args>                                                                                 \
-    void log##level(const std::shared_ptr<logging::Logger> &logger, const std::string &message, Args &&...args) \
-    {                                                                                                           \
-        static logging::LogManager &manager = logging::LogManager::global();                                    \
-        manager.log(logger, LogLevel::level, message, std::forward<Args>(args)...);                             \
-    }                                                                                                           \
-    template <typename... Args>                                                                                 \
-    void log##level(const std::string &message, Args &&...args)                                                 \
-    {                                                                                                           \
-        static logging::LogManager &manager = logging::LogManager::global();                                    \
-        manager.log(LogLevel::level, message, std::forward<Args>(args)...);                                     \
-    }
-
-DEFINE_LOG_FUNCTION(Info)
-DEFINE_LOG_FUNCTION(Debug)
-DEFINE_LOG_FUNCTION(Warn)
-DEFINE_LOG_FUNCTION(Error)
-DEFINE_LOG_FUNCTION(Fatal)
-DEFINE_LOG_FUNCTION(Trace)
-
-#undef DEFINE_LOG_FUNCTION
+#define logInfo(...)  logging::mng.log(logging::mng.defaultLogger(), logging::Level::Info, __VA_ARGS__)
+#define logDebug(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Debug, __VA_ARGS__)
+#define logTrace(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Trace, __VA_ARGS__)
+#define logWarn(...)  logging::mng.log(logging::mng.defaultLogger(), logging::Level::Warn, __VA_ARGS__)
+#define logError(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Error, __VA_ARGS__)
+#define logFatal(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Fatal, __VA_ARGS__)
 
 #endif

@@ -149,7 +149,7 @@ public:
         }
     }
 
-    void await()
+    virtual void await()
     {
         while (!_tasks.empty()) std::this_thread::yield();
     }
@@ -187,7 +187,7 @@ private:
 /// \brief Represents a task manager that handles task processing.
 ///
 /// It provides methods to perform task processing in worker threads and handle tasks with conditions.
-class APPLIB_API TaskManager : public TaskQueue
+class APPLIB_API TaskManager final : public TaskQueue
 {
 public:
     void destroy();
@@ -224,7 +224,7 @@ public:
     void stopWorkerThreads();
 
     /// \brief Wait for the all tasks to finish.
-    void await();
+    virtual void await() override;
 
 private:
     std::atomic<bool> _running{true};

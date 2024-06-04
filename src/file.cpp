@@ -1,7 +1,5 @@
 #include <core/file/file.hpp>
 #include <core/log.hpp>
-#include <core/std/string.hpp>
-#include <oneapi/tbb/enumerable_thread_specific.h>
 
 namespace io
 {
@@ -13,9 +11,9 @@ namespace io
             if (!file)
             {
                 if (!std::filesystem::exists(filename))
-                    logError("File does not exist: " + filename);
+                    logError("File does not exist: %s", filename.c_str());
                 else
-                    logError("Failed to open file: " + filename);
+                    logError("Failed to open file: %s", filename.c_str());
                 return false;
             }
 
@@ -112,12 +110,12 @@ namespace io
             }
             catch (std::filesystem::filesystem_error &e)
             {
-                logWarn("Failed to copy file: %s", std::string(e.what()));
+                logWarn("Failed to copy file: %s", e.what());
                 return false;
             }
             catch (const std::exception &e)
             {
-                logWarn("Failed to copy file: %s", std::string(e.what()));
+                logWarn("Failed to copy file: %s", e.what());
                 return false;
             }
         }

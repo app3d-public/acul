@@ -89,13 +89,13 @@ std::string f(const char *format, ...) noexcept
     std::string result;
     va_list args;
     va_start(args, format);
-    int size = snprintf(nullptr, 0, format, args) + 1;
+    int size = vsnprintf(nullptr, 0, format, args) + 1;
     if (size <= 1)
         result = "";
     else
     {
         std::unique_ptr<char[]> buf(new char[size]);
-        snprintf(buf.get(), size, format, args);
+        vsnprintf(buf.get(), size, format, args);
         result = std::string(buf.get(), buf.get() + size - 1);
     }
     va_end(args);

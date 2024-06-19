@@ -413,7 +413,7 @@ public:
     using reference = T &;
     using const_reference = const T &;
 
-    Iterator(pointer ptr) : _ptr(ptr) {}
+    Iterator(pointer ptr = nullptr) : _ptr(ptr) {}
 
     reference operator*() { return *_ptr; }
     reference operator*() const { return *_ptr; }

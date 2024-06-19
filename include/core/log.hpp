@@ -218,7 +218,7 @@ namespace logging
     } mng;
 
     inline std::shared_ptr<Logger> getLogger(const std::string &name) { return mng.getLogger(name); }
-} // namespace logging
+} // namespace log
 
 #define logInfo(...)  logging::mng.log(logging::mng.defaultLogger(), logging::Level::Info, __VA_ARGS__)
 #define logDebug(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Debug, __VA_ARGS__)

@@ -2,12 +2,12 @@
 #define APP_CORE_FILE_H
 
 #include <filesystem>
-#include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>
+#include <oneapi/tbb/parallel_for.h>
 #include <string>
-#include <string_view>
 #include "../api.hpp"
 #include "../std/darray.hpp"
+#include "../std/string_pool.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
@@ -49,7 +49,7 @@ namespace io
          * @param size Size of the data buffer
          * @param dst Dynamic array to store the parsed lines
          */
-        void fillLineBuffer(const char *data, size_t size, DArray<std::string_view> &dst);
+        void fillLineBuffer(const char *data, size_t size, StringPool<char> &dst);
 
         /**
          * Reads a file in blocks using in mutithread context, splits it into lines, and processes each line using a
@@ -65,7 +65,7 @@ namespace io
          */
         template <typename T>
         bool readByBlock(const std::string &filename, std::string &error, T &dstBuffer,
-                         void (*callback)(T &, const std::string_view &, int))
+                         void (*callback)(T &, const char *, int))
         {
 #ifdef _WIN32
             HANDLE fileHandle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
@@ -104,12 +104,12 @@ namespace io
             // Parse the file in parallel
             try
             {
-                DArray<std::string_view> lines;
-                fillLineBuffer(fileData, fileSize.QuadPart, lines);
-                oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, lines.size(), 512),
+                StringPool<char> stringPool(fileSize.QuadPart);
+                fillLineBuffer(fileData, fileSize.QuadPart, stringPool);
+                oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
                                               for (size_t i = range.begin(); i != range.end(); ++i)
-                                                  callback(dstBuffer, lines[i], i);
+                                                  callback(dstBuffer, stringPool[i], i);
                                           });
             }
             catch (const std::exception &e)

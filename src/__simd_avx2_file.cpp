@@ -1,16 +1,15 @@
 #include <core/api.hpp>
 #include <core/std/darray.hpp>
+#include <core/std/string_pool.hpp>
 #include <cstddef>
-#include <string_view>
 
 namespace io
 {
     namespace file
     {
-        APPLIB_API void fillLineBuffer(const char *data, size_t size, DArray<std::string_view> &dst)
+        APPLIB_API void fillLineBuffer(const char *data, size_t size, StringPool<char> &pool)
         {
             const char *dataEnd = data + size;
-            dst.reserve(size / 50);
 
             __m256i newline = _mm256_set1_epi8('\n');
             __m256i return_carriage = _mm256_set1_epi8('\r');
@@ -44,7 +43,7 @@ namespace io
                     {
                         size_t lineLen = newlinePos - lineStart;
                         if (lineLen > 0 && lineStart[lineLen - 1] == '\r') --lineLen;
-                        dst.emplace_back(lineStart, lineLen);
+                        pool.push(lineStart, lineLen);
                     }
 
                     lineStart = newlinePos + 1; // Skip newline or carriage return
@@ -60,7 +59,7 @@ namespace io
             {
                 size_t lineLen = dataEnd - lineStart;
                 if (lineLen > 0 && lineStart[lineLen - 1] == '\r') --lineLen;
-                dst.emplace_back(lineStart, lineLen);
+                pool.push(lineStart, lineLen);
             }
         }
 

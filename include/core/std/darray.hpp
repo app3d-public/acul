@@ -27,11 +27,10 @@ public:
     using size_type = size_t;
 
     class Iterator;
-    class ReverseIterator;
     using iterator = Iterator;
     using const_iterator = const Iterator;
-    using reverse_iterator = ReverseIterator;
-    using const_reverse_iterator = const ReverseIterator;
+    using reverse_iterator = std::reverse_iterator<Iterator>;
+    using const_reverse_iterator = const std::reverse_iterator<Iterator>;
 
     DArray() noexcept : _size(0), _capacity(DARRAY_SBO_SIZE), _data(allocator.allocate(DARRAY_SBO_SIZE)) {
     }
@@ -531,85 +530,5 @@ void DArray<T, Allocator>::insert(iterator pos, InputIt first, InputIt last)
         _size += insertCount;
     }
 }
-
-template <typename T, template <typename> class Allocator>
-class DArray<T, Allocator>::ReverseIterator
-{
-public:
-    using iterator_category = std::random_access_iterator_tag;
-    using value_type = T;
-    using difference_type = std::ptrdiff_t;
-    using pointer = typename Iterator::pointer;
-    using reference = typename Iterator::reference;
-
-    ReverseIterator(pointer ptr = nullptr) : _base(ptr) {}
-    explicit ReverseIterator(const Iterator &iter) : _base(iter) {}
-
-    ReverseIterator &operator++()
-    {
-        --_base;
-        return *this;
-    }
-
-    ReverseIterator operator++(int)
-    {
-        ReverseIterator tmp = *this;
-        --_base;
-        return tmp;
-    }
-
-    ReverseIterator &operator--()
-    {
-        ++_base;
-        return *this;
-    }
-
-    ReverseIterator operator--(int)
-    {
-        ReverseIterator tmp = *this;
-        ++_base;
-        return tmp;
-    }
-
-    reference operator*() const
-    {
-        Iterator tmp = _base;
-        return *--tmp;
-    }
-
-    pointer operator->() const
-    {
-        Iterator tmp = _base;
-        --tmp;
-        return tmp.operator->();
-    }
-
-    ReverseIterator &operator+=(difference_type n)
-    {
-        _base -= n;
-        return *this;
-    }
-
-    ReverseIterator operator+(difference_type n) const { return ReverseIterator(_base - n); }
-
-    ReverseIterator &operator-=(difference_type n)
-    {
-        _base += n;
-        return *this;
-    }
-
-    ReverseIterator operator-(difference_type n) const { return ReverseIterator(_base + n); }
-
-    difference_type operator-(const ReverseIterator &other) const { return other._base - _base; }
-
-    bool operator==(const ReverseIterator &other) const { return _base == other._base; }
-
-    bool operator!=(const ReverseIterator &other) const { return _base != other._base; }
-
-    reference operator[](difference_type n) const { return *(*this + n); }
-
-private:
-    Iterator _base;
-};
 
 #endif // APP_CORE_STD_DArray

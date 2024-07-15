@@ -1,6 +1,7 @@
 #ifndef CORE_MEM_H
 #define CORE_MEM_H
 
+#include <cassert>
 #include <core/api.hpp>
 #include <cstddef>
 #include <functional>
@@ -59,22 +60,26 @@ template <typename T>
 class Proxy
 {
 public:
-    Proxy(const std::shared_ptr<T> &ptr = nullptr) : _ptr(ptr) {}
+    Proxy(T *ptr = nullptr) : _ptr(ptr) {}
 
-    T *operator->() { return _ptr.get(); }
+    T *operator->() { return _ptr; }
 
-    T &operator*() { return *_ptr; }
+    T &operator*()
+    {
+        assert(_ptr != nullptr);
+        return *_ptr;
+    }
 
     operator bool() const { return _ptr != nullptr; }
 
-    void set(const std::shared_ptr<T> &ptr) { _ptr = ptr; }
+    void set(T *ptr) { _ptr = ptr; }
 
-    std::shared_ptr<T> &get() { return _ptr; }
+    T &get() { return *_ptr; }
 
-    void reset() { _ptr.reset(); }
+    void reset() { _ptr = nullptr; }
 
 private:
-    std::shared_ptr<T> _ptr;
+    T *_ptr;
 };
 
 #endif

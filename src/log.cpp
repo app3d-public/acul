@@ -138,9 +138,23 @@ namespace logging
         }
     }
 
-    LogManager mng;
+    LogManager *mng{nullptr};
 
-    LogManager::LogManager() { _taskThread = std::thread(&LogManager::workerThread, this); }
+    void LogManager::init()
+    {
+        mng = new LogManager();
+        mng->_taskThread = std::thread(&LogManager::workerThread, mng);
+    }
+
+    void LogManager::destroy()
+    {
+        {
+            std::unique_lock<std::mutex> lock(mng->_queueMutex);
+            mng->_running = false;
+            mng->_queueChanged.notify_one();
+        }
+        mng->_taskThread.join();
+    }
 
     void LogManager::workerThread()
     {
@@ -155,16 +169,6 @@ namespace logging
                 _queueChanged.wait(lock, [this]() { return !_logQueue.empty() || !_running; });
             }
         }
-    }
-
-    void LogManager::destroy()
-    {
-        {
-            std::unique_lock<std::mutex> lock(_queueMutex);
-            _running = false;
-            _queueChanged.notify_one();
-        }
-        _taskThread.join();
     }
 
     std::shared_ptr<Logger> LogManager::getLogger(const std::string &name) const

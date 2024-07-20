@@ -52,7 +52,10 @@ namespace logging
     class ThreadIdTokenHandler final : public TokenHandler
     {
     public:
-        void handle(Level level, const char *message, std::stringstream &ss) const override { ss << std::this_thread::get_id(); }
+        void handle(Level level, const char *message, std::stringstream &ss) const override
+        {
+            ss << std::this_thread::get_id();
+        }
     };
 
     class LevelNameTokenHandler final : public TokenHandler
@@ -149,11 +152,10 @@ namespace logging
      * different log levels. The LogManager is a singleton class, meaning only one instance of it can exist in the
      * application.
      */
-    extern APPLIB_API class APPLIB_API LogManager
+    class APPLIB_API LogManager
     {
     public:
-        LogManager();
-
+        static void init();
         /**
          * @brief Adds a logger with the specified name and file path.
          * @param name The name of the logger.
@@ -203,7 +205,7 @@ namespace logging
             while (!_logQueue.empty()) std::this_thread::yield();
         }
 
-        void destroy();
+        static void destroy();
 
     private:
         Level _level{Level::Error};
@@ -214,17 +216,18 @@ namespace logging
         oneapi::tbb::concurrent_queue<std::pair<std::shared_ptr<Logger>, std::string>> _logQueue;
         std::condition_variable _queueChanged;
         std::mutex _queueMutex;
+    };
 
-    } mng;
+    extern APPLIB_API LogManager *mng;
 
-    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return mng.getLogger(name); }
-} // namespace log
+    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return mng->getLogger(name); }
+} // namespace logging
 
-#define logInfo(...)  logging::mng.log(logging::mng.defaultLogger(), logging::Level::Info, __VA_ARGS__)
-#define logDebug(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Debug, __VA_ARGS__)
-#define logTrace(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Trace, __VA_ARGS__)
-#define logWarn(...)  logging::mng.log(logging::mng.defaultLogger(), logging::Level::Warn, __VA_ARGS__)
-#define logError(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Error, __VA_ARGS__)
-#define logFatal(...) logging::mng.log(logging::mng.defaultLogger(), logging::Level::Fatal, __VA_ARGS__)
+#define logInfo(...)  logging::mng->log(logging::mng->defaultLogger(), logging::Level::Info, __VA_ARGS__)
+#define logDebug(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Debug, __VA_ARGS__)
+#define logTrace(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Trace, __VA_ARGS__)
+#define logWarn(...)  logging::mng->log(logging::mng->defaultLogger(), logging::Level::Warn, __VA_ARGS__)
+#define logError(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Error, __VA_ARGS__)
+#define logFatal(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Fatal, __VA_ARGS__)
 
 #endif

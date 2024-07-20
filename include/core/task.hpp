@@ -5,6 +5,7 @@
 #include <functional>
 #include <future>
 #include <oneapi/tbb/concurrent_queue.h>
+#include <oneapi/tbb/task_arena.h>
 #include <thread>
 #include "api.hpp"
 #include "std/darray.hpp"
@@ -160,11 +161,20 @@ protected:
     std::condition_variable _taskAvailable;
 };
 
+static thread_local int g_threadID = -1;
+
+inline size_t getThreadID()
+{
+    return g_threadID == -1 ? oneapi::tbb::this_task_arena::current_thread_index() : g_threadID;
+}
+
 /// @brief Represents a thread pool manager class
 class APPLIB_API ThreadPool
 {
 public:
-    ThreadPool() : _threadsCount(std::thread::hardware_concurrency()) {}
+    ThreadPool() : _threadsCount(std::thread::hardware_concurrency()) {
+        g_threadID = 0;
+    }
     explicit ThreadPool(unsigned int count) : _threadsCount(count) {}
 
     /// @brief Stop all worker threads

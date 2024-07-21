@@ -21,7 +21,7 @@ public:
      *
      * @param handler The function to be executed by the task.
      */
-    explicit Task(std::function<T()> handler) : _handler(handler) {}
+    explicit Task(std::function<T()> handler) : _handler(handler), _future(_promise.get_future()) {}
 
     /**
      * Executes the task and recursively runs the next task in the chain.
@@ -63,8 +63,7 @@ public:
         else
         {
             using R = std::invoke_result_t<F, T>;
-            auto nextTask =
-                std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_promise.get_future().get()); });
+            auto nextTask = std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); });
             _next = nextTask;
             return _next;
         }
@@ -75,7 +74,7 @@ public:
      *
      * Waits for the promise to be set.
      */
-    void await() { _promise.get_future().wait(); }
+    void await() { _future.wait(); }
 
     /**
      * @brief Gets the result of the task.
@@ -86,12 +85,13 @@ public:
     template <typename R = T, typename = std::enable_if_t<!std::is_void_v<R>, R>>
     R get()
     {
-        return _promise.get_future().get();
+        return _future.get();
     }
 
 private:
     std::function<T()> _handler;
     std::promise<T> _promise;
+    std::shared_future<T> _future;
     std::shared_ptr<Task<void>> _next;
 };
 

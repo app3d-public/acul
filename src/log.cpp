@@ -154,6 +154,8 @@ namespace logging
             mng->_queueChanged.notify_one();
         }
         mng->_taskThread.join();
+        delete mng;
+        mng = nullptr;
     }
 
     void LogManager::workerThread()
@@ -161,8 +163,7 @@ namespace logging
         while (_running)
         {
             std::pair<std::shared_ptr<Logger>, std::string> pair;
-            if (_logQueue.try_pop(pair))
-                pair.first->write(pair.second);
+            if (_logQueue.try_pop(pair)) { pair.first->write(pair.second); }
             else
             {
                 std::unique_lock<std::mutex> lock(_queueMutex);

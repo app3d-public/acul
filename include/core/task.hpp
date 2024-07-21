@@ -1,255 +1,144 @@
 #ifndef APP_CORE_TASK_H
 #define APP_CORE_TASK_H
 
-#include <condition_variable>
-#include <functional>
 #include <future>
-#include <oneapi/tbb/concurrent_queue.h>
-#include <oneapi/tbb/task_arena.h>
-#include <thread>
+#include <oneapi/tbb/task_group.h>
 #include "api.hpp"
-#include "std/darray.hpp"
 
-// Interface for a generic task. It provides a structure for task execution and fetching results.
-class ITask
-{
-public:
-    virtual void onRun() = 0;  // Method to define the task's execution logic.
-    virtual void onFetch() {}; // Optional method to define post-execution logic (e.g., processing results).
-    virtual ~ITask() = default;
-};
-
-// Class for a specific task type, inheriting from ITask
+/**
+ * @brief Class representing an asynchronous task.
+ *
+ * This class allows chaining of tasks and provides mechanisms to run and await the completion of tasks.
+ *
+ * @tparam T The return type of the task.
+ */
 template <typename T>
-class Task : public ITask
+class Task final : public std::enable_shared_from_this<Task<T>>
 {
 public:
-    explicit Task(std::function<T()> handler) : _onRun(handler) {}
+    /**
+     * @brief Constructs a Task with a callback.
+     *
+     * @param handler The function to be executed by the task.
+     */
+    explicit Task(std::function<T()> handler) : _handler(handler) {}
 
-    // Method to set a callback function for post-execution logic and return a shared pointer to the task.
-    Task<T> *onFetch(std::function<void(T)> fetch)
+    /**
+     * Executes the task and recursively runs the next task in the chain.
+     *
+     * If the task return type is void, the handler function is called and the promise is set to a value.
+     * Otherwise, the handler function is called and its return value is set as the value of the promise.
+     *
+     * @throws None
+     */
+    void run()
     {
-        _onFetch = fetch;
-        return this;
-    }
-
-    // Method to execute the task's logic and set the promise value.
-    virtual void onRun() override
-    {
-        _result = _onRun();
-        _runPromise.set_value(_result);
-    }
-
-    // Method to execute post-task logic with the result.
-    virtual void onFetch() override
-    {
-        if (_onFetch) _onFetch(_result);
-        _fetchPromise.set_value(_result);
-    }
-
-    // Returns a future to the task's execution result.
-    std::future<T> runFuture() { return _runPromise.get_future(); }
-
-    // Returns a future to the result of the onFetch method.
-    std::future<T> fetchFuture() { return _fetchPromise.get_future(); }
-
-private:
-    T _result;
-    std::function<T()> _onRun;
-    std::function<void(const T &)> _onFetch;
-    std::promise<T> _runPromise;
-    std::promise<T> _fetchPromise;
-};
-
-// Class for a specific task type, inheriting from ITask
-template <>
-class Task<void> : public ITask
-{
-public:
-    explicit Task(std::function<void()> handler) : _onRun(handler) {}
-
-    virtual ~Task() = default;
-
-    // Method to set a callback function for post-execution logic and return a shared pointer to the task.
-    Task<void> *onFetch(std::function<void()> fetch)
-    {
-        _onFetch = fetch;
-        return this;
-    }
-
-    // Method to execute the task's logic and set the promise value.
-    virtual void onRun() override
-    {
-        _onRun();
-        _runPromise.set_value();
-    }
-
-    // Method to execute post-task logic with the result.
-    virtual void onFetch() override
-    {
-        if (_onFetch)
+        if constexpr (std::is_void<T>::value)
         {
-            _onFetch();
-            _fetchPromise.set_value();
+            _handler();
+            _promise.set_value();
+        }
+        else
+            _promise.set_value(_handler());
+        if (_next) _next->run();
+    }
+
+    /**
+     * @brief Chains another task to be executed after the current task.
+     *
+     * @tparam F The type of the next task function.
+     * @param task The next task function to be executed.
+     * @return A shared pointer to the next task.
+     */
+    template <typename F>
+    auto next(F &&task)
+    {
+        if constexpr (std::is_void_v<T>)
+        {
+            using R = std::invoke_result_t<F>;
+            auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task));
+            _next = nextTask;
+            return _next;
+        }
+        else
+        {
+            using R = std::invoke_result_t<F, T>;
+            auto nextTask =
+                std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_promise.get_future().get()); });
+            _next = nextTask;
+            return _next;
         }
     }
 
-    // Returns a future to the task's execution result.
-    std::future<void> runFuture() { return _runPromise.get_future(); }
+    /**
+     * @brief Awaits the completion of the task.
+     *
+     * Waits for the promise to be set.
+     */
+    void await() { _promise.get_future().wait(); }
 
-    // Returns a future to the result of the onFetch method.
-    std::future<void> fetchFuture() { return _fetchPromise.get_future(); }
+    /**
+     * @brief Gets the result of the task.
+     *
+     * @tparam R The type of the result (default is T).
+     * @return The result of the task.
+     */
+    template <typename R = T, typename = std::enable_if_t<!std::is_void_v<R>, R>>
+    R get()
+    {
+        return _promise.get_future().get();
+    }
 
 private:
-    std::function<void()> _onRun;
-    std::function<void()> _onFetch;
-    std::promise<void> _runPromise;
-    std::promise<void> _fetchPromise;
+    std::function<T()> _handler;
+    std::promise<T> _promise;
+    std::shared_ptr<Task<void>> _next;
 };
 
-/// \brief Represents a task queue that holds tasks to be processed.
-///
-/// This class provides methods to add tasks to the queue and perform task processing in a worker thread.
-class TaskQueue
+/**
+ * @brief Class for managing and running tasks.
+ *
+ * This class provides mechanisms to add tasks and await their completion.
+ */
+class TaskManager
 {
 public:
-    virtual ~TaskQueue() = default;
+    // @brief Awaits the completion of all tasks in the task group.
+    void await() { _group.wait(); }
 
-    /// \brief Add a task to the task queue.
-    ///
-    /// \param task The task to be added.
+    /**
+     * @brief Returns the global instance of the TaskManager.
+     *
+     * @return The global TaskManager instance.
+     */
+    static APPLIB_API TaskManager &global();
 
+    /**
+     * @brief Adds a new task to the task group.
+     *
+     * @tparam F The type of the task function.
+     * @param task The task function to be added.
+     * @return A shared pointer to the added task.
+     */
     template <typename F>
-    auto addTask(F &&task, bool notify = true)
+    auto addTask(F &&task)
     {
-        if constexpr (std::is_invocable<F>::value && !std::is_convertible<F, ITask *>::value)
+        if constexpr (std::is_invocable<F>::value)
         {
             using R = std::invoke_result_t<F>;
-            auto ptr = new Task<R>(std::forward<F>(task));
-            _tasks.push(ptr);
-            if (notify) notifyAll();
+            auto ptr = std::make_shared<Task<R>>(std::forward<F>(task));
+            _group.run([ptr]() { ptr->run(); });
             return ptr;
         }
         else
         {
             auto ptr = std::forward<F>(task);
-            _tasks.push(ptr);
-            if (notify) notifyAll();
+            _group.run([ptr]() { ptr->run(); });
             return ptr;
         }
     }
 
-    /// \brief Perform the task processing in the worker thread.
-    virtual void taskWorkerThread() = 0;
-
-    void notifyAll()
-    {
-        {
-            std::unique_lock<std::mutex> lock(_taskMutex);
-            _taskAvailable.notify_all();
-        }
-    }
-
-    virtual void await()
-    {
-        while (!_tasks.empty()) std::this_thread::yield();
-    }
-
-protected:
-    oneapi::tbb::concurrent_queue<ITask *> _tasks;
-    std::mutex _taskMutex;
-    std::condition_variable _taskAvailable;
-};
-
-static thread_local int g_threadID = -1;
-
-inline size_t getThreadID()
-{
-    return g_threadID == -1 ? oneapi::tbb::this_task_arena::current_thread_index() : g_threadID;
-}
-
-/// @brief Represents a thread pool manager class
-class APPLIB_API ThreadPool
-{
-public:
-    ThreadPool() : _threadsCount(std::thread::hardware_concurrency()) {
-        g_threadID = 0;
-    }
-    explicit ThreadPool(unsigned int count) : _threadsCount(count) {}
-
-    /// @brief Stop all worker threads
-    void stopThreads();
-
-    /// @brief Get the number of worker threads
-    void threadsCount(unsigned int count);
-
-    /// @brief Set the number of worker threads
-    unsigned int threadsCount() const;
-
-    /// @brief Prepare worker threads
-    void prepareWorkerThreads(TaskQueue *taskQueue);
-
 private:
-    unsigned int _threadsCount;
-    DArray<std::thread> _threads;
+    oneapi::tbb::task_group _group;
 };
-
-/// \brief Represents a task manager that handles task processing.
-///
-/// It provides methods to perform task processing in worker threads and handle tasks with conditions.
-class APPLIB_API TaskManager final : public TaskQueue
-{
-public:
-    void destroy();
-
-    void threadPool(ThreadPool *pool) { _threadPool = pool; }
-
-    static TaskManager &global();
-
-    /// \brief Perform the task processing in the worker thread.
-    void taskWorkerThread() override;
-
-private:
-    ThreadPool *_threadPool;
-    std::atomic<bool> _running;
-
-    TaskManager() : _threadPool(nullptr), _running(true) {}
-};
-
-class TaskManagerSync : public TaskQueue
-{
-public:
-    /// \brief Get the singleton instance of the TaskManagerSync.
-    ///
-    /// \return The singleton instance of the TaskManagerSync.
-    static TaskManagerSync &global();
-
-    /// \brief Perform the task processing in the main worker thread.
-    void taskWorkerThread() override;
-
-    /// \brief Perform the task processing in the fetch worker thread.
-    void fetchTaskWorkerThread();
-
-    /// \brief Stop the worker threads for task processing.
-    void stopWorkerThreads();
-
-    /// \brief Wait for the all tasks to finish.
-    virtual void await() override;
-
-private:
-    std::atomic<bool> _running{true};
-    std::atomic<bool> _fetchRunning{true};
-    std::thread _executionThread;
-    std::thread _fetchThread;
-    oneapi::tbb::concurrent_queue<ITask *> _fetchTasks;
-    std::condition_variable _tasksEmpty;
-    std::condition_variable _fetchTasksEmpty;
-    std::mutex _fetchTasksMutex;
-
-    TaskManagerSync();
-    ~TaskManagerSync();
-    TaskManagerSync(const TaskManagerSync &) = delete;
-    TaskManagerSync &operator=(const TaskManagerSync &) = delete;
-};
-
 #endif

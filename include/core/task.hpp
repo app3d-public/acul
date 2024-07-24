@@ -2,8 +2,20 @@
 #define APP_CORE_TASK_H
 
 #include <future>
+#include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
 #include "api.hpp"
+#include "event/event.hpp"
+
+class ITask
+{
+public:
+    virtual ~ITask() = default;
+
+    virtual void run() = 0;
+
+    virtual void await() = 0;
+};
 
 /**
  * @brief Class representing an asynchronous task.
@@ -13,7 +25,7 @@
  * @tparam T The return type of the task.
  */
 template <typename T>
-class Task final : public std::enable_shared_from_this<Task<T>>
+class Task final : public ITask, public std::enable_shared_from_this<Task<T>>
 {
 public:
     /**
@@ -31,7 +43,7 @@ public:
      *
      * @throws None
      */
-    void run()
+    virtual void run() override
     {
         if constexpr (std::is_void<T>::value)
         {
@@ -74,7 +86,7 @@ public:
      *
      * Waits for the promise to be set.
      */
-    void await() { _future.wait(); }
+    virtual void await() override { _future.wait(); }
 
     /**
      * @brief Gets the result of the task.
@@ -92,8 +104,15 @@ private:
     std::function<T()> _handler;
     std::promise<T> _promise;
     std::shared_future<T> _future;
-    std::shared_ptr<Task<void>> _next;
+    std::shared_ptr<ITask> _next;
 };
+
+static thread_local int g_threadID = -1;
+
+inline size_t getThreadID()
+{
+    return g_threadID == -1 ? oneapi::tbb::this_task_arena::current_thread_index() : g_threadID;
+}
 
 /**
  * @brief Class for managing and running tasks.
@@ -103,8 +122,15 @@ private:
 class TaskManager
 {
 public:
-    // @brief Awaits the completion of all tasks in the task group.
-    void await() { _group.wait(); }
+    TaskManager() { g_threadID = 0; }
+
+    /// \brief Awaits the completion of all tasks in the task group.
+    // \param force If true, all tasks in the group will be cancelled.
+    void await(bool force = false)
+    {
+        if (force) _group.cancel();
+        _group.wait();
+    }
 
     /**
      * @brief Returns the global instance of the TaskManager.
@@ -141,4 +167,19 @@ public:
 private:
     oneapi::tbb::task_group _group;
 };
+
+struct TaskUpdateEvent final : public events::Event
+{
+    void *ctx;
+    std::string header;
+    std::string message;
+    f32 progress;
+
+    TaskUpdateEvent(const std::string &name, void *ctx = nullptr, const std::string &header = "",
+                    const std::string &message = "", f32 progress = 0.0f)
+        : Event(name), ctx(ctx), header(header), message(message), progress(progress)
+    {
+    }
+};
+
 #endif

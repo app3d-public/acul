@@ -1,15 +1,9 @@
-#ifndef CORE_MEM_H
-#define CORE_MEM_H
+#pragma once
 
-#include <cassert>
-#include <core/api.hpp>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include "../std/basic_types.hpp"
-#include "../std/list.hpp"
-
-inline size_t alignUp(size_t value, size_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
+#include "api.hpp"
+#include "std/basic_types.hpp"
+#include "std/enum.hpp"
+#include "std/list.hpp"
 
 class APPLIB_API MemCache
 {
@@ -34,10 +28,28 @@ private:
 class APPLIB_API DisposalQueue
 {
 public:
-    static APPLIB_API DisposalQueue &global();
+    enum class StateBits : u8
+    {
+        Idle = 0x0,
+        MemRelease = 0x1,
+        TaskCtx = 0x2
+    };
+
+    using State = Flags<StateBits>;
+
+    State state() const { return _state; }
+
+    static APPLIB_API DisposalQueue &global()
+    {
+        static DisposalQueue queue;
+        return queue;
+    }
+
+    size_t size() const { return _queue.size(); }
 
     void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
+        _state |= StateBits::MemRelease;
         _queue.push({cache, onWait});
     }
 
@@ -54,32 +66,15 @@ private:
         std::function<void()> onWait = nullptr;
     };
     Queue<MemData> _queue;
+    State _state = StateBits::Idle;
+
+    DisposalQueue() = default;
 };
 
-template <typename T>
-class Proxy
+template <>
+struct FlagTraits<DisposalQueue::StateBits>
 {
-public:
-    Proxy(T *ptr = nullptr) : _ptr(ptr) {}
-
-    T *operator->() { return _ptr; }
-
-    T &operator*()
-    {
-        assert(_ptr != nullptr);
-        return *_ptr;
-    }
-
-    operator bool() const { return _ptr != nullptr; }
-
-    void set(T *ptr) { _ptr = ptr; }
-
-    T &get() { return *_ptr; }
-
-    void reset() { _ptr = nullptr; }
-
-private:
-    T *_ptr;
+    static constexpr bool isBitmask = true;
+    static constexpr DisposalQueue::State allFlags =
+        DisposalQueue::StateBits::Idle | DisposalQueue::StateBits::MemRelease | DisposalQueue::StateBits::TaskCtx;
 };
-
-#endif

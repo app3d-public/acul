@@ -2,6 +2,7 @@
 #define APP_CORE_TASK_H
 
 #include <future>
+#include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
 #include "api.hpp"
@@ -31,9 +32,14 @@ public:
     /**
      * @brief Constructs a Task with a callback.
      *
+     * @tparam T The return type of the task.
      * @param handler The function to be executed by the task.
+     * @param ctx The task group context.
      */
-    explicit Task(std::function<T()> handler) : _handler(handler), _future(_promise.get_future()) {}
+    explicit Task(std::function<T()> handler, oneapi::tbb::task_group_context *ctx)
+        : _ctx{ctx}, _handler(handler), _future(_promise.get_future())
+    {
+    }
 
     /**
      * Executes the task and recursively runs the next task in the chain.
@@ -68,14 +74,15 @@ public:
         if constexpr (std::is_void_v<T>)
         {
             using R = std::invoke_result_t<F>;
-            auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task));
+            auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task), _ctx);
             _next = nextTask;
             return _next;
         }
         else
         {
             using R = std::invoke_result_t<F, T>;
-            auto nextTask = std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); });
+            auto nextTask =
+                std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); }, _ctx);
             _next = nextTask;
             return _next;
         }
@@ -97,10 +104,12 @@ public:
     template <typename R = T, typename = std::enable_if_t<!std::is_void_v<R>, R>>
     R get()
     {
+        if (_ctx->is_group_execution_cancelled()) return R();
         return _future.get();
     }
 
 private:
+    oneapi::tbb::task_group_context *_ctx;
     std::function<T()> _handler;
     std::promise<T> _promise;
     std::shared_future<T> _future;
@@ -119,16 +128,16 @@ inline size_t getThreadID()
  *
  * This class provides mechanisms to add tasks and await their completion.
  */
-class TaskManager
+class APPLIB_API TaskManager
 {
 public:
-    TaskManager() { g_threadID = 0; }
+    TaskManager() : _ctx(oneapi::tbb::task_group_context::isolated), _group(_ctx) { g_threadID = 0; }
 
     /// \brief Awaits the completion of all tasks in the task group.
     // \param force If true, all tasks in the group will be cancelled.
     void await(bool force = false)
     {
-        if (force) _group.cancel();
+        if (force) _ctx.cancel_group_execution();
         _group.wait();
     }
 
@@ -152,7 +161,7 @@ public:
         if constexpr (std::is_invocable<F>::value)
         {
             using R = std::invoke_result_t<F>;
-            auto ptr = std::make_shared<Task<R>>(std::forward<F>(task));
+            auto ptr = std::make_shared<Task<R>>(std::forward<F>(task), &_ctx);
             _group.run([ptr]() { ptr->run(); });
             return ptr;
         }
@@ -165,6 +174,7 @@ public:
     }
 
 private:
+    oneapi::tbb::task_group_context _ctx;
     oneapi::tbb::task_group _group;
 };
 

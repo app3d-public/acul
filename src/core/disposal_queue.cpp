@@ -1,10 +1,4 @@
-#include <core/mem/mem.hpp>
-
-DisposalQueue &DisposalQueue::global()
-{
-    static DisposalQueue instance;
-    return instance;
-}
+#include <core/disposal_queue.hpp>
 
 void DisposalQueue::releaseResources()
 {
@@ -19,4 +13,5 @@ void DisposalQueue::releaseResources()
         }
         _queue.pop();
     }
+    _state &= ~StateBits::MemRelease;
 }

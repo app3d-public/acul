@@ -11,7 +11,6 @@
 #include <map>
 #include <oneapi/tbb/scalable_allocator.h>
 
-
 using i8 = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
@@ -75,5 +74,27 @@ inline Point2D operator-(const Point2D &a) { return {-a.x, -a.y}; }
 inline Point2D operator*(const Point2D &a, i32 b) { return {a.x * b, a.y * b}; }
 
 inline Point2D operator/(const Point2D &a, i32 b) { return {a.x / b, a.y / b}; }
+
+template <typename T>
+class Proxy
+{
+public:
+    Proxy(T *ptr = nullptr) : _ptr(ptr) {}
+
+    T *operator->() { return _ptr; }
+
+    T &operator*() { return *_ptr; }
+
+    operator bool() const { return _ptr != nullptr; }
+
+    void set(T *ptr) { _ptr = ptr; }
+
+    T &get() { return *_ptr; }
+
+    void reset() { _ptr = nullptr; }
+
+private:
+    T *_ptr;
+};
 
 #endif

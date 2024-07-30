@@ -1,11 +1,11 @@
 #ifndef APP_CORE_STD_STREAM_H
 #define APP_CORE_STD_STREAM_H
 
+#include <core/api.hpp>
+#include <core/std/darray.hpp>
 #include <glm/glm.hpp>
 #include <stdexcept>
 #include <string>
-#include <core/std/darray.hpp>
-#include <core/api.hpp>
 
 /**
  * @brief Utility class for binary stream manipulation.
@@ -117,8 +117,7 @@ public:
         while (_pos < _data.size())
         {
             char ch = _data[_pos++];
-            if (ch == '\0')
-                break;
+            if (ch == '\0') break;
             str += ch;
         }
         return *this;
@@ -195,9 +194,21 @@ public:
      */
     size_t size() const { return _data.size(); }
 
+    /**
+     * @brief Shifts the stream position by the specified amount.
+     * @param amount Amount to shift the position by.
+     */
+    void shift(size_t amount) { _pos += amount; }
+
 private:
     DArray<char> _data;
     size_t _pos;
 };
+
+template <typename T>
+BinStream &writeToStream(BinStream &stream, const T &src);
+
+template <typename T>
+BinStream &readFromStream(BinStream &stream, T &dst);
 
 #endif

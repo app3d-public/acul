@@ -24,20 +24,29 @@ namespace io
 {
     namespace file
     {
+        enum class ReadState
+        {
+            Undefined,
+            Success,
+            Error,
+            ChecksumMismatch,
+            Cancelled
+        };
+
         /**
          * @brief Reads a file as binary buffer
          * @param filename The name of the file to read.
          * @param buffer A reference to a variable to store the data.
-         * @return True if the file was successfully read, false otherwise.
+         * @return Success if the file was successfully read, error otherwise.
          **/
-        APPLIB_API bool readBinary(const std::string &filename, DArray<char> &buffer);
+        APPLIB_API ReadState readBinary(const std::string &filename, DArray<char> &buffer);
 
         /**
          * @brief Writes a binary buffer to a file
          * @param filename The name of the file to write.
          * @param buffer The data to write.
          * @param size The size of the data.
-         * @return True if the file was successfully written, false otherwise.
+         * @return Success if the file was successfully written, error otherwise.
          **/
         APPLIB_API bool writeBinary(const std::string &filename, const char *buffer, size_t size);
 
@@ -64,8 +73,8 @@ namespace io
          * otherwise.
          */
         template <typename T>
-        bool readByBlock(const std::string &filename, std::string &error, T &dstBuffer,
-                         void (*callback)(T &, const char *, int))
+        ReadState readByBlock(const std::string &filename, std::string &error, T &dstBuffer,
+                              void (*callback)(T &, const char *, int))
         {
 #ifdef _WIN32
             HANDLE fileHandle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
@@ -73,7 +82,7 @@ namespace io
             if (fileHandle == INVALID_HANDLE_VALUE)
             {
                 error = "Failed to open file: " + filename;
-                return false;
+                return ReadState::Error;
             }
 
             LARGE_INTEGER fileSize;
@@ -81,7 +90,7 @@ namespace io
             {
                 CloseHandle(fileHandle);
                 error = "Failed to get file size: " + filename;
-                return false;
+                return ReadState::Error;
             }
 
             HANDLE mappingHandle = CreateFileMapping(fileHandle, NULL, PAGE_READONLY, 0, 0, NULL);
@@ -89,7 +98,7 @@ namespace io
             {
                 CloseHandle(fileHandle);
                 error = "Failed to create file mapping: " + filename;
-                return false;
+                return ReadState::Error;
             }
 
             char *fileData = static_cast<char *>(MapViewOfFile(mappingHandle, FILE_MAP_READ, 0, 0, fileSize.QuadPart));
@@ -98,7 +107,7 @@ namespace io
                 CloseHandle(mappingHandle);
                 CloseHandle(fileHandle);
                 error = "Failed to map file to memory: " + filename;
-                return false;
+                return ReadState::Error;
             }
 
             // Parse the file in parallel
@@ -164,7 +173,7 @@ namespace io
             munmap(fileData, fileSize);
             close(fd);
 #endif
-            return error.empty();
+            return error.empty() ? ReadState::Success : ReadState::Error;
         }
 
         /**
@@ -190,6 +199,38 @@ namespace io
          */
         APPLIB_API bool copyFile(const std::filesystem::path &src, const std::filesystem::path &dst,
                                  const std::filesystem::copy_options options);
+
+        /**
+         * @brief Compresses the given data using zstd.
+         *
+         * This function compresses the provided data buffer using the zstd compression
+         * algorithm.
+         *
+         * @param data Pointer to the data buffer to be compressed.
+         * @param size The size of the data buffer.
+         * @param compressed The resulting compressed data will be stored in this
+         * vector.
+         * @param quality The compression quality level, which can be in the range [1,
+         * 22]. Typically, values from 1 to 12 are used. A value of 1 results in the
+         * fastest compression speed (but less compression), while a value of 22
+         * provides maximum compression (at the cost of speed).
+         * @return Returns true if the compression was successful, false otherwise.
+         */
+        APPLIB_API bool compress(const char *data, size_t size, DArray<char> &compressed, int quality);
+
+        /**
+         * @brief Decompresses the given data using zstd.
+         *
+         * This function decompresses the provided compressed data buffer using the zstd
+         * decompression algorithm.
+         *
+         * @param data Pointer to the compressed data buffer.
+         * @param size The size of the compressed data buffer.
+         * @param decompressed The resulting decompressed data will be stored in this
+         * vector.
+         * @return Returns true if the decompression was successful, false otherwise.
+         */
+        APPLIB_API bool decompress(const char *data, size_t size, DArray<char> &decompressed);
     } // namespace file
 } // namespace io
 

@@ -1,4 +1,4 @@
-#include <core/file/file.hpp>
+#include <core/io/file.hpp>
 #include <core/pipeline.hpp>
 
 using GraphicsConfig = PipelineConfig<vk::GraphicsPipelineCreateInfo>;
@@ -55,7 +55,7 @@ GraphicsConfig &GraphicsConfig::enableMSAA(const Device::Config config)
 
 void ShaderModule::load(Device &device)
 {
-    if (!io::file::readBinary(path.string(), code))
+    if (io::file::readBinary(path.string(), code) != io::file::ReadState::Success)
         throw std::runtime_error("Failed to read shader " + path.filename().string());
     vk::ShaderModuleCreateInfo createInfo;
     createInfo.setCodeSize(code.size()).setPCode(reinterpret_cast<const u32 *>(code.data()));

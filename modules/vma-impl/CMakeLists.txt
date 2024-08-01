@@ -4,7 +4,7 @@ project(vma
     LANGUAGES C
     DESCRIPTION "Vulkan Memory Allocator")
 
-include_directories("../deps/external/vma/include")
+include_directories("../3rd-party/vma/include")
 
 add_library(${PROJECT_NAME} SHARED vma.cpp)
 

@@ -1,9 +1,9 @@
-[submodule "src/deps/external/half"]
-	path = src/deps/external/half
-	url = gitea@git.local:root/half.git
-[submodule "src/deps/external/vma"]
-	path = src/deps/external/vma
+[submodule "half"]
+	path = modules/3rd-party/half
+	url = git@git.fp.lan:root/half.git
+[submodule "vma"]
+	path = modules/3rd-party/vma
 	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-[submodule "src/vma/deps/external/vma"]
-	path = src/vma/deps/external/vma
-	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "glm"]
+	path = modules/3rd-party/glm
+	url = git@github.com:g-truc/glm.git

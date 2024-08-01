@@ -4,12 +4,23 @@ project(app3d-core
     LANGUAGES CXX C
     DESCRIPTION "App3d Core Library")
 
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/core")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/deps/external/half/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include")
 
-add_subdirectory("src/vma")
+# GLM
+set(GLM_ENABLE_CXX_20 ON)
+add_definitions(-DGLM_FORCE_RADIANS -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_ENABLE_EXPERIMENTAL)
+set(BUILD_SHARED_LIBS ON)
+add_subdirectory("modules/3rd-party/glm")
+set(BUILD_SHARED_LIBS OFF)
+if(USE_ASAN)
+    target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif(USE_ASAN)
+
+add_subdirectory("modules/vma-impl")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC -DAPPLIB_BUILD)

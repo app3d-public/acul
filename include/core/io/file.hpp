@@ -30,7 +30,9 @@ namespace io
             Success,
             Error,
             ChecksumMismatch,
-            Cancelled
+            Cancelled,
+            SizeError,
+            MapError
         };
 
         /**
@@ -73,32 +75,25 @@ namespace io
          * otherwise.
          */
         template <typename T>
-        ReadState readByBlock(const std::string &filename, std::string &error, T &dstBuffer,
-                              void (*callback)(T &, const char *, int))
+        ReadState readByBlock(const std::string &filename, T &dstBuffer, void (*callback)(T &, const char *, int))
         {
 #ifdef _WIN32
             HANDLE fileHandle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
                                            FILE_ATTRIBUTE_NORMAL, NULL);
-            if (fileHandle == INVALID_HANDLE_VALUE)
-            {
-                error = "Failed to open file: " + filename;
-                return ReadState::Error;
-            }
+            if (fileHandle == INVALID_HANDLE_VALUE) return ReadState::Error;
 
             LARGE_INTEGER fileSize;
             if (!GetFileSizeEx(fileHandle, &fileSize))
             {
                 CloseHandle(fileHandle);
-                error = "Failed to get file size: " + filename;
-                return ReadState::Error;
+                return ReadState::SizeError;
             }
 
             HANDLE mappingHandle = CreateFileMapping(fileHandle, NULL, PAGE_READONLY, 0, 0, NULL);
             if (mappingHandle == NULL)
             {
                 CloseHandle(fileHandle);
-                error = "Failed to create file mapping: " + filename;
-                return ReadState::Error;
+                return ReadState::MapError;
             }
 
             char *fileData = static_cast<char *>(MapViewOfFile(mappingHandle, FILE_MAP_READ, 0, 0, fileSize.QuadPart));
@@ -106,11 +101,11 @@ namespace io
             {
                 CloseHandle(mappingHandle);
                 CloseHandle(fileHandle);
-                error = "Failed to map file to memory: " + filename;
-                return ReadState::Error;
+                return ReadState::MapError;
             }
 
             // Parse the file in parallel
+            ReadState res = ReadState::Success;
             try
             {
                 StringPool<char> stringPool(fileSize.QuadPart);
@@ -123,7 +118,7 @@ namespace io
             }
             catch (const std::exception &e)
             {
-                error = "File error: " + std::string(e.what());
+                res = ReadState::Error;
             }
 
             // Unmap the file from memory
@@ -173,7 +168,7 @@ namespace io
             munmap(fileData, fileSize);
             close(fd);
 #endif
-            return error.empty() ? ReadState::Success : ReadState::Error;
+            return res;
         }
 
         /**

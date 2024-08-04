@@ -32,8 +32,7 @@ public:
     using reverse_iterator = std::reverse_iterator<Iterator>;
     using const_reverse_iterator = const std::reverse_iterator<Iterator>;
 
-    DArray() noexcept : _size(0), _capacity(DARRAY_SBO_SIZE), _data(allocator.allocate(DARRAY_SBO_SIZE)) {
-    }
+    DArray() noexcept : _size(0), _capacity(DARRAY_SBO_SIZE), _data(allocator.allocate(DARRAY_SBO_SIZE)) {}
 
     explicit DArray(size_type size) noexcept : _size(size), _capacity(size), _data(allocator.allocate(size))
     {
@@ -121,12 +120,10 @@ public:
     {
         if (this != &other)
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
-                for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
+            const size_type oldCapacity = _capacity;
             _capacity = other._capacity;
-            const size_type oldSize = _size;
+            if (oldCapacity < other._capacity) reallocate(false);
             _size = other._size;
-            if (oldSize < _size) reallocate();
             if constexpr (std::is_trivially_copyable_v<T>)
                 std::memcpy(_data, other._data, _size * sizeof(T));
             else
@@ -356,9 +353,9 @@ private:
     size_type _capacity;
     pointer _data;
 
-    void reallocate()
+    void reallocate(bool adjustCapacity = true)
     {
-        _capacity = std::max(_capacity * 2, std::max((size_t)8UL, _capacity + 1));
+        if (adjustCapacity) _capacity = std::max(_capacity * 2, std::max((size_t)8UL, _capacity + 1));
         pointer newData;
         if constexpr (std::is_trivially_copyable_v<T>)
         {

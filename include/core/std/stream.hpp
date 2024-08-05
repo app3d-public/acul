@@ -205,10 +205,4 @@ private:
     size_t _pos;
 };
 
-template <typename T>
-BinStream &writeToStream(BinStream &stream, const T &src);
-
-template <typename T>
-BinStream &readFromStream(BinStream &stream, T &dst);
-
 #endif

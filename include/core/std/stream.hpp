@@ -153,7 +153,14 @@ public:
      * @param size Size of the data in bytes.
      * @return Reference to the stream to support chained calls.
      */
-    BinStream &write(const char *data, size_t size);
+    template <typename T>
+    BinStream &write(T *data, size_t size)
+    {
+        if (data == nullptr) throw std::invalid_argument("Null pointer passed to write");
+
+        _data.insert(_data.end(), reinterpret_cast<char *>(data), reinterpret_cast<char *>(data) + size * sizeof(T));
+        return *this;
+    }
 
     /**
      * @brief Reads raw data from the stream.
@@ -162,7 +169,19 @@ public:
      * @param size Size of the data in bytes.
      * @return Reference to the stream to support chained calls.
      */
-    BinStream &read(char *data, size_t size);
+    template <typename T>
+    BinStream &read(T *data, size_t size)
+    {
+        if (data == nullptr) throw std::invalid_argument("Null pointer passed to read");
+
+        size_t byteSize = size * sizeof(T);
+        if (_pos + byteSize > _data.size()) throw std::runtime_error("Error reading from stream");
+
+        std::memcpy(data, &_data[_pos], byteSize);
+        _pos += byteSize;
+
+        return *this;
+    }
 
     /**
      * @brief Retrieves a constant pointer to the stream's data.
@@ -186,7 +205,11 @@ public:
      * @brief Sets the current position in the stream.
      * @param pos Desired position.
      */
-    void pos(size_t pos);
+    void pos(size_t pos)
+    {
+        if (pos > _data.size()) throw std::out_of_range("Invalid position");
+        _pos = pos;
+    }
 
     /**
      * @brief Gets the size of the data in the stream.

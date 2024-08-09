@@ -3,6 +3,7 @@
 
 #include <core/api.hpp>
 #include <core/std/darray.hpp>
+#include <core/std/list.hpp>
 #include <glm/glm.hpp>
 #include <stdexcept>
 #include <string>
@@ -42,6 +43,14 @@ public:
     {
         const char *byte_data = reinterpret_cast<const char *>(&val);
         _data.insert(_data.end(), byte_data, byte_data + sizeof(val));
+        return *this;
+    }
+
+    template <typename T>
+    BinStream &write(const List<T> &list)
+    {
+        write(list.size());
+        for (const auto &item : list) write(item);
         return *this;
     }
 
@@ -102,6 +111,20 @@ public:
         }
         else
             throw std::runtime_error("Error reading from stream");
+        return *this;
+    }
+
+    template <typename T>
+    BinStream &read(List<T> &list)
+    {
+        size_t count;
+        read(count);
+        for (size_t i = 0; i < count; ++i)
+        {
+            T item;
+            read(item);
+            list.push_back(item);
+        }
         return *this;
     }
 

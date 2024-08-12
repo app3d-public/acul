@@ -12,18 +12,19 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include"
 
 # GLM
 set(GLM_ENABLE_CXX_20 ON)
-add_definitions(-DGLM_FORCE_RADIANS -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_ENABLE_EXPERIMENTAL)
 set(BUILD_SHARED_LIBS ON)
 add_subdirectory("modules/3rd-party/glm")
 set(BUILD_SHARED_LIBS OFF)
 if(USE_ASAN)
     target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif(USE_ASAN)
+target_compile_definitions(glm PUBLIC GLM_FORCE_RADIANS GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_ENABLE_EXPERIMENTAL)
 
 add_subdirectory("modules/vma-impl")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC -DAPPLIB_BUILD)
+
 
 if(USE_ASAN)
     target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)

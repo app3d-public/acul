@@ -13,5 +13,4 @@ void DisposalQueue::releaseResources()
         }
         _queue.pop();
     }
-    _state &= ~StateBits::MemRelease;
 }

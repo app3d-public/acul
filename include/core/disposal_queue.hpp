@@ -2,7 +2,6 @@
 
 #include "api.hpp"
 #include "std/basic_types.hpp"
-#include "std/enum.hpp"
 #include "std/list.hpp"
 
 class APPLIB_API MemCache
@@ -28,16 +27,6 @@ private:
 class APPLIB_API DisposalQueue
 {
 public:
-    enum class StateBits : u8
-    {
-        Idle = 0x0,
-        MemRelease = 0x1,
-        TaskCtx = 0x2
-    };
-
-    using State = Flags<StateBits>;
-
-    State state() const { return _state; }
 
     static APPLIB_API DisposalQueue &global()
     {
@@ -49,7 +38,6 @@ public:
 
     void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
-        _state |= StateBits::MemRelease;
         _queue.push({cache, onWait});
     }
 
@@ -66,15 +54,6 @@ private:
         std::function<void()> onWait = nullptr;
     };
     Queue<MemData> _queue;
-    State _state = StateBits::Idle;
 
     DisposalQueue() = default;
-};
-
-template <>
-struct FlagTraits<DisposalQueue::StateBits>
-{
-    static constexpr bool isBitmask = true;
-    static constexpr DisposalQueue::State allFlags =
-        DisposalQueue::StateBits::Idle | DisposalQueue::StateBits::MemRelease | DisposalQueue::StateBits::TaskCtx;
 };

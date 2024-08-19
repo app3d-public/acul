@@ -102,7 +102,7 @@ std::string f(const char *format, ...) noexcept
     return result;
 }
 
-std::string f(const char* format, va_list args) noexcept
+std::string f(const char *format, va_list args) noexcept
 {
     std::string result;
     int size = vsnprintf(nullptr, 0, format, args) + 1;
@@ -428,9 +428,10 @@ std::string getStrRange(const char *&str)
     return std::string(begin, end);
 }
 
-std::string trimEnd(const std::string &str)
+std::string trimEnd(const char *str)
 {
-    const char *end = str.data() + str.size();
-    while (end != str.data() && !std::isprint(static_cast<unsigned char>(*(end - 1)))) --end;
-    return std::string(str.data(), end);
+    if (!str) return "";
+    const char *end = str + std::strlen(str);
+    while (end != str && (*(end - 1) == '\n' || *(end - 1) == '\r')) --end;
+    return std::string(str, end);
 }

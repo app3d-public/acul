@@ -302,6 +302,8 @@ public:
 
     iterator erase(iterator pos);
 
+    iterator erase(iterator first, iterator last);
+
     iterator insert(iterator pos, const T &value);
 
     template <typename InputIt>
@@ -477,6 +479,22 @@ DArray<T, Allocator>::iterator DArray<T, Allocator>::erase(iterator pos)
         std::move(_data + index + 1, _data + _size, _data + index);
         --_size;
         if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(_data + _size);
+        return iterator(_data + index);
+    }
+    return end();
+}
+
+template <typename T, template <typename> class Allocator>
+DArray<T, Allocator>::iterator DArray<T, Allocator>::erase(iterator first, iterator last)
+{
+    if (first >= begin() && last <= end() && first < last)
+    {
+        std::ptrdiff_t index = first - begin();
+        std::ptrdiff_t count = last - first;
+        std::move(_data + index + count, _data + _size, _data + index);
+        _size -= count;
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            for (std::ptrdiff_t i = 0; i < count; ++i) allocator.destroy(_data + _size + i);
         return iterator(_data + index);
     }
     return end();

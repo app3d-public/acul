@@ -25,7 +25,7 @@ APPLIB_API std::string trim(const std::string &inputStr, size_t max = std::numer
  */
 APPLIB_API std::string f(const char *format, ...) noexcept;
 
-APPLIB_API std::string f(const char* format, va_list args) noexcept;
+APPLIB_API std::string f(const char *format, va_list args) noexcept;
 
 /**
  * @brief Converts the integer to the C-style string
@@ -132,6 +132,6 @@ inline void strToV3Optional(const char *&str, glm::vec3 &vec)
  */
 APPLIB_API std::string getStrRange(const char *&str);
 
-APPLIB_API std::string trimEnd(const std::string &str);
+APPLIB_API std::string trimEnd(const char *str);
 
 #endif

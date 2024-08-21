@@ -118,23 +118,33 @@ namespace logging
         std::shared_ptr<TokenHandlerList> _tokens;
     };
 
-    class APPLIB_API FileLogger : public Logger
+    class APPLIB_API FileLogger final : public Logger
     {
     public:
-        FileLogger(const std::string &name, const std::string &path, std::ios_base::openmode flags);
+        FileLogger(const std::string &name, const std::filesystem::path &path, std::ios_base::openmode flags)
+            : Logger(name), _path(path)
+        {
+            _fs.open(path, flags);
+        }
 
-        ~FileLogger();
+        ~FileLogger()
+        {
+            if (_fs.is_open()) _fs.close();
+        }
 
         std::ostream &stream() override { return _fs; }
 
-        void write(const std::string &message) override;
+        void write(const std::string &message) override
+        {
+            if (_fs.is_open()) _fs << message;
+        }
 
     private:
-        std::string _filepath;
+        std::filesystem::path _path;
         std::ofstream _fs;
     };
 
-    class ConsoleLogger : public Logger
+    class ConsoleLogger final : public Logger
     {
     public:
         explicit ConsoleLogger(const std::string &name) : Logger(name) {}

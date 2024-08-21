@@ -84,22 +84,6 @@ namespace logging
         }
     };
 
-    FileLogger::FileLogger(const std::string &name, const std::string &path, std::ios_base::openmode flags)
-        : Logger(name), _filepath(path)
-    {
-        _fs.open(path, flags);
-    }
-
-    FileLogger::~FileLogger()
-    {
-        if (_fs.is_open()) _fs.close();
-    }
-
-    void FileLogger::write(const std::string &message)
-    {
-        if (_fs.is_open()) _fs << message;
-    }
-
     void Logger::setPattern(const std::string &pattern)
     {
         _tokens->clear();

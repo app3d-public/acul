@@ -1,8 +1,9 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include "std/darray.hpp"
-#include "task.hpp"
+#include "../api.hpp"
+#include "../std/basic_types.hpp"
+#include "../std/darray.hpp"
 
 /**
  * @class CommandPool
@@ -11,27 +12,33 @@
 class APPLIB_API CommandPool
 {
 public:
-    CommandPool() { _pools.resize(std::thread::hardware_concurrency()); }
-
     /**
      * @brief Destroys the command pool.
      * @param device The Vulkan device.
      * @param loader The Vulkan dispatch loader.
      */
-    void destroy(vk::Device &device, vk::DispatchLoaderDynamic &loader);
+    void destroy(vk::Device &device, vk::DispatchLoaderDynamic &loader)
+    {
+        if (_vkPool) device.destroyCommandPool(_vkPool, nullptr, loader);
+    }
 
     /**
      * @brief Gets the Vulkan command pool.
      * @return The Vulkan command pool.
      */
-    vk::CommandPool vkPool() const { return _pools[getThreadID()].vkPool; }
+    vk::CommandPool vkPool() const { return _vkPool; }
 
     /**
      * @brief Gets the size of the specified command buffer level.
      * @param level The command buffer level (primary or secondary).
      * @return The size of the command buffer group.
      */
-    size_t size(vk::CommandBufferLevel level) const;
+    size_t size(vk::CommandBufferLevel level) const
+    {
+        if (level == vk::CommandBufferLevel::ePrimary)
+            return _primary.size - _primary.pos + _primary.releasedBuffers.size();
+        return _secondary.size - _secondary.pos + _secondary.releasedBuffers.size();
+    }
 
     /**
      * @brief Allocates the command pool with the specified creation info.
@@ -79,14 +86,9 @@ private:
         Queue<size_t> releasedBuffers;
     };
 
-    struct _CommandPool
-    {
-        vk::CommandPool vkPool;
-        _CommandGroup primary;
-        _CommandGroup secondary;
-    };
-
-    DArray<_CommandPool> _pools;
+    vk::CommandPool _vkPool;
+    _CommandGroup _primary;
+    _CommandGroup _secondary;
 
     void requestBuffers(_CommandGroup &group, vk::CommandBuffer *pBuffers, size_t size, vk::CommandBufferLevel level,
                         vk::Device &device, vk::DispatchLoaderDynamic &loader);

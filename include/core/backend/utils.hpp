@@ -26,10 +26,10 @@ APPLIB_API vk::CommandBuffer beginSingleTimeCommands(Device &device, QueueFamily
  * @param commandBuffer The command buffer to end and submit.
  * @param queue The queue family to submit the command buffer to.
  * @param device The device object.
- *
+ * @return The result of the submit operation.
  * @throws vk::Error if there is an error submitting or waiting for the command buffer.
  */
-APPLIB_API void endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInfo &queue, Device &device);
+APPLIB_API vk::Result endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInfo &queue, Device &device);
 
 /// @brief Create a buffer with the given size, usage flags, and memory usage
 /// @param size Size of the buffer in bytes
@@ -41,8 +41,9 @@ APPLIB_API void endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFami
 /// @param allocation: Allocation for the buffer
 /// @param device Device
 /// @return True on success, false on failure
-APPLIB_API bool createBuffer(vk::DeviceSize size, vk::BufferUsageFlags vkUsage, VmaMemoryUsage vmaUsage, vk::Buffer &buffer,
-                  vk::MemoryPropertyFlags requiredFlags, f32 priority, VmaAllocation &allocation, const Device &device);
+APPLIB_API bool createBuffer(vk::DeviceSize size, vk::BufferUsageFlags vkUsage, VmaMemoryUsage vmaUsage,
+                             vk::Buffer &buffer, vk::MemoryPropertyFlags requiredFlags, f32 priority,
+                             VmaAllocation &allocation, const Device &device);
 
 /// @brief Copy buffer from source to destination
 /// @param device Device
@@ -57,8 +58,8 @@ APPLIB_API void copyBuffer(Device &device, vk::Buffer srcBuffer, vk::Buffer dstB
 /// @param oldLayout Current layout
 /// @param newLayout New layout
 /// @param mipLevels Image mip level
-APPLIB_API void transitionImageLayout(Device &device, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-                           u32 mipLevels);
+APPLIB_API void transitionImageLayout(Device &device, vk::Image image, vk::ImageLayout oldLayout,
+                                      vk::ImageLayout newLayout, u32 mipLevels);
 
 /// @brief Copy buffer to VK image
 /// @param device Device
@@ -69,8 +70,8 @@ APPLIB_API void transitionImageLayout(Device &device, vk::Image image, vk::Image
 /// @param layerCount Layer count
 /// @param offsetX Offset X
 /// @param offsetY Offset Y
-APPLIB_API void copyBufferToImage(Device &device, vk::Buffer buffer, vk::Image image, u32 width, u32 height, u32 layerCount,
-                       int offsetX = 0, int offsetY = 0);
+APPLIB_API void copyBufferToImage(Device &device, vk::Buffer buffer, vk::Image image, u32 width, u32 height,
+                                  u32 layerCount, int offsetX = 0, int offsetY = 0);
 
 /// @brief Copy image from VK Buffer
 /// @param device Device
@@ -81,8 +82,8 @@ APPLIB_API void copyBufferToImage(Device &device, vk::Buffer buffer, vk::Image i
 /// @param layerCount Layer count
 /// @param offsetX Offset X
 /// @param offsetY Offset Y
-APPLIB_API void copyImageToBuffer(Device &device, vk::Buffer buffer, vk::Image image, u32 width, u32 height, u32 layerCount,
-                       int offsetX, int offsetY);
+APPLIB_API void copyImageToBuffer(Device &device, vk::Buffer buffer, vk::Image image, u32 width, u32 height,
+                                  u32 layerCount, int offsetX, int offsetY);
 
 /// @brief Create VK image by ImageCreeateInfo structure
 /// @param imageInfo ImageCreateInfo structure
@@ -94,6 +95,6 @@ APPLIB_API void copyImageToBuffer(Device &device, vk::Buffer buffer, vk::Image i
 /// @param priority Mem priority
 /// @return True on success, false on failure
 APPLIB_API bool createImageWithInfo(const vk::ImageCreateInfo &imageInfo, vk::Image &image, VmaAllocation &allocation,
-                         VmaAllocator &allocator, VmaMemoryUsage vmaUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY,
-                         vk::MemoryPropertyFlags vkMemFlags = vk::MemoryPropertyFlagBits::eDeviceLocal,
-                         f32 priority = 0.5f);
+                                    VmaAllocator &allocator, VmaMemoryUsage vmaUsageFlags = VMA_MEMORY_USAGE_GPU_ONLY,
+                                    vk::MemoryPropertyFlags vkMemFlags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                    f32 priority = 0.5f);

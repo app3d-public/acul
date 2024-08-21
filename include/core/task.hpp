@@ -8,8 +8,7 @@
 #include <oneapi/tbb/task_group.h>
 #include "api.hpp"
 #include "disposal_queue.hpp"
-#include "event/event.hpp"
-
+#include "event.hpp"
 
 class ITask
 {

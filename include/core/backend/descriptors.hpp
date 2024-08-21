@@ -6,7 +6,7 @@
 #ifndef APP_BACKEND_DESCRIPTORS
 #define APP_BACKEND_DESCRIPTORS
 
-#include "device/device.hpp"
+#include "device.hpp"
 
 namespace app
 {

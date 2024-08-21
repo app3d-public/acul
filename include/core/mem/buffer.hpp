@@ -1,6 +1,6 @@
 #pragma once
-#include "../device/device.hpp"
-#include "../device/utils.hpp"
+#include "../backend/device.hpp"
+#include "../backend/utils.hpp"
 #include "../disposal_queue.hpp"
 
 /// @brief VK buffer abstraction wrapper

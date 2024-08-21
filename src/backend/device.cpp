@@ -1,4 +1,4 @@
-#include <core/device/device.hpp>
+#include <core/backend/device.hpp>
 #include <core/log.hpp>
 
 #define DEVICE_QUEUE_GRAPHICS 0
@@ -155,6 +155,7 @@ void Device::init(const std::string &appName, u32 version, DeviceCreateCtx *crea
     createLogicalDevice();
     createAllocator();
     allocateCommandPools();
+    fencePool.allocate(createCtx->fencePoolSize, vkDevice, vkLoader);
     _createCtx = nullptr;
 }
 
@@ -162,6 +163,7 @@ void Device::destroy()
 {
     if (!vkDevice) return;
     destroyQueue(*this, vkDevice, vkLoader);
+    fencePool.destroy(vkDevice, vkLoader);
     if (!std::uncaught_exception()) vmaDestroyAllocator(allocator);
     logInfo("Destroying vk:device");
     vkDevice.destroy(nullptr, vkLoader);
@@ -365,11 +367,9 @@ void Device::createLogicalDevice()
     assert(graphicsQueue.familyIndex.has_value() && computeQueue.familyIndex.has_value());
     Set<u32> uniqueQueueFamilies = {graphicsQueue.familyIndex.value(), computeQueue.familyIndex.value()};
     if (_createCtx->enablePresent) uniqueQueueFamilies.insert(presentQueue.familyIndex.value());
-    u32 queueCount = std::max(1U, std::thread::hardware_concurrency());
-    logInfo("Creating %d queues", queueCount);
-    DArray<f32> queuePriorities(queueCount, 1.0f);
+    f32 queuePriority = 1.0f;
     for (u32 queueFamily : uniqueQueueFamilies)
-        queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), queueFamily, queueCount, queuePriorities.data());
+        queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), queueFamily, 1, &queuePriority);
 
     vk::PhysicalDeviceFeatures deviceFeatures;
     deviceFeatures.setSamplerAnisotropy(true)
@@ -393,16 +393,10 @@ void Device::createLogicalDevice()
         .setPNext(&drawFeatures);
     vkDevice = physicalDevice.createDevice(createInfo, nullptr, vkLoader);
 
-    graphicsQueue.queues.resize(queueCount);
-    computeQueue.queues.resize(queueCount);
-    if (_createCtx->enablePresent) presentQueue.queues.resize(queueCount);
-    for (u32 i = 0; i < queueCount; i++)
-    {
-        graphicsQueue.queues[i] = vkDevice.getQueue(graphicsQueue.familyIndex.value(), i, vkLoader);
-        computeQueue.queues[i] = vkDevice.getQueue(computeQueue.familyIndex.value(), i, vkLoader);
-        if (_createCtx->enablePresent)
-            presentQueue.queues[i] = vkDevice.getQueue(presentQueue.familyIndex.value(), i, vkLoader);
-    }
+    graphicsQueue.vkQueue = vkDevice.getQueue(graphicsQueue.familyIndex.value(), 0, vkLoader);
+    computeQueue.vkQueue = vkDevice.getQueue(computeQueue.familyIndex.value(), 0, vkLoader);
+    if (_createCtx->enablePresent)
+        presentQueue.vkQueue = vkDevice.getQueue(presentQueue.familyIndex.value(), 0, vkLoader);
 }
 
 void Device::createAllocator()

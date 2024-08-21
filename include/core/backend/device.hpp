@@ -2,9 +2,10 @@
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
-#include "../command_pool.hpp"
 #include "../std/basic_types.hpp"
 #include "../std/darray.hpp"
+#include "command_pool.hpp"
+#include "fence_pool.hpp"
 
 class DeviceCreateCtx
 {
@@ -13,8 +14,9 @@ public:
     DArray<const char *> extensions;
     DArray<const char *> optExtensions;
     bool enablePresent;
+    size_t fencePoolSize;
 
-    DeviceCreateCtx() : enablePresent(false) {}
+    DeviceCreateCtx() : enablePresent(false), fencePoolSize(0) {}
 
     virtual ~DeviceCreateCtx() = default;
 
@@ -43,17 +45,21 @@ public:
         return *this;
     }
 
+    DeviceCreateCtx &setFencePoolSize(size_t fencePoolSize)
+    {
+        this->fencePoolSize = fencePoolSize;
+        return *this;
+    }
+
 protected:
-    DeviceCreateCtx(bool enablePresent) : enablePresent(enablePresent) {}
+    DeviceCreateCtx(bool enablePresent) : enablePresent(enablePresent), fencePoolSize(0) {}
 };
 
 struct QueueFamilyInfo
 {
     std::optional<u32> familyIndex;
-    DArray<vk::Queue> queues;
+    vk::Queue vkQueue;
     CommandPool pool;
-
-    vk::Queue &vkQueue() { return queues[getThreadID()]; }
 };
 
 struct DeviceQueue
@@ -92,6 +98,7 @@ public:
     vk::PhysicalDeviceDepthStencilResolveProperties depthResolveProperties;
     VmaAllocator allocator;
     vk::SurfaceKHR surface;
+    FencePool fencePool;
 
     Device() = default;
     Device(const Device &) = delete;

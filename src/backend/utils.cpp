@@ -1,4 +1,5 @@
-#include <core/device/utils.hpp>
+#include <core/backend/fence_pool.hpp>
+#include <core/backend/utils.hpp>
 #include <core/log.hpp>
 
 #define MEM_DEDICATTED_ALLOC_MIN 536870912u
@@ -14,16 +15,20 @@ vk::CommandBuffer beginSingleTimeCommands(Device &device, QueueFamilyInfo &queue
     return commandBuffer;
 }
 
-void endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInfo &queue, Device &device)
+vk::Result endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInfo &queue, Device &device)
 {
+    vk::Fence fence;
+    device.fencePool.requestFences(&fence, 1, device.vkDevice, device.vkLoader);
+    device.vkDevice.resetFences(fence, device.vkLoader);
     commandBuffer.end(device.vkLoader);
     vk::SubmitInfo submitInfo;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
-    auto &vkQueue = queue.vkQueue();
-    vkQueue.submit(submitInfo, nullptr, device.vkLoader);
-    vkQueue.waitIdle(device.vkLoader);
+    queue.vkQueue.submit(submitInfo, fence, device.vkLoader);
+    auto res = device.vkDevice.waitForFences(fence, true, UINT64_MAX, device.vkLoader);
     queue.pool.releaseBuffer(commandBuffer, vk::CommandBufferLevel::ePrimary);
+    device.fencePool.releaseFence(fence);
+    return res;
 }
 
 bool createBuffer(vk::DeviceSize size, vk::BufferUsageFlags vkUsage, VmaMemoryUsage vmaUsage, vk::Buffer &buffer,

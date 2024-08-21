@@ -1,5 +1,5 @@
 #include <core/io/file.hpp>
-#include <core/pipeline.hpp>
+#include <core/backend/pipeline.hpp>
 
 using GraphicsConfig = PipelineConfig<vk::GraphicsPipelineCreateInfo>;
 GraphicsConfig &GraphicsConfig::loadDefaults()

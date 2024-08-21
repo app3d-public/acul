@@ -1,8 +1,8 @@
 #ifndef APP_GRAPHICS_PIPELINE_H
 #define APP_GRAPHICS_PIPELINE_H
 
-#include "device/device.hpp"
-#include "log.hpp"
+#include "device.hpp"
+#include "../log.hpp"
 
 // Сonfiguration settings for a Vulkan graphics pipeline.
 struct IPipelineConfig

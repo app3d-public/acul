@@ -1,7 +1,7 @@
 #pragma once
 
+#include <oneapi/tbb/concurrent_queue.h>
 #include "api.hpp"
-#include "std/basic_types.hpp"
 #include "std/list.hpp"
 
 class APPLIB_API MemCache
@@ -34,8 +34,6 @@ public:
         return queue;
     }
 
-    size_t size() const { return _queue.size(); }
-
     void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
         _queue.push({cache, onWait});
@@ -53,7 +51,7 @@ private:
         List<MemCache *> cacheList;
         std::function<void()> onWait = nullptr;
     };
-    Queue<MemData> _queue;
+    oneapi::tbb::concurrent_queue<MemData> _queue;
 
     DisposalQueue() = default;
 };

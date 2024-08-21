@@ -2,11 +2,14 @@
 #define APP_CORE_TASK_H
 
 #include <future>
+#include <memory>
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
 #include "api.hpp"
+#include "disposal_queue.hpp"
 #include "event/event.hpp"
+
 
 class ITask
 {
@@ -36,7 +39,7 @@ public:
      * @param handler The function to be executed by the task.
      * @param ctx The task group context.
      */
-    explicit Task(std::function<T()> handler, oneapi::tbb::task_group_context *ctx)
+    explicit Task(std::function<T()> handler, oneapi::tbb::task_group_context *ctx = nullptr)
         : _ctx{ctx}, _handler(handler), _future(_promise.get_future())
     {
     }
@@ -76,7 +79,7 @@ public:
             using R = std::invoke_result_t<F>;
             auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task), _ctx);
             _next = nextTask;
-            return _next;
+            return this;
         }
         else
         {
@@ -84,7 +87,7 @@ public:
             auto nextTask =
                 std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); }, _ctx);
             _next = nextTask;
-            return _next;
+            return this;
         }
     }
 
@@ -104,7 +107,7 @@ public:
     template <typename R = T, typename = std::enable_if_t<!std::is_void_v<R>, R>>
     R get()
     {
-        if (_ctx->is_group_execution_cancelled()) return R();
+        if (_ctx && _ctx->is_group_execution_cancelled()) return R();
         return _future.get();
     }
 
@@ -114,6 +117,33 @@ private:
     std::promise<T> _promise;
     std::shared_future<T> _future;
     std::shared_ptr<ITask> _next;
+};
+
+template <typename F>
+auto addTask(F &&task)
+{
+    if constexpr (std::is_invocable<F>::value)
+    {
+        using R = std::invoke_result_t<F>;
+        auto ptr = std::make_shared<Task<R>>(std::forward<F>(task));
+        return ptr;
+    }
+    else
+    {
+        auto ptr = std::forward<F>(task);
+        return ptr;
+    }
+}
+
+class TaskMemCache : public MemCache
+{
+public:
+    explicit TaskMemCache(const std::shared_ptr<ITask> &task) : _task(task) {}
+
+    virtual void free() override { _task->run(); }
+
+private:
+    std::shared_ptr<ITask> _task;
 };
 
 static thread_local int g_threadID = -1;
@@ -146,7 +176,11 @@ public:
      *
      * @return The global TaskManager instance.
      */
-    static APPLIB_API TaskManager &global();
+    static TaskManager &global()
+    {
+        static TaskManager singleton;
+        return singleton;
+    }
 
     /**
      * @brief Adds a new task to the task group.
@@ -156,21 +190,11 @@ public:
      * @return A shared pointer to the added task.
      */
     template <typename F>
-    auto addTask(F &&task)
+    inline auto dispatch(F &&task)
     {
-        if constexpr (std::is_invocable<F>::value)
-        {
-            using R = std::invoke_result_t<F>;
-            auto ptr = std::make_shared<Task<R>>(std::forward<F>(task), &_ctx);
-            _group.run([ptr]() { ptr->run(); });
-            return ptr;
-        }
-        else
-        {
-            auto ptr = std::forward<F>(task);
-            _group.run([ptr]() { ptr->run(); });
-            return ptr;
-        }
+        auto ptr = addTask(std::forward<F>(task));
+        _group.run([ptr]() { ptr->run(); });
+        return ptr;
     }
 
 private:

@@ -30,7 +30,6 @@ namespace io
             Success,
             Error,
             ChecksumMismatch,
-            Cancelled,
             SizeError,
             MapError
         };

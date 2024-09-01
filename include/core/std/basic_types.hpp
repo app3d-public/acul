@@ -89,7 +89,7 @@ public:
 
     void set(T *ptr) { _ptr = ptr; }
 
-    T &get() { return *_ptr; }
+    T *get() { return _ptr; }
 
     void reset() { _ptr = nullptr; }
 

@@ -8,6 +8,10 @@ include_directories("../3rd-party/vma/include")
 
 add_library(${PROJECT_NAME} SHARED vma.cpp)
 
+if(USE_ASAN)
+    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif(USE_ASAN)
+
 target_compile_options(${PROJECT_NAME} PUBLIC
     -Wno-unused-variable
     -Wno-nullability-completeness

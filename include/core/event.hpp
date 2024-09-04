@@ -1,49 +1,38 @@
 #ifndef APP_CORE_EVENT_H
 #define APP_CORE_EVENT_H
 
-#include <any>
 #include <cassert>
 #include <functional>
 #include <string>
 #include "api.hpp"
 #include "std/basic_types.hpp"
 #include "std/darray.hpp"
+#include "std/traits.hpp"
 
 namespace events
 {
-    struct Event
+    struct IEvent
+    {
+        std::string name;
+
+        explicit IEvent(const std::string &name = "") : name(name) {}
+
+        virtual ~IEvent() = default;
+
+        bool operator==(const IEvent &event) const { return event.name == name; }
+        bool operator!=(const IEvent &event) const { return !(*this == event); }
+    };
+
+    template <typename T>
+    struct Event final : IEvent
     {
     public:
-        explicit Event(const std::string &name = "", std::any data = {}) : _name(name), _data(std::move(data)) {}
+        T data;
 
-        virtual ~Event() = default;
-
-        template <typename T>
-        T data()
-        {
-            assert(_data.type() == typeid(T));
-            return std::any_cast<T>(_data);
-        }
-
-        template <typename T>
-        T data() const
-        {
-            assert(_data.type() == typeid(T));
-            return std::any_cast<T>(_data);
-        }
-
-        void data(std::any data) { _data = std::move(data); }
-
-        bool operator==(const Event &event) const { return event._name == _name; }
-        bool operator!=(const Event &event) const { return !(*this == event); }
-
-        std::string name() const { return _name; }
-        void name(const std::string &name) { _name = name; }
-
-    protected:
-        std::string _name;
-        std::any _data;
+        explicit Event(const std::string &name = "", T &&data = {}) : IEvent(name), data(std::forward<T>(data)) {}
     };
+
+    using PointerEvent = Event<IEvent *>;
 
     // Base class for event listeners.
     class BaseEventListener
@@ -86,7 +75,7 @@ namespace events
         template <typename E>
         iterator addListener(const std::string &event, std::function<void(E &)> listener, int priority = 5)
         {
-            static_assert(std::is_base_of<Event, E>::value, "E must inherit from Event");
+            static_assert(std::is_base_of<IEvent, E>::value, "E must inherit from Event");
             auto eventListener = new EventListener<E>(listener);
             return _listeners[event].emplace(priority, eventListener);
         }
@@ -114,22 +103,11 @@ namespace events
             }
         }
 
-        // Dispatches an event by name, creating an event instance with the provided arguments.
-        // Parameters:
-        // - eventName: The name of the event to dispatch.
-        // - args: Arguments to pass to the event constructor.
-        template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>, typename... Args>
-        void dispatch(const std::string &eventName, Args &&...args)
-        {
-            E event(eventName, std::forward<Args>(args)...);
-            dispatch(event);
-        }
-
         // Dispatchs an event, invoking all listeners subscribed to this event.
-        template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>>
+        template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void dispatch(E &event)
         {
-            auto it = _listeners.find(event.name());
+            auto it = _listeners.find(event.name);
             if (it != _listeners.end())
             {
                 for (auto iter = it->second.begin(); iter != it->second.end();)
@@ -141,6 +119,27 @@ namespace events
             }
             else
                 _pendingEvents.push(std::move(event));
+        }
+
+        // Dispatches an event by name, creating an event instance with the provided arguments.
+        inline void dispatch(const std::string &name)
+        {
+            auto event = IEvent(name);
+            dispatch(event);
+        }
+
+        template <typename T>
+        inline void dispatch(const std::string &name, T &&data)
+        {
+            auto event = Event<T>(name, std::forward<T>(data));
+            dispatch(event);
+        }
+
+        template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>, typename... Args>
+        inline void dispatch(const std::string &name, Args &&...args)
+        {
+            E event(name, std::forward<Args>(args)...);
+            dispatch(event);
         }
 
         // Retrieves a list of all listeners registered for a specific event.
@@ -186,18 +185,22 @@ namespace events
         }
 
         // Binds a listener to an event of a specific type.
-        template <typename E = Event, typename = std::enable_if_t<std::is_base_of_v<Event, E>>, typename T>
-        void bindEvent(T *owner, const std::string &event, std::function<void(E &)> listener, int priority = 5)
+        template <typename Listener>
+        void bindEvent(void *owner, const std::string &event, Listener &&listener, int priority = 5)
         {
-            auto id = addListener<E>(event, listener, priority);
+            using arg_type = typename lambda_arg_traits<Listener>::argument_type;
+            using event_type = typename std::remove_reference<arg_type>::type;
+            static_assert(std::is_base_of<IEvent, event_type>::value, "EventType must inherit from Event");
+            auto id = addListener<event_type>(event, std::forward<Listener>(listener), priority);
             pointers[owner].emplace_back(id->second, event);
         }
 
         // Binds a listener to a list of events of a specific type.
-        template <typename E = Event, typename F, typename = std::enable_if_t<std::is_base_of_v<Event, E>>, typename T>
-        inline void bindEvent(T *owner, std::initializer_list<std::string> events, F listener, int priority = 5)
+        template <typename Listener>
+        inline void bindEvent(void *owner, std::initializer_list<std::string> events, Listener &&listener,
+                              int priority = 5)
         {
-            for (const auto &event : events) bindEvent<E>(owner, event, listener, priority);
+            for (const auto &event : events) bindEvent(owner, event, std::forward<Listener>(listener), priority);
         }
 
         // Clears all registered listeners from the manager, ensuring all memory is properly freed.
@@ -213,18 +216,18 @@ namespace events
             pointers.clear();
         }
 
-    public:
-        std::unordered_map<std::string, MultiMap<int, BaseEventListener *>> _listeners;
-        Queue<Event> _pendingEvents;
+    private:
+        HashMap<std::string, MultiMap<int, BaseEventListener *>> _listeners;
+        Queue<IEvent> _pendingEvents;
     };
 } // namespace events
 
 namespace std
 {
     template <>
-    struct hash<events::Event>
+    struct hash<events::IEvent>
     {
-        size_t operator()(const events::Event &event) const { return hash<string>{}(event.name()); }
+        size_t operator()(const events::IEvent &event) const { return hash<string>{}(event.name); }
     };
 } // namespace std
 

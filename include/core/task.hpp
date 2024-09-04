@@ -201,7 +201,7 @@ private:
     oneapi::tbb::task_group _group;
 };
 
-struct TaskUpdateEvent final : public events::Event
+struct TaskUpdateEvent final : public events::IEvent
 {
     void *ctx;
     std::string header;
@@ -210,7 +210,7 @@ struct TaskUpdateEvent final : public events::Event
 
     TaskUpdateEvent(const std::string &name, void *ctx = nullptr, const std::string &header = "",
                     const std::string &message = "", f32 progress = 0.0f)
-        : Event(name), ctx(ctx), header(header), message(message), progress(progress)
+        : IEvent(name), ctx(ctx), header(header), message(message), progress(progress)
     {
     }
 };

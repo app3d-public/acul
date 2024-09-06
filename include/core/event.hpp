@@ -29,7 +29,12 @@ namespace events
     public:
         T data;
 
-        explicit Event(const std::string &name = "", T &&data = {}) : IEvent(name), data(std::forward<T>(data)) {}
+        template <typename U, typename = std::enable_if_t<!std::is_same_v<std::decay_t<U>, Event>>>
+        explicit Event(const std::string &name, U &&data) : IEvent(name), data(std::forward<U>(data))
+        {
+        }
+
+        explicit Event(const std::string &name) : IEvent(name), data() {}
     };
 
     using PointerEvent = Event<IEvent *>;
@@ -107,6 +112,16 @@ namespace events
         template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void dispatch(E &event)
         {
+            if (event.name == "not:test")
+            {
+                if constexpr (std::is_same_v<E, Event<int>>)
+                {
+                    logInfo("event data: %d", event.data);
+                    assert(event.data == 77);
+                }
+                else
+                    throw std::runtime_error(typeid(E).name());
+            }
             auto it = _listeners.find(event.name);
             if (it != _listeners.end())
             {
@@ -117,8 +132,6 @@ namespace events
                     ++iter;
                 }
             }
-            else
-                _pendingEvents.push(std::move(event));
         }
 
         // Dispatches an event by name, creating an event instance with the provided arguments.
@@ -174,16 +187,6 @@ namespace events
             }
         }
 
-        // Processes all events that are pending in the queue.
-        void dispatchPendingEvents()
-        {
-            while (!_pendingEvents.empty())
-            {
-                dispatch(_pendingEvents.front());
-                _pendingEvents.pop();
-            }
-        }
-
         // Binds a listener to an event of a specific type.
         template <typename Listener>
         void bindEvent(void *owner, const std::string &event, Listener &&listener, int priority = 5)
@@ -218,7 +221,6 @@ namespace events
 
     private:
         HashMap<std::string, MultiMap<int, BaseEventListener *>> _listeners;
-        Queue<IEvent> _pendingEvents;
     };
 } // namespace events
 

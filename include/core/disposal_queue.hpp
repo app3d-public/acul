@@ -27,13 +27,6 @@ private:
 class APPLIB_API DisposalQueue
 {
 public:
-
-    static APPLIB_API DisposalQueue &global()
-    {
-        static DisposalQueue queue;
-        return queue;
-    }
-
     void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
         _queue.push({cache, onWait});
@@ -41,7 +34,7 @@ public:
 
     void push(MemCache *cache, const std::function<void()> &onWait = nullptr) { push(List<MemCache *>{cache}, onWait); }
 
-    void releaseResources();
+    void flush();
 
     bool empty() const { return _queue.empty(); }
 
@@ -52,6 +45,4 @@ private:
         std::function<void()> onWait = nullptr;
     };
     oneapi::tbb::concurrent_queue<MemData> _queue;
-
-    DisposalQueue() = default;
 };

@@ -1,6 +1,6 @@
 #include <core/disposal_queue.hpp>
 
-void DisposalQueue::releaseResources()
+void DisposalQueue::flush()
 {
     while (!_queue.empty())
     {

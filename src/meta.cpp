@@ -1,10 +1,9 @@
 #include <core/log.hpp>
 #include <core/meta.hpp>
 
-
 namespace meta
 {
-    HashMap<u32, Stream *> g_Streams;
+    astl::hashmap<u32, Stream *> g_Streams;
 
     void addStream(u32 signature, Stream *stream)
     {
@@ -16,7 +15,7 @@ namespace meta
         }
     }
 
-    void initStreams(const DArray<std::pair<u32, Stream *>> &streams)
+    void initStreams(const astl::vector<std::pair<u32, Stream *>> &streams)
     {
         g_Streams.insert(streams.begin(), streams.end());
     }
@@ -44,7 +43,7 @@ namespace meta
      **
      *********************************/
 
-    Block *ExternalStream::readFromStream(BinStream &stream)
+    Block *ExternalStream::readFromStream(astl::BinStream &stream)
     {
         ExternalBlock *block = new ExternalBlock;
         stream.read(block->dataSize);
@@ -53,7 +52,7 @@ namespace meta
         return block;
     }
 
-    void ExternalStream::writeToStream(BinStream &stream, Block *content)
+    void ExternalStream::writeToStream(astl::BinStream &stream, Block *content)
     {
         ExternalBlock *ext = static_cast<ExternalBlock *>(content);
         stream.write(ext->dataSize).write(ext->data, ext->dataSize);

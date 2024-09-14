@@ -1,13 +1,11 @@
 #include <core/api.hpp>
-#include <core/std/darray.hpp>
 #include <core/std/string_pool.hpp>
-#include <cstddef>
 
 namespace io
 {
     namespace file
     {
-        APPLIB_API void fillLineBuffer(const char *data, size_t size, StringPool<char> &pool)
+        APPLIB_API void fillLineBuffer(const char *data, size_t size, astl::string_pool<char> &pool)
         {
             const char *dataEnd = data + size;
 

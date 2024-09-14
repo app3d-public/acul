@@ -6,8 +6,8 @@
 #include <oneapi/tbb/parallel_for.h>
 #include <string>
 #include "../api.hpp"
-#include "../std/darray.hpp"
 #include "../std/string_pool.hpp"
+#include "../std/vector.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
@@ -40,7 +40,7 @@ namespace io
          * @param buffer A reference to a variable to store the data.
          * @return Success if the file was successfully read, error otherwise.
          **/
-        APPLIB_API ReadState readBinary(const std::string &filename, DArray<char> &buffer);
+        APPLIB_API ReadState readBinary(const std::string &filename, astl::vector<char> &buffer);
 
         /**
          * @brief Writes a binary buffer to a file
@@ -59,7 +59,7 @@ namespace io
          * @param size Size of the data buffer
          * @param dst Dynamic array to store the parsed lines
          */
-        void fillLineBuffer(const char *data, size_t size, StringPool<char> &dst);
+        void fillLineBuffer(const char *data, size_t size, astl::string_pool<char> &dst);
 
         /**
          * Reads a file in blocks using in mutithread context, splits it into lines, and processes each line using a
@@ -107,7 +107,7 @@ namespace io
             ReadState res = ReadState::Success;
             try
             {
-                StringPool<char> stringPool(fileSize.QuadPart);
+                astl::string_pool<char> stringPool(fileSize.QuadPart);
                 fillLineBuffer(fileData, fileSize.QuadPart, stringPool);
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
@@ -151,7 +151,7 @@ namespace io
 
             try
             {
-                DArray<std::string_view> lines;
+                astl::vector<std::string_view> lines;
                 fillLineBuffer(fileData, fileSize, lines);
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, lines.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
@@ -210,7 +210,7 @@ namespace io
          * provides maximum compression (at the cost of speed).
          * @return Returns true if the compression was successful, false otherwise.
          */
-        APPLIB_API bool compress(const char *data, size_t size, DArray<char> &compressed, int quality);
+        APPLIB_API bool compress(const char *data, size_t size, astl::vector<char> &compressed, int quality);
 
         /**
          * @brief Decompresses the given data using zstd.
@@ -224,7 +224,7 @@ namespace io
          * vector.
          * @return Returns true if the decompression was successful, false otherwise.
          */
-        APPLIB_API bool decompress(const char *data, size_t size, DArray<char> &decompressed);
+        APPLIB_API bool decompress(const char *data, size_t size, astl::vector<char> &decompressed);
     } // namespace file
 } // namespace io
 

@@ -6,7 +6,7 @@ namespace io
 {
     namespace file
     {
-        ReadState readBinary(const std::string &filename, DArray<char> &buffer)
+        ReadState readBinary(const std::string &filename, astl::vector<char> &buffer)
         {
             FILE *file = fopen(filename.c_str(), "rb");
             if (!file)
@@ -121,7 +121,7 @@ namespace io
             }
         }
 
-        bool compress(const char *data, size_t size, DArray<char> &compressed, int quality)
+        bool compress(const char *data, size_t size, astl::vector<char> &compressed, int quality)
         {
             size_t const maxCompressedSize = ZSTD_compressBound(size);
             compressed.resize(maxCompressedSize);
@@ -139,7 +139,7 @@ namespace io
             return true;
         }
 
-        bool decompress(const char *data, size_t size, DArray<char> &decompressed)
+        bool decompress(const char *data, size_t size, astl::vector<char> &decompressed)
         {
             size_t decompressedSize = ZSTD_getFrameContentSize(data, size);
             if (decompressedSize == 0 || decompressedSize == ZSTD_CONTENTSIZE_ERROR ||

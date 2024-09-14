@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include "../api.hpp"
 #include "../std/basic_types.hpp"
-#include "../std/darray.hpp"
+#include "../std/vector.hpp"
 
 /**
  * @class CommandPool
@@ -82,8 +82,8 @@ private:
     {
         size_t size;
         size_t pos;
-        DArray<vk::CommandBuffer> buffers;
-        Queue<size_t> releasedBuffers;
+        astl::vector<vk::CommandBuffer> buffers;
+        astl::queue<size_t> releasedBuffers;
     };
 
     vk::CommandPool _vkPool;

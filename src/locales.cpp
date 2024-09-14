@@ -22,7 +22,7 @@ namespace locales
 
     std::string getUserLanguage()
     {
-        constexpr SArray<std::string, 2> supportedLanguages = {"en", "ru"};
+        constexpr std::array<std::string, 2> supportedLanguages = {"en", "ru"};
         std::string shellLocale = setlocale(LC_MESSAGES, "");
         size_t underscorePos = shellLocale.find("_");
         std::string shortLocale;

@@ -4,7 +4,7 @@
 
 namespace math
 {
-    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, Point2D extent)
+    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, astl::point2D extent)
     {
         float xNdc = (screen.x / extent.x) * 2.0f - 1;
         float yNdc = 1.0f - (screen.y / extent.y) * 2.0f;

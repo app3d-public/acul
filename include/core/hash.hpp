@@ -17,9 +17,9 @@ namespace std
     }
 
     template <typename T, size_t N>
-    struct hash<SArray<T, N>>
+    struct hash<array<T, N>>
     {
-        std::size_t operator()(const SArray<T, N> &k) const
+        std::size_t operator()(const array<T, N> &k) const
         {
             size_t seed = 0;
             for (const auto &v : k) hash_combine(seed, v);

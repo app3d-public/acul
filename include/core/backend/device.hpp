@@ -3,16 +3,16 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 #include "../std/basic_types.hpp"
-#include "../std/darray.hpp"
+#include "../std/vector.hpp"
 #include "command_pool.hpp"
 #include "fence_pool.hpp"
 
 class DeviceCreateCtx
 {
 public:
-    DArray<const char *> validationLayers;
-    DArray<const char *> extensions;
-    DArray<const char *> optExtensions;
+    astl::vector<const char *> validationLayers;
+    astl::vector<const char *> extensions;
+    astl::vector<const char *> optExtensions;
     bool enablePresent;
     size_t fencePoolSize;
 
@@ -25,21 +25,21 @@ public:
         return vk::Result::eSuccess;
     };
 
-    virtual DArray<const char *> getWindowExtensions() { return DArray<const char *>(); }
+    virtual astl::vector<const char *> getWindowExtensions() { return astl::vector<const char *>(); }
 
-    DeviceCreateCtx &setValidationLayers(const DArray<const char *> &validationLayers)
+    DeviceCreateCtx &setValidationLayers(const astl::vector<const char *> &validationLayers)
     {
         this->validationLayers = validationLayers;
         return *this;
     }
 
-    DeviceCreateCtx &setExtensions(const DArray<const char *> &extensions)
+    DeviceCreateCtx &setExtensions(const astl::vector<const char *> &extensions)
     {
         this->extensions = extensions;
         return *this;
     }
 
-    DeviceCreateCtx &setOptExtensions(const DArray<const char *> &extensions)
+    DeviceCreateCtx &setOptExtensions(const astl::vector<const char *> &extensions)
     {
         this->optExtensions = extensions;
         return *this;
@@ -123,7 +123,7 @@ public:
     /// @param tiling Image tiling type
     /// @param features VK format features
     /// @return Filtered format on success
-    vk::Format findSupportedFormat(const DArray<vk::Format> &candidates, vk::ImageTiling tiling,
+    vk::Format findSupportedFormat(const astl::vector<vk::Format> &candidates, vk::ImageTiling tiling,
                                    vk::FormatFeatureFlags features);
 
     SwapchainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
@@ -149,24 +149,25 @@ private:
 
     void pickPhysicalDevice();
 
-    bool isDeviceSuitable(vk::PhysicalDevice device, const HashSet<std::string> &allExtensions,
+    bool isDeviceSuitable(vk::PhysicalDevice device, const astl::hashset<std::string> &allExtensions,
                           std::optional<u32> *familyIndices);
 
-    bool validatePhysicalDevice(vk::PhysicalDevice device, HashSet<std::string> &ext, std::optional<u32> *indices);
+    bool validatePhysicalDevice(vk::PhysicalDevice device, astl::hashset<std::string> &ext,
+                                std::optional<u32> *indices);
 
     void createLogicalDevice();
 
     void createAllocator();
 
-    bool checkValidationLayerSupport(const DArray<const char *> &validationLayers);
+    bool checkValidationLayerSupport(const astl::vector<const char *> &validationLayers);
 
     void setupDebugMessenger();
 
-    DArray<const char *> getRequiredExtensions();
+    astl::vector<const char *> getRequiredExtensions();
 
-    bool checkDeviceExtensionSupport(const HashSet<std::string> &allExtensions) const;
+    bool checkDeviceExtensionSupport(const astl::hashset<std::string> &allExtensions) const;
 
-    int getDeviceRating(const DArray<const char *> &optExtensions);
+    int getDeviceRating(const astl::vector<const char *> &optExtensions);
 
     void findQueueFamilies(std::optional<u32> *dst, vk::PhysicalDevice device);
 

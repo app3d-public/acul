@@ -25,9 +25,9 @@ namespace meta
     public:
         virtual ~Stream() = default;
 
-        virtual Block *readFromStream(BinStream &stream) = 0;
+        virtual Block *readFromStream(astl::BinStream &stream) = 0;
 
-        virtual void writeToStream(BinStream &stream, Block *block) = 0;
+        virtual void writeToStream(astl::BinStream &stream, Block *block) = 0;
     };
 
     constexpr u32 sign_block_external = SIGN_APP_PART_DEFAULT << 16 | 0x3F84;
@@ -43,7 +43,7 @@ namespace meta
      * @brief Initializes the stream handlers.
      * @param streams The stream handlers to initialize.
      */
-    APPLIB_API void initStreams(const DArray<std::pair<u32, Stream *>> &streams);
+    APPLIB_API void initStreams(const astl::vector<std::pair<u32, Stream *>> &streams);
 
     /**
      * @brief Clears all registered stream handlers.
@@ -77,9 +77,9 @@ namespace meta
     class APPLIB_API ExternalStream final : public meta::Stream
     {
     public:
-        virtual meta::Block *readFromStream(BinStream &stream) override;
+        virtual meta::Block *readFromStream(astl::BinStream &stream) override;
 
-        virtual void writeToStream(BinStream &stream, meta::Block *block) override;
+        virtual void writeToStream(astl::BinStream &stream, meta::Block *block) override;
     };
 
 } // namespace meta

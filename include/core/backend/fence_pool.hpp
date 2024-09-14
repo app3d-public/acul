@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include "../api.hpp"
 #include "../std/basic_types.hpp"
-#include "../std/darray.hpp"
+#include "../std/vector.hpp"
 
 class APPLIB_API FencePool
 {
@@ -44,6 +44,6 @@ public:
 private:
     size_t _size = 0;
     size_t _pos = 0;
-    DArray<vk::Fence> _fences;
-    Queue<size_t> _released;
+    astl::vector<vk::Fence> _fences;
+    astl::queue<size_t> _released;
 };

@@ -24,8 +24,8 @@ namespace logging
         localtime_r(&time_t_now, &tm_now);
 #endif
 
-        ss << f("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1, tm_now.tm_mday,
-                tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
+        ss << astl::format("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
+                           tm_now.tm_mday, tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
     }
 
     void LevelNameTokenHandler::handle(Level level, const char *message, std::stringstream &ss) const
@@ -101,7 +101,7 @@ namespace logging
                 _tokens->push_back(std::make_shared<TextTokenHandler>(text));
             }
 
-            HashMap<std::string, std::shared_ptr<TokenHandler>> tokenHandlers = {
+            astl::hashmap<std::string, std::shared_ptr<TokenHandler>> tokenHandlers = {
                 {"ascii_time", std::make_shared<TimeTokenHandler>()},
                 {"level_name", std::make_shared<LevelNameTokenHandler>()},
                 {"thread", std::make_shared<ThreadIdTokenHandler>()},
@@ -171,7 +171,7 @@ namespace logging
         logger->parseTokens(level, message, ss);
         va_list args;
         va_start(args, message);
-        _logQueue.push({logger, f(ss.str().c_str(), args)});
+        _logQueue.push({logger, astl::format_va_list(ss.str().c_str(), args)});
         va_end(args);
         _queueChanged.notify_one();
     }

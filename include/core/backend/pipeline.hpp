@@ -1,13 +1,13 @@
 #ifndef APP_GRAPHICS_PIPELINE_H
 #define APP_GRAPHICS_PIPELINE_H
 
-#include "device.hpp"
 #include "../log.hpp"
+#include "device.hpp"
 
 // Сonfiguration settings for a Vulkan graphics pipeline.
 struct IPipelineConfig
 {
-    DArray<vk::PipelineShaderStageCreateInfo> shaderStages;
+    astl::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
     vk::PipelineLayout pipelineLayout = nullptr;
 };
 
@@ -25,10 +25,10 @@ struct APPLIB_API PipelineConfig<vk::GraphicsPipelineCreateInfo> final : public 
     vk::PipelineColorBlendStateCreateInfo colorBlendInfo;
     vk::PipelineDepthStencilStateCreateInfo depthStencilInfo;
     vk::PipelineRasterizationConservativeStateCreateInfoEXT conservativeState;
-    DArray<vk::DynamicState> dynamicStateEnables;
+    astl::vector<vk::DynamicState> dynamicStateEnables;
     vk::PipelineDynamicStateCreateInfo dynamicStateInfo;
-    DArray<vk::VertexInputBindingDescription> bindingDescriptions;
-    DArray<vk::VertexInputAttributeDescription> attributeDescriptions;
+    astl::vector<vk::VertexInputBindingDescription> bindingDescriptions;
+    astl::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vk::RenderPass renderPass = nullptr;
     u32 subpass = 0;
@@ -77,9 +77,9 @@ struct PipelineConfig<vk::ComputePipelineCreateInfo> final : public IPipelineCon
  */
 struct APPLIB_API ShaderModule
 {
-    std::filesystem::path path;        ///< Path to the shader file.
-    vk::ShaderModule module; ///< Vulkan shader module object.
-    DArray<char> code;       ///< Raw shader code.
+    std::filesystem::path path; ///< Path to the shader file.
+    vk::ShaderModule module;    ///< Vulkan shader module object.
+    astl::vector<char> code;    ///< Raw shader code.
 
     /**
      * @brief Load the shader module from the specified device.
@@ -101,7 +101,7 @@ struct APPLIB_API ShaderModule
     void destroy(Device &device) { device.vkDevice.destroyShaderModule(module, nullptr, device.vkLoader); }
 };
 
-using Shaders = DArray<ShaderModule>;
+using Shaders = astl::vector<ShaderModule>;
 
 /**
  * @brief Template struct for batching Vulkan pipeline creation.
@@ -122,9 +122,9 @@ struct PipelineBatch
         PipelineConfig<create_info_t> config;
         create_info_t createInfo;
     };
-    DArray<Artifact> artifacts;   ///< Stores configurations for each pipeline.
-    DArray<ShaderModule> shaders; ///< Shader modules associated with the pipelines.
-    vk::PipelineCache cache;      ///< Pipeline cache used for pipeline creation.
+    astl::vector<Artifact> artifacts;   ///< Stores configurations for each pipeline.
+    astl::vector<ShaderModule> shaders; ///< Shader modules associated with the pipelines.
+    vk::PipelineCache cache;            ///< Pipeline cache used for pipeline creation.
 
     /**
      * @brief Creates Vulkan pipelines in a batch operation.
@@ -245,6 +245,6 @@ inline void addPipelineToBatch(PipelineBatch<typename T::Artifact::create_info_t
  * @param frag The fragment shader module.
  * @param device The Vulkan device to be used for pipeline creation.
  */
-APPLIB_API void prepareBasicGraphicsPipeline(PipelineBatch<vk::GraphicsPipelineCreateInfo>::Artifact &artifact, ShaderModule &vert,
-                                  ShaderModule &frag, Device &device);
+APPLIB_API void prepareBasicGraphicsPipeline(PipelineBatch<vk::GraphicsPipelineCreateInfo>::Artifact &artifact,
+                                             ShaderModule &vert, ShaderModule &frag, Device &device);
 #endif

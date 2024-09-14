@@ -27,12 +27,15 @@ private:
 class APPLIB_API DisposalQueue
 {
 public:
-    void push(const List<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
+    void push(const astl::list<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
         _queue.push({cache, onWait});
     }
 
-    void push(MemCache *cache, const std::function<void()> &onWait = nullptr) { push(List<MemCache *>{cache}, onWait); }
+    void push(MemCache *cache, const std::function<void()> &onWait = nullptr)
+    {
+        push(astl::list<MemCache *>{cache}, onWait);
+    }
 
     void flush();
 
@@ -41,7 +44,7 @@ public:
 private:
     struct MemData
     {
-        List<MemCache *> cacheList;
+        astl::list<MemCache *> cacheList;
         std::function<void()> onWait = nullptr;
     };
     oneapi::tbb::concurrent_queue<MemData> _queue;

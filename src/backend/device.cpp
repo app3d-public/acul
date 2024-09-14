@@ -6,12 +6,13 @@
 #define DEVICE_QUEUE_COMPUTE  2
 #define DEVICE_QUEUE_COUNT    3
 
-DArray<const char *> usingExtensitions;
+astl::vector<const char *> usingExtensitions;
 
-DArray<const char *> getSupportedOptExt(vk::PhysicalDevice device, const HashSet<std::string> &allExtensions,
-                                        const DArray<const char *> &optExtensions)
+astl::vector<const char *> getSupportedOptExt(vk::PhysicalDevice device,
+                                              const astl::hashset<std::string> &allExtensions,
+                                              const astl::vector<const char *> &optExtensions)
 {
-    DArray<const char *> supportedExtensions;
+    astl::vector<const char *> supportedExtensions;
     for (const auto &reqExt : optExtensions)
         if (allExtensions.find(reqExt) != allExtensions.end()) supportedExtensions.push_back(reqExt);
     return supportedExtensions;
@@ -178,7 +179,7 @@ vk::DynamicLoader &Device::vklib()
     return lib;
 }
 
-bool Device::checkValidationLayerSupport(const DArray<const char *> &validationLayers)
+bool Device::checkValidationLayerSupport(const astl::vector<const char *> &validationLayers)
 {
     std::vector<vk::LayerProperties> availableLayers = vk::enumerateInstanceLayerProperties(vkLoader);
     return std::all_of(validationLayers.begin(), validationLayers.end(), [&](const char *layerName) {
@@ -189,14 +190,14 @@ bool Device::checkValidationLayerSupport(const DArray<const char *> &validationL
     });
 }
 
-DArray<const char *> Device::getRequiredExtensions()
+astl::vector<const char *> Device::getRequiredExtensions()
 {
-    DArray<const char *> extensions = _createCtx->getWindowExtensions();
+    astl::vector<const char *> extensions = _createCtx->getWindowExtensions();
     if (_useValidationLayers) extensions.push_back(vk::EXTDebugUtilsExtensionName);
     return extensions;
 }
 
-bool Device::checkDeviceExtensionSupport(const HashSet<std::string> &allExtensions) const
+bool Device::checkDeviceExtensionSupport(const astl::hashset<std::string> &allExtensions) const
 {
     for (const auto &extension : _createCtx->extensions)
     {
@@ -206,7 +207,7 @@ bool Device::checkDeviceExtensionSupport(const HashSet<std::string> &allExtensio
     return true;
 }
 
-int Device::getDeviceRating(const DArray<const char *> &optExtensions)
+int Device::getDeviceRating(const astl::vector<const char *> &optExtensions)
 {
     int rating(0);
     // Properties
@@ -264,8 +265,8 @@ void Device::pickPhysicalDevice()
 {
     logInfo("Searching physical device");
     auto devices = vkInstance.enumeratePhysicalDevices(vkLoader);
-    DArray<const char *> optExtensions;
-    HashSet<std::string> extensions;
+    astl::vector<const char *> optExtensions;
+    astl::hashset<std::string> extensions;
 
     if (config.gpuDevice >= 0 && config.gpuDevice < devices.size())
     {
@@ -327,7 +328,7 @@ void Device::pickPhysicalDevice()
     assert(graphicsQueue.familyIndex.has_value() && computeQueue.familyIndex.has_value());
 }
 
-bool Device::isDeviceSuitable(vk::PhysicalDevice device, const HashSet<std::string> &allExtensions,
+bool Device::isDeviceSuitable(vk::PhysicalDevice device, const astl::hashset<std::string> &allExtensions,
                               std::optional<u32> *familyIndices)
 {
     bool ret =
@@ -339,7 +340,8 @@ bool Device::isDeviceSuitable(vk::PhysicalDevice device, const HashSet<std::stri
     return ret && familyIndices[DEVICE_QUEUE_PRESENT].has_value() && swapChainAdequate;
 }
 
-bool Device::validatePhysicalDevice(vk::PhysicalDevice device, HashSet<std::string> &ext, std::optional<u32> *indices)
+bool Device::validatePhysicalDevice(vk::PhysicalDevice device, astl::hashset<std::string> &ext,
+                                    std::optional<u32> *indices)
 {
     auto availableExtensions = device.enumerateDeviceExtensionProperties(nullptr, vkLoader);
     ext.clear();
@@ -363,9 +365,9 @@ vk::SampleCountFlagBits getMaxUsableSampleCount(vk::PhysicalDeviceProperties pro
 void Device::createLogicalDevice()
 {
     logInfo("Creating logical device");
-    DArray<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    astl::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     assert(graphicsQueue.familyIndex.has_value() && computeQueue.familyIndex.has_value());
-    Set<u32> uniqueQueueFamilies = {graphicsQueue.familyIndex.value(), computeQueue.familyIndex.value()};
+    astl::set<u32> uniqueQueueFamilies = {graphicsQueue.familyIndex.value(), computeQueue.familyIndex.value()};
     if (_createCtx->enablePresent) uniqueQueueFamilies.insert(presentQueue.familyIndex.value());
     f32 queuePriority = 1.0f;
     for (u32 queueFamily : uniqueQueueFamilies)
@@ -427,7 +429,7 @@ void Device::destroyWindowSurface()
 
 void Device::hasWindowRequiredInstanceExtensions()
 {
-    HashSet<std::string> available{};
+    astl::set<std::string> available{};
     for (const auto &extension : vk::enumerateInstanceExtensionProperties(nullptr, vkLoader))
         available.insert(extension.extensionName);
 
@@ -448,7 +450,7 @@ SwapchainSupportDetails Device::querySwapChainSupport(vk::PhysicalDevice device)
     return details;
 }
 
-vk::Format Device::findSupportedFormat(const DArray<vk::Format> &candidates, vk::ImageTiling tiling,
+vk::Format Device::findSupportedFormat(const astl::vector<vk::Format> &candidates, vk::ImageTiling tiling,
                                        vk::FormatFeatureFlags features)
 {
     for (vk::Format format : candidates)

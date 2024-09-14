@@ -17,10 +17,10 @@ namespace app
     // *************** Descriptor Set Layout *********************
 
     DescriptorSetLayout::DescriptorSetLayout(Device &device,
-                                             const HashMap<u32, vk::DescriptorSetLayoutBinding> &bindings)
+                                             const astl::hashmap<u32, vk::DescriptorSetLayoutBinding> &bindings)
         : _device{device}, _bindings{bindings}
     {
-        DArray<vk::DescriptorSetLayoutBinding> setLayoutBindings{};
+        astl::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings{};
         for (auto kv : bindings) setLayoutBindings.push_back(kv.second);
 
         vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutInfo;
@@ -33,7 +33,7 @@ namespace app
     // *************** Descriptor Pool *********************
 
     DescriptorPool::DescriptorPool(Device &device, u32 maxSets, vk::DescriptorPoolCreateFlags poolFlags,
-                                   const DArray<vk::DescriptorPoolSize> &poolSizes)
+                                   const astl::vector<vk::DescriptorPoolSize> &poolSizes)
         : _device{device}
     {
         vk::DescriptorPoolCreateInfo descriptorPoolInfo(poolFlags, maxSets, poolSizes.size(), poolSizes.data());

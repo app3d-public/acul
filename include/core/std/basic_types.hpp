@@ -26,75 +26,77 @@ using c8 = char;
 using c16 = char16_t;
 using c32 = char32_t;
 
-template <typename T, size_t Size>
-using SArray = std::array<T, Size>;
-
-template <typename T>
-using Queue = std::queue<T, std::deque<T, oneapi::tbb::scalable_allocator<T>>>;
-
-template <typename T>
-using Set = std::set<T, std::less<T>, oneapi::tbb::scalable_allocator<T>>;
-
-template <typename K, typename V, typename C = std::less<K>>
-using Map = std::map<K, V, C, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
-
-template <typename K, typename V, typename C = std::less<K>>
-using MultiMap = std::multimap<K, V, C, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
-
-template <typename T>
-using HashSet = std::unordered_set<T, std::hash<T>, std::equal_to<T>, oneapi::tbb::scalable_allocator<T>>;
-
-template <typename K, typename V, typename H = std::hash<K>>
-using HashMap = std::unordered_map<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
-
-template <typename K, typename V, typename H = std::hash<K>>
-using MultiHashMap =
-    std::unordered_multimap<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
-
-struct Point2D
+namespace astl
 {
-    i32 x;
-    i32 y;
-};
 
-inline bool operator==(const Point2D &a, const Point2D &b) { return a.x == b.x && a.y == b.y; }
+    template <typename T>
+    using queue = std::queue<T, std::deque<T, oneapi::tbb::scalable_allocator<T>>>;
 
-inline bool operator!=(const Point2D &a, const Point2D &b) { return !(a == b); }
+    template <typename T>
+    using set = std::set<T, std::less<T>, oneapi::tbb::scalable_allocator<T>>;
 
-inline bool operator<(const Point2D &a, const Point2D &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); }
+    template <typename K, typename V, typename C = std::less<K>>
+    using map = std::map<K, V, C, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 
-inline bool operator>(const Point2D &a, const Point2D &b) { return b < a; }
+    template <typename K, typename V, typename C = std::less<K>>
+    using multimap = std::multimap<K, V, C, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 
-inline Point2D operator+(const Point2D &a, const Point2D &b) { return {a.x + b.x, a.y + b.y}; }
+    template <typename T>
+    using hashset = std::unordered_set<T, std::hash<T>, std::equal_to<T>, oneapi::tbb::scalable_allocator<T>>;
 
-inline Point2D operator-(const Point2D &a, const Point2D &b) { return {a.x - b.x, a.y - b.y}; }
+    template <typename K, typename V, typename H = std::hash<K>>
+    using hashmap =
+        std::unordered_map<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 
-inline Point2D operator-(const Point2D &a) { return {-a.x, -a.y}; }
+    template <typename K, typename V, typename H = std::hash<K>>
+    using multi_hashmap =
+        std::unordered_multimap<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 
-inline Point2D operator*(const Point2D &a, i32 b) { return {a.x * b, a.y * b}; }
+    struct point2D
+    {
+        i32 x;
+        i32 y;
+    };
 
-inline Point2D operator/(const Point2D &a, i32 b) { return {a.x / b, a.y / b}; }
+    inline bool operator==(const point2D &a, const point2D &b) { return a.x == b.x && a.y == b.y; }
 
-template <typename T>
-class Proxy
-{
-public:
-    Proxy(T *ptr = nullptr) : _ptr(ptr) {}
+    inline bool operator!=(const point2D &a, const point2D &b) { return !(a == b); }
 
-    T *operator->() { return _ptr; }
+    inline bool operator<(const point2D &a, const point2D &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); }
 
-    T &operator*() { return *_ptr; }
+    inline bool operator>(const point2D &a, const point2D &b) { return b < a; }
 
-    operator bool() const { return _ptr != nullptr; }
+    inline point2D operator+(const point2D &a, const point2D &b) { return {a.x + b.x, a.y + b.y}; }
 
-    void set(T *ptr) { _ptr = ptr; }
+    inline point2D operator-(const point2D &a, const point2D &b) { return {a.x - b.x, a.y - b.y}; }
 
-    T *get() { return _ptr; }
+    inline point2D operator-(const point2D &a) { return {-a.x, -a.y}; }
 
-    void reset() { _ptr = nullptr; }
+    inline point2D operator*(const point2D &a, i32 b) { return {a.x * b, a.y * b}; }
 
-private:
-    T *_ptr;
-};
+    inline point2D operator/(const point2D &a, i32 b) { return {a.x / b, a.y / b}; }
+
+    template <typename T>
+    class proxy
+    {
+    public:
+        proxy(T *ptr = nullptr) : _ptr(ptr) {}
+
+        T *operator->() { return _ptr; }
+
+        T &operator*() { return *_ptr; }
+
+        operator bool() const { return _ptr != nullptr; }
+
+        void set(T *ptr) { _ptr = ptr; }
+
+        T *get() { return _ptr; }
+
+        void reset() { _ptr = nullptr; }
+
+    private:
+        T *_ptr;
+    };
+} // namespace astl
 
 #endif

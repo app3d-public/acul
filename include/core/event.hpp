@@ -6,8 +6,8 @@
 #include <string>
 #include "api.hpp"
 #include "std/basic_types.hpp"
-#include "std/darray.hpp"
 #include "std/traits.hpp"
+#include "std/vector.hpp"
 
 namespace events
 {
@@ -72,9 +72,8 @@ namespace events
     class APPLIB_API Manager
     {
     public:
-        using iterator = MultiMap<int, BaseEventListener *>::iterator;
-
-        HashMap<void *, DArray<ListenerInfo>> pointers;
+        using iterator = astl::multimap<int, BaseEventListener *>::iterator;
+        astl::hashmap<void *, astl::vector<ListenerInfo>> pointers;
 
         // Adds a listener for a specific type of event and returns an iterator to it.
         template <typename E>
@@ -158,9 +157,9 @@ namespace events
         // Retrieves a list of all listeners registered for a specific event.
         // Returns a dynamic array of pointers to listeners for the event.
         template <typename E>
-        DArray<EventListener<E> *> getListeners(const std::string &event)
+        astl::vector<EventListener<E> *> getListeners(const std::string &event)
         {
-            DArray<EventListener<E> *> result;
+            astl::vector<EventListener<E> *> result;
             auto it = _listeners.find(event);
             if (it != _listeners.end())
             {
@@ -191,7 +190,7 @@ namespace events
         template <typename Listener>
         void bindEvent(void *owner, const std::string &event, Listener &&listener, int priority = 5)
         {
-            using arg_type = typename lambda_arg_traits<Listener>::argument_type;
+            using arg_type = typename astl::lambda_arg_traits<Listener>::argument_type;
             using event_type = typename std::remove_reference<arg_type>::type;
             static_assert(std::is_base_of<IEvent, event_type>::value, "EventType must inherit from Event");
             auto id = addListener<event_type>(event, std::forward<Listener>(listener), priority);
@@ -220,7 +219,7 @@ namespace events
         }
 
     private:
-        HashMap<std::string, MultiMap<int, BaseEventListener *>> _listeners;
+        astl::hashmap<std::string, astl::multimap<int, BaseEventListener *>> _listeners;
     };
 } // namespace events
 

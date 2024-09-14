@@ -5,8 +5,10 @@
 #include <limits>
 #include <oneapi/tbb/scalable_allocator.h>
 
+namespace astl {
+
 template <typename T>
-class MemAllocator
+class mem_allocator
 {
 public:
     using value_type = T;
@@ -15,14 +17,14 @@ public:
     using size_type = size_t;
     using difference_type = ptrdiff_t;
 
-    MemAllocator() noexcept = default;
-    MemAllocator(const MemAllocator &) noexcept = default;
+    mem_allocator() noexcept = default;
+    mem_allocator(const mem_allocator &) noexcept = default;
 
     template <typename U>
-    MemAllocator(const MemAllocator<U> &) noexcept
+    mem_allocator(const mem_allocator<U> &) noexcept
     {
     }
-    ~MemAllocator() = default;
+    ~mem_allocator() = default;
 
     pointer allocate(size_type num, const void *hint = 0) noexcept
     {
@@ -58,15 +60,15 @@ public:
 };
 
 template <typename T, typename U>
-bool operator==(const MemAllocator<T> &, const MemAllocator<U> &)
+bool operator==(const mem_allocator<T> &, const mem_allocator<U> &)
 {
     return true;
 }
 
 template <typename T, typename U>
-bool operator!=(const MemAllocator<T> &, const MemAllocator<U> &)
+bool operator!=(const mem_allocator<T> &, const mem_allocator<U> &)
 {
     return false;
 }
-
+}
 #endif

@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 #include "std/basic_types.hpp"
-#include "std/darray.hpp"
+#include "std/vector.hpp"
 
 namespace logging
 {
@@ -30,7 +30,7 @@ namespace logging
         virtual void handle(Level level, const char *message, std::stringstream &ss) const = 0;
     };
 
-    using TokenHandlerList = DArray<std::shared_ptr<TokenHandler>>;
+    using TokenHandlerList = astl::vector<std::shared_ptr<TokenHandler>>;
 
     class TextTokenHandler final : public TokenHandler
     {
@@ -219,7 +219,7 @@ namespace logging
 
     private:
         Level _level{Level::Error};
-        HashMap<std::string, std::shared_ptr<Logger>> _loggers;
+        astl::hashmap<std::string, std::shared_ptr<Logger>> _loggers;
         std::shared_ptr<Logger> _defaultLogger;
         bool _running{true};
         std::thread _taskThread;

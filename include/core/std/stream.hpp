@@ -13,25 +13,25 @@ namespace astl
     /**
      * @brief Utility class for binary stream manipulation.
      *
-     * The `BinStream` class provides a way to read and write binary data to and from a stream.
+     * The `bin_stream` class provides a way to read and write binary data to and from a stream.
      * The stream is based by a `Array<char>`, enabling dynamic resizing and efficient
      * random access. It's suitable for serializing and deserializing complex data structures
      * in binary format.
      */
-    class APPLIB_API BinStream
+    class APPLIB_API bin_stream
     {
     public:
         /**
          * @brief Default constructor. Initializes the stream position to 0.
          */
-        BinStream() : _pos(0) {}
+        bin_stream() : _pos(0) {}
 
         /**
          * @brief Constructor that initializes the stream with provided data.
          *
          * @param data Binary data to initialize the stream with.
          */
-        explicit BinStream(vector<char> &&data) : _data(std::move(data)), _pos(0) {}
+        explicit bin_stream(vector<char> &&data) : _data(std::move(data)), _pos(0) {}
 
         /**
          * @brief Writes a value of type T to the stream.
@@ -41,7 +41,7 @@ namespace astl
          * @return Reference to the stream to support chained calls.
          */
         template <typename T>
-        BinStream &write(const T &val)
+        bin_stream &write(const T &val)
         {
             const char *byte_data = reinterpret_cast<const char *>(&val);
             _data.insert(_data.end(), byte_data, byte_data + sizeof(val));
@@ -49,7 +49,7 @@ namespace astl
         }
 
         template <typename T>
-        BinStream &write(const list<T> &list)
+        bin_stream &write(const list<T> &list)
         {
             write(list.size());
             for (const auto &item : list) write(item);
@@ -64,18 +64,18 @@ namespace astl
          * @param str String to write.
          * @return Reference to the stream to support chained calls.
          */
-        BinStream &write(const std::string &str)
+        bin_stream &write(const std::string &str)
         {
             _data.insert(_data.end(), str.begin(), str.end());
             _data.push_back('\0');
             return *this;
         }
 
-        BinStream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
+        bin_stream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
 
-        BinStream &write(const glm::vec3 &vec) { return write(vec.x).write(vec.y).write(vec.z); }
+        bin_stream &write(const glm::vec3 &vec) { return write(vec.x).write(vec.y).write(vec.z); }
 
-        BinStream &write(const glm::mat4 &mat)
+        bin_stream &write(const glm::mat4 &mat)
         {
             return write(mat[0][0])
                 .write(mat[0][1])
@@ -104,7 +104,7 @@ namespace astl
          * @throws std::runtime_error If there's not enough data in the stream.
          */
         template <typename T>
-        BinStream &read(T &val)
+        bin_stream &read(T &val)
         {
             if (_pos + sizeof(T) <= _data.size())
             {
@@ -117,7 +117,7 @@ namespace astl
         }
 
         template <typename T>
-        BinStream &read(list<T> &list)
+        bin_stream &read(list<T> &list)
         {
             size_t count;
             read(count);
@@ -136,7 +136,7 @@ namespace astl
          * @param str Reference where the read string will be stored.
          * @return Reference to the stream to support chained calls.
          */
-        BinStream &read(std::string &str)
+        bin_stream &read(std::string &str)
         {
             str.clear();
             while (_pos < _data.size())
@@ -148,10 +148,10 @@ namespace astl
             return *this;
         }
 
-        BinStream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
-        BinStream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
+        bin_stream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
+        bin_stream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
 
-        BinStream &read(glm::mat4 &mat)
+        bin_stream &read(glm::mat4 &mat)
         {
             return read(mat[0][0])
                 .read(mat[0][1])
@@ -179,7 +179,7 @@ namespace astl
          * @return Reference to the stream to support chained calls.
          */
         template <typename T>
-        BinStream &write(T *data, size_t size)
+        bin_stream &write(T *data, size_t size)
         {
             if (data == nullptr) throw std::invalid_argument("Null pointer passed to write");
 
@@ -196,7 +196,7 @@ namespace astl
          * @return Reference to the stream to support chained calls.
          */
         template <typename T>
-        BinStream &read(T *data, size_t size)
+        bin_stream &read(T *data, size_t size)
         {
             if (data == nullptr) throw std::invalid_argument("Null pointer passed to read");
 

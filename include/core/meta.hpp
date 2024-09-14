@@ -25,9 +25,9 @@ namespace meta
     public:
         virtual ~Stream() = default;
 
-        virtual Block *readFromStream(astl::BinStream &stream) = 0;
+        virtual Block *readFromStream(astl::bin_stream &stream) = 0;
 
-        virtual void writeToStream(astl::BinStream &stream, Block *block) = 0;
+        virtual void writeToStream(astl::bin_stream &stream, Block *block) = 0;
     };
 
     constexpr u32 sign_block_external = SIGN_APP_PART_DEFAULT << 16 | 0x3F84;
@@ -77,9 +77,9 @@ namespace meta
     class APPLIB_API ExternalStream final : public meta::Stream
     {
     public:
-        virtual meta::Block *readFromStream(astl::BinStream &stream) override;
+        virtual meta::Block *readFromStream(astl::bin_stream &stream) override;
 
-        virtual void writeToStream(astl::BinStream &stream, meta::Block *block) override;
+        virtual void writeToStream(astl::bin_stream &stream, meta::Block *block) override;
     };
 
 } // namespace meta

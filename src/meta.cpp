@@ -43,7 +43,7 @@ namespace meta
      **
      *********************************/
 
-    Block *ExternalStream::readFromStream(astl::BinStream &stream)
+    Block *ExternalStream::readFromStream(astl::bin_stream &stream)
     {
         ExternalBlock *block = new ExternalBlock;
         stream.read(block->dataSize);
@@ -52,7 +52,7 @@ namespace meta
         return block;
     }
 
-    void ExternalStream::writeToStream(astl::BinStream &stream, Block *content)
+    void ExternalStream::writeToStream(astl::bin_stream &stream, Block *content)
     {
         ExternalBlock *ext = static_cast<ExternalBlock *>(content);
         stream.write(ext->dataSize).write(ext->data, ext->dataSize);

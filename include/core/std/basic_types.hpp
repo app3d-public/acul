@@ -68,7 +68,21 @@ namespace astl
 
     inline point2D operator+(const point2D &a, const point2D &b) { return {a.x + b.x, a.y + b.y}; }
 
+    inline point2D &operator+=(point2D &a, const point2D &b)
+    {
+        a.x += b.x;
+        a.y += b.y;
+        return a;
+    }
+
     inline point2D operator-(const point2D &a, const point2D &b) { return {a.x - b.x, a.y - b.y}; }
+
+    inline point2D &operator-=(point2D &a, const point2D &b)
+    {
+        a.x -= b.x;
+        a.y -= b.y;
+        return a;
+    }
 
     inline point2D operator-(const point2D &a) { return {-a.x, -a.y}; }
 

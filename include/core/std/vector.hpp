@@ -1,8 +1,6 @@
 #ifndef APP_CORE_STD_VECTOR_H
 #define APP_CORE_STD_VECTOR_H
 
-#define VECTOR_SBO_SIZE 4
-
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -34,7 +32,7 @@ namespace astl
         using reverse_iterator = std::reverse_iterator<Iterator>;
         using const_reverse_iterator = const std::reverse_iterator<Iterator>;
 
-        vector() noexcept : _size(0), _capacity(VECTOR_SBO_SIZE), _data(allocator.allocate(VECTOR_SBO_SIZE)) {}
+        vector() noexcept : _size(0), _capacity(0), _data(nullptr) {}
 
         explicit vector(size_type size) noexcept : _size(size), _capacity(size), _data(allocator.allocate(size))
         {

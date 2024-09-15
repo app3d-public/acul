@@ -28,9 +28,11 @@ using c32 = char32_t;
 
 namespace astl
 {
+    template <typename T>
+    using deque = std::deque<T, oneapi::tbb::scalable_allocator<T>>;
 
     template <typename T>
-    using queue = std::queue<T, std::deque<T, oneapi::tbb::scalable_allocator<T>>>;
+    using queue = std::queue<T, deque<T>>;
 
     template <typename T>
     using set = std::set<T, std::less<T>, oneapi::tbb::scalable_allocator<T>>;

@@ -111,16 +111,6 @@ namespace events
         template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>>
         void dispatch(E &event)
         {
-            if (event.name == "not:test")
-            {
-                if constexpr (std::is_same_v<E, Event<int>>)
-                {
-                    logInfo("event data: %d", event.data);
-                    assert(event.data == 77);
-                }
-                else
-                    throw std::runtime_error(typeid(E).name());
-            }
             auto it = _listeners.find(event.name);
             if (it != _listeners.end())
             {

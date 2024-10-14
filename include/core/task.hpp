@@ -148,13 +148,6 @@ namespace task
         std::shared_ptr<ITask> _task;
     };
 
-    static thread_local int g_threadID = -1;
-
-    inline size_t getThreadID()
-    {
-        return g_threadID == -1 ? oneapi::tbb::this_task_arena::current_thread_index() : g_threadID;
-    }
-
     /**
      * @brief Class for managing and running tasks.
      *
@@ -163,7 +156,7 @@ namespace task
     class APPLIB_API ThreadDispatch
     {
     public:
-        ThreadDispatch() : _ctx(oneapi::tbb::task_group_context::isolated), _group(_ctx) { g_threadID = 0; }
+        ThreadDispatch() : _ctx(oneapi::tbb::task_group_context::isolated), _group(_ctx) {}
 
         /// \brief Awaits the completion of all tasks in the task group.
         // \param force If true, all tasks in the group will be cancelled.

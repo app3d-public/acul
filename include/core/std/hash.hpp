@@ -2,10 +2,25 @@
 #define APP_CORE_CRC32_H
 
 #include <glm/glm.hpp>
-#include "api.hpp"
-#include "std/basic_types.hpp"
+#include <random>
+#include "../api.hpp"
+#include "basic_types.hpp"
 
-APPLIB_API u32 crc32(u32 crc, const char *buf, size_t len);
+namespace astl
+{
+    struct IDGen
+    {
+        IDGen() : gen(std::random_device{}()), dist(0, UINT64_MAX) {}
+
+        u64 operator()() { return dist(gen); }
+
+    private:
+        std::mt19937_64 gen;
+        std::uniform_int_distribution<uint64_t> dist;
+    };
+
+    APPLIB_API u32 crc32(u32 crc, const char *buf, size_t len);
+} // namespace astl
 
 namespace std
 {

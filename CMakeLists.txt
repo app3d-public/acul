@@ -38,6 +38,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     intl
     zstd
     glm)
+
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        Synchronization
+        Dbghelp)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:vma,INCLUDE_DIRECTORIES>)
 
 set_target_properties(${PROJECT_NAME}

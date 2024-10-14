@@ -4,6 +4,7 @@
 #include <iterator>
 #include <type_traits>
 #include "../mem/allocator.hpp"
+#include "type_traits.hpp"
 
 namespace astl
 {
@@ -139,6 +140,19 @@ namespace astl
                 tail = &((*tail)->next);
             }
             return *this;
+        }
+
+        template <typename InputIt, typename = std::enable_if_t<is_input_iterator_based<InputIt>::value>>
+        forward_list(InputIt first, InputIt last) : _head(nullptr)
+        {
+            pointer *tail = &_head;
+            for (; first != last; ++first)
+            {
+                *tail = allocator.allocate(1);
+                allocator.construct(*tail, *first);
+                (*tail)->next = nullptr;
+                tail = &((*tail)->next);
+            }
         }
 
         ~forward_list()
@@ -563,7 +577,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
-                                                                                const_reference value)
+                                                                                  const_reference value)
     {
         pointer node = pos._ptr;
         pointer new_node = allocator.allocate(1);
@@ -592,7 +606,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, size_type count,
-                                                                                const_reference value)
+                                                                                  const_reference value)
     {
         pointer node = pos._ptr;
         pointer last = node;
@@ -613,7 +627,7 @@ namespace astl
     template <typename T, template <typename> class Allocator>
     template <class InputIt>
     forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, InputIt first,
-                                                                                InputIt last)
+                                                                                  InputIt last)
     {
         pointer node = pos._ptr;
         pointer last_node = nullptr;
@@ -633,7 +647,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
-                                                                                std::initializer_list<T> ilist)
+                                                                                  std::initializer_list<T> ilist)
     {
         pointer node = pos._ptr;
         pointer last_inserted = node;
@@ -667,7 +681,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     forward_list<T, Allocator>::iterator forward_list<T, Allocator>::erase_after(const_iterator first,
-                                                                               const_iterator last)
+                                                                                 const_iterator last)
     {
         pointer current = first._ptr;
         if (current)
@@ -726,7 +740,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     void forward_list<T, Allocator>::splice_after(const_iterator pos, forward_list &other, const_iterator first,
-                                                 const_iterator last)
+                                                  const_iterator last)
     {
         if (first._ptr == last._ptr || first._ptr->next == nullptr) return;
         pointer first_node = first._ptr->next;
@@ -739,7 +753,7 @@ namespace astl
 
     template <typename T, template <typename> class Allocator>
     void forward_list<T, Allocator>::splice_after(const_iterator pos, forward_list &&other, const_iterator first,
-                                                 const_iterator last)
+                                                  const_iterator last)
     {
         splice_after(pos, other, first, last);
     }

@@ -6,7 +6,7 @@
 #include <string>
 #include "api.hpp"
 #include "std/basic_types.hpp"
-#include "std/traits.hpp"
+#include "std/type_traits.hpp"
 #include "std/vector.hpp"
 
 namespace events

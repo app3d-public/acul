@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <iterator>
 #include "../mem/allocator.hpp"
+#include "type_traits.hpp"
 
 namespace astl
 {
@@ -95,6 +96,12 @@ namespace astl
             clear();
             for (const_reference value : ilist) push_back(value);
             return *this;
+        }
+
+        template <typename InputIt, typename = std::enable_if_t<is_input_iterator_based<InputIt>::value>>
+        list(InputIt first, InputIt last) : list()
+        {
+            for (; first != last; ++first) push_back(*first);
         }
 
         ~list() noexcept

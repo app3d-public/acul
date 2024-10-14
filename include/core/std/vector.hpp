@@ -8,8 +8,8 @@
 #include <memory>
 #include <oneapi/tbb/scalable_allocator.h>
 #include <stdexcept>
-#include <type_traits>
 #include "../mem/allocator.hpp"
+#include "type_traits.hpp"
 
 namespace astl
 {
@@ -36,7 +36,7 @@ namespace astl
 
         explicit vector(size_type size) noexcept : _size(size), _capacity(size), _data(allocator.allocate(size))
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
+            if constexpr (!std::is_trivially_constructible_v<T>)
                 for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i);
         }
 
@@ -50,16 +50,20 @@ namespace astl
                     allocator.construct(_data + i, value);
         }
 
-        template <typename InputIt, typename = std::enable_if_t<!std::is_integral<InputIt>::value>>
+        template <typename InputIt, std::enable_if_t<is_input_iterator<InputIt>::value, int> = 0>
         vector(InputIt first, InputIt last) : _size(0), _capacity(0), _data(nullptr)
         {
-            _size = std::distance(first, last);
-            _data = allocator.allocate(_size);
+            for (; first != last; ++first) emplace_back(*first);
+        }
+
+        template <typename ForwardIt, std::enable_if_t<is_forward_iterator_based<ForwardIt>::value, int> = 0>
+        vector(ForwardIt first, ForwardIt last)
+            : _size(std::distance(first, last)), _capacity(_size), _data(allocator.allocate(_size))
+        {
             if (_size > 0)
             {
-                _capacity = _size;
                 size_type i = 0;
-                for (InputIt it = first; it != last; ++it, ++i)
+                for (ForwardIt it = first; it != last; ++it, ++i)
                     if constexpr (std::is_trivially_constructible_v<T>)
                         _data[i] = *it;
                     else
@@ -78,13 +82,7 @@ namespace astl
         vector(const vector &other) noexcept
             : _size(other._size), _capacity(other._size), _data(allocator.allocate(_capacity))
         {
-            if (_size > 0)
-            {
-                if constexpr (std::is_trivially_copyable_v<T>)
-                    std::memcpy(_data, other._data, _size * sizeof(T));
-                else
-                    for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i, other._data[i]);
-            }
+            if (_size > 0) copy_construct(other._data, other._data + _size, _data);
         }
 
         vector(vector &&other) noexcept : _size(other._size), _capacity(other._capacity), _data(other._data)
@@ -124,10 +122,7 @@ namespace astl
                 _capacity = other._capacity;
                 if (oldCapacity < other._capacity) reallocate(false);
                 _size = other._size;
-                if constexpr (std::is_trivially_copyable_v<T>)
-                    std::memcpy(_data, other._data, _size * sizeof(T));
-                else
-                    for (size_type i = 0; i < _size; ++i) allocator.construct(_data + i, other._data[i]);
+                copy_construct(other._data, other._data + _size, _data);
             }
             return *this;
         }
@@ -379,21 +374,35 @@ namespace astl
         }
 
         template <typename Iter, typename Dest>
-        void move_construct(Iter start, Iter end, Dest dest)
+        void copy_construct(Iter start, Iter end, Dest dest)
         {
-            for (; start != end; ++start, ++dest) new (dest) T(std::move(*start));
+            if constexpr (std::is_trivially_copyable_v<T>)
+            {
+                if constexpr (!std::is_rvalue_reference_v<decltype(*start)>)
+                    std::memcpy(dest, &(*start), (end - start) * sizeof(T));
+                else
+                    for (; start != end; ++start, ++dest) *dest = *start;
+            }
+            else
+                for (; start != end; ++start, ++dest) allocator.construct(dest, *start);
         }
 
         template <typename Iter, typename Dest>
-        void copy_construct(Iter start, Iter end, Dest dest)
+        void move_construct(Iter start, Iter end, Dest dest)
         {
-            for (; start != end; ++start, ++dest) new (dest) T(*start);
+            if constexpr (std::is_trivially_move_constructible_v<T>)
+                std::memmove(dest, &(*start), (end - start) * sizeof(T));
+            else
+                for (; start != end; ++start, ++dest) allocator.construct(dest, std::move(*start));
         }
 
         template <typename Iter>
         void move_elements_backward(Iter start, Iter end, Iter destEnd)
         {
-            while (end != start) new (--destEnd) T(std::move(*--end));
+            if constexpr (std::is_trivially_move_constructible_v<T>)
+                std::memmove(destEnd - (end - start), &(*start), (end - start) * sizeof(T));
+            else
+                while (end != start) allocator.construct(--destEnd, std::move(*--end));
         }
     };
 
@@ -521,6 +530,7 @@ namespace astl
     {
         size_type posIndex = pos - _data;
         size_type insertCount = std::distance(first, last);
+
         if (_size + insertCount > _capacity)
         {
             size_type newCapacity = std::max(_capacity * 2, _size + insertCount);
@@ -531,19 +541,17 @@ namespace astl
             copy_construct(first, last, newData + posIndex);
             move_construct(_data + posIndex, _data + _size, newData + posIndex + insertCount);
 
-            if constexpr (!std::is_trivially_destructible_v<T>)
-                for (size_type i = 0; i < _size; ++i) allocator.destroy(_data + i);
             allocator.deallocate(_data, _capacity);
+
             _data = newData;
-            _size += insertCount;
             _capacity = newCapacity;
         }
         else
         {
             move_elements_backward(_data + posIndex, _data + _size, _data + posIndex + insertCount);
             copy_construct(first, last, _data + posIndex);
-            _size += insertCount;
         }
+        _size += insertCount;
     }
 } // namespace astl
 

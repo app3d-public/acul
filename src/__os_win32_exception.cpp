@@ -1,4 +1,7 @@
 #include <core/exception.hpp>
+#include <core/std/basic_types.hpp>
+#include <core/std/string.hpp>
+#include <core/std/vector.hpp>
 #include <dbghelp.h>
 #include <psapi.h>
 
@@ -28,6 +31,12 @@ void writeExceptionInfo(EXCEPTION_POINTERS *pExceptionInfo, std::ofstream &strea
     stream << "\tRSP: 0x" << context->Rsp << std::endl;
     stream << "\tRIP: 0x" << context->Rip << std::dec << std::endl;
 }
+
+struct SymbolInfo
+{
+    std::string name;
+    DWORD64 endAddress;
+};
 
 // Required dummy line in according with Clangd bug.
 // See https://github.com/llvm/llvm-project/issues/51164
@@ -100,7 +109,7 @@ std::string findSymbolFromTable(DWORD64 address, const astl::map<DWORD64, Symbol
         --it;
         if (address >= it->first && address < it->second.endAddress) return it->second.name;
     }
-    return "unknown";
+    return "<unknown>";
 }
 
 struct __SymbolTempInfo
@@ -110,38 +119,22 @@ struct __SymbolTempInfo
     std::string name;
 };
 
-void analyzeCOFFSymbols(const astl::vector<char> &fileData, DWORD64 loadedBaseAddr, std::ofstream &crash_stream,
+void analyzeCOFFSymbols(const astl::vector<char> &fileData, DWORD64 loadedBaseAddr,
                         astl::map<DWORD64, SymbolInfo> &symbolMap)
 {
     PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.data();
-    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-    {
-        crash_stream << "Invalid DOS Header.\n";
-        return;
-    }
+    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return;
 
     PIMAGE_NT_HEADERS64 ntHeaders = (PIMAGE_NT_HEADERS64)(fileData.data() + dosHeader->e_lfanew);
-    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
-    {
-        crash_stream << "Invalid NT Header.\n";
-        return;
-    }
+    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE) return;
 
     DWORD symbolTableOffset = ntHeaders->FileHeader.PointerToSymbolTable;
     DWORD numberOfSymbols = ntHeaders->FileHeader.NumberOfSymbols;
 
-    if (symbolTableOffset == 0 || numberOfSymbols == 0)
-    {
-        crash_stream << "COFF Symbol Table is missing.\n";
-        return;
-    }
+    if (symbolTableOffset == 0 || numberOfSymbols == 0) return;
 
     DWORD64 imageBase = ntHeaders->OptionalHeader.ImageBase;
-    if (imageBase == 0)
-    {
-        crash_stream << "Can't get ImageBase.\n";
-        return;
-    }
+    if (imageBase == 0) return;
 
     DWORD64 baseAddressOffset = loadedBaseAddr - imageBase;
 
@@ -198,8 +191,38 @@ void analyzeCOFFSymbols(const astl::vector<char> &fileData, DWORD64 loadedBaseAd
     }
 }
 
-void writeStackTrace(std::ofstream &stream, CONTEXT *context, const astl::map<u64, SymbolInfo> &symbolTable)
+using hmodule_symbol_map_t = astl::hashmap<DWORD64, std::pair<std::string, astl::map<DWORD64, SymbolInfo>>>;
+
+hmodule_symbol_map_t::iterator findSymbolMap(hmodule_symbol_map_t &hmodule_symbol_map, DWORD64 moduleBase,
+                                             std::string &moduleName)
 {
+    auto it = hmodule_symbol_map.find(moduleBase);
+    if (it == hmodule_symbol_map.end())
+    {
+        char moduleNameTmp[MAX_PATH];
+        if (!GetModuleFileNameA((HINSTANCE)moduleBase, moduleNameTmp, MAX_PATH)) return hmodule_symbol_map.end();
+
+        moduleName = std::string(moduleNameTmp);
+        std::ifstream fd(moduleName, std::ios::binary);
+        if (!fd)
+            return hmodule_symbol_map.end();
+        else
+        {
+            auto fileData = astl::vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
+            fd.close();
+            auto [inserted_it, inserted] =
+                hmodule_symbol_map.emplace(moduleBase, std::make_pair(moduleName, astl::map<DWORD64, SymbolInfo>()));
+            analyzeCOFFSymbols(fileData, moduleBase, inserted_it->second.second); // заполняем символы
+            return inserted_it;
+        }
+    }
+    return it;
+}
+
+void writeStackTrace(std::ofstream &stream, CONTEXT *context)
+{
+    hmodule_symbol_map_t hmodule_symbol_map;
+
     HANDLE hProcess = GetCurrentProcess();
     HANDLE hThread = GetCurrentThread();
     HMODULE mainModule = GetModuleHandleA(NULL);
@@ -219,55 +242,51 @@ void writeStackTrace(std::ofstream &stream, CONTEXT *context, const astl::map<u6
     stackFrame.AddrFrame.Mode = AddrModeFlat;
     stackFrame.AddrStack.Mode = AddrModeFlat;
 
-    stream << "Stack trace:" << std::endl;
+    stream << "Stack trace:\n";
     int frameIndex = 0;
-    DWORD64 displacementSym = 0;
-    char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
-    PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
-    pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
-    pSymbol->MaxNameLen = MAX_SYM_NAME;
 
     while (StackWalk64(machineType, hProcess, hThread, &stackFrame, context, NULL, SymFunctionTableAccess64,
                        SymGetModuleBase64, NULL))
     {
-        stream << "\t#" << frameIndex << " 0x" << std::hex << stackFrame.AddrPC.Offset;
-        std::string name;
-        if (SymFromAddr(hProcess, stackFrame.AddrPC.Offset, &displacementSym, pSymbol))
-            name = pSymbol->Name;
-        else
-            name = findSymbolFromTable(stackFrame.AddrPC.Offset, symbolTable);
-        stream << " in " << demangle(name.c_str());
-
+        stream << astl::format("\t#%d 0x%llx", frameIndex, stackFrame.AddrPC.Offset);
         DWORD64 moduleBase = SymGetModuleBase64(hProcess, stackFrame.AddrPC.Offset);
+
         if (moduleBase)
         {
-            HMODULE hModule = reinterpret_cast<HMODULE>(moduleBase);
-            if (hModule != mainModule)
+            std::string name, moduleName;
+            auto it = findSymbolMap(hmodule_symbol_map, moduleBase, moduleName);
+            if (it == hmodule_symbol_map.end())
+                name = "<unknown>";
+            else
             {
-                char moduleName[MAX_PATH];
-                if (GetModuleFileNameA((HINSTANCE)moduleBase, moduleName, MAX_PATH)) stream << " at " << moduleName;
+                const std::string &moduleName = it->second.first;
+                const astl::map<DWORD64, SymbolInfo> &symbolMap = it->second.second;
+                if (symbolMap.empty()) // Try get symbol info from .edata
+                {
+                    DWORD64 displacementSym = 0;
+                    char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+                    PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
+                    pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+                    pSymbol->MaxNameLen = MAX_SYM_NAME;
+                    if (SymFromAddr(hProcess, stackFrame.AddrPC.Offset, &displacementSym, pSymbol))
+                        name = pSymbol->Name;
+                    else
+                        name = "<unknown>";
+                }
+                else
+                    name = findSymbolFromTable(stackFrame.AddrPC.Offset, symbolMap);
             }
+            stream << " in " << demangle(name.c_str());
+            if (moduleBase != (DWORD64)mainModule && !moduleName.empty()) stream << " at " << moduleName;
         }
         else
-            stream << " at Unknown";
+            stream << " in <unknown>";
 
         stream << std::endl;
         frameIndex++;
     }
-    SymCleanup(hProcess);
-}
 
-astl::vector<char> readHModule(std::ofstream &crash_stream, HMODULE hModule)
-{
-    char filename[MAX_PATH];
-    GetModuleFileNameA(hModule, filename, MAX_PATH);
-    std::ifstream file(filename, std::ios::binary);
-    if (!file)
-    {
-        crash_stream << "Can't open " << filename << "\n";
-        return {};
-    }
-    return astl::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    SymCleanup(hProcess);
 }
 
 void createMiniDump(EXCEPTION_POINTERS *pep, const std::string &filename, std::ofstream &crash_stream)

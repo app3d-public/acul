@@ -171,12 +171,12 @@ namespace logging
          * @param name The name of the logger.
          * @param path The file path where the log file should be created.
          * @param flags The flags to open the log file with.
-         * @return A shared pointer to the added Logger object.
+         * @return A pointer to the added Logger object.
          */
         template <typename T, typename... Args>
-        std::shared_ptr<T> addLogger(const std::string &name, Args &&...args)
+        T *addLogger(const std::string &name, Args &&...args)
         {
-            std::shared_ptr<T> logger = std::make_shared<T>(name, std::forward<Args>(args)...);
+            auto *logger = new T(name, std::forward<Args>(args)...);
             _loggers[name] = logger;
             return logger;
         }
@@ -184,9 +184,9 @@ namespace logging
         /**
          * @brief Gets the logger with the specified name.
          * @param name The name of the logger to retrieve.
-         * @return A shared pointer to the Logger object, or nullptr if the logger was not found.
+         * @return A pointer to the Logger object, or nullptr if the logger was not found.
          */
-        std::shared_ptr<Logger> getLogger(const std::string &name) const;
+        Logger *getLogger(const std::string &name) const;
 
         /**
          * @brief Removes the logger with the specified name.
@@ -194,11 +194,11 @@ namespace logging
          */
         void removeLogger(const std::string &name);
 
-        __attribute__((format(printf, 4, 5))) APPLIB_API void log(const std::shared_ptr<Logger> &logger, Level level,
-                                                                  const char *message, ...);
+        __attribute__((format(printf, 4, 5))) APPLIB_API void log(Logger *logger, Level level, const char *message,
+                                                                  ...);
 
-        std::shared_ptr<Logger> defaultLogger() const { return _defaultLogger; }
-        void defaultLogger(std::shared_ptr<Logger> logger) { _defaultLogger = logger; }
+        Logger *defaultLogger() const { return _defaultLogger; }
+        void defaultLogger(Logger *logger) { _defaultLogger = logger; }
 
         Level level() const { return _level; }
 
@@ -219,18 +219,18 @@ namespace logging
 
     private:
         Level _level{Level::Error};
-        astl::hashmap<std::string, std::shared_ptr<Logger>> _loggers;
-        std::shared_ptr<Logger> _defaultLogger;
+        astl::hashmap<std::string, Logger *> _loggers;
+        Logger *_defaultLogger;
         bool _running{true};
         std::thread _taskThread;
-        oneapi::tbb::concurrent_queue<std::pair<std::shared_ptr<Logger>, std::string>> _logQueue;
+        oneapi::tbb::concurrent_queue<std::pair<Logger *, std::string>> _logQueue;
         std::condition_variable _queueChanged;
         std::mutex _queueMutex;
     };
 
     extern APPLIB_API LogManager *mng;
 
-    inline std::shared_ptr<Logger> getLogger(const std::string &name) { return mng->getLogger(name); }
+    inline Logger *getLogger(const std::string &name) { return mng->getLogger(name); }
 } // namespace logging
 
 #define logInfo(...)  logging::mng->log(logging::mng->defaultLogger(), logging::Level::Info, __VA_ARGS__)

@@ -63,13 +63,6 @@ namespace io
                 astl::vector<EntryPoint *> entrypoints;
             };
 
-            struct Config
-            {
-                std::filesystem::path path;
-                size_t groupSize;
-                astl::vector<EntryGroup *> groups;
-            };
-
             struct Request
             {
                 astl::bin_stream stream;
@@ -106,8 +99,8 @@ namespace io
             class APPLIB_API Cache
             {
             public:
-                Cache(const Config &config, task::ThreadDispatch *dispatch)
-                    : _config(config),
+                Cache(const std::filesystem::path &path, task::ThreadDispatch &dispatch)
+                    : _path(path),
                       _dispatch(dispatch),
                       _writeNode(new oneapi::tbb::flow::function_node<FlowOutput>(
                           _graph, tbb::flow::unlimited,
@@ -115,12 +108,11 @@ namespace io
                 {
                 }
 
-                ~Cache();
+                ~Cache() { delete _writeNode; }
 
                 std::filesystem::path path(EntryPoint *entrypoint, EntryGroup *group)
                 {
-                    auto filename = astl::format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
-                    return _config.path / filename;
+                    return _path / astl::format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
                 }
 
                 EntryPoint *registerEntrypoint(EntryGroup *group);
@@ -150,8 +142,8 @@ namespace io
                                         astl::vector<IndexEntry *> &indexEntries);
 
             private:
-                Config _config;
-                task::ThreadDispatch *_dispatch;
+                std::filesystem::path _path;
+                task::ThreadDispatch &_dispatch;
                 oneapi::tbb::flow::graph _graph;
                 tbb::flow::function_node<FlowOutput> *_writeNode;
                 astl::shared_mutex _lock;

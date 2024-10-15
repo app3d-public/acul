@@ -138,6 +138,7 @@ namespace logging
             mng->_queueChanged.notify_one();
         }
         mng->_taskThread.join();
+        for (auto &logger : mng->_loggers) delete logger.second;
         delete mng;
         mng = nullptr;
     }
@@ -146,8 +147,9 @@ namespace logging
     {
         while (_running)
         {
-            std::pair<std::shared_ptr<Logger>, std::string> pair;
-            if (_logQueue.try_pop(pair)) { pair.first->write(pair.second); }
+            std::pair<Logger *, std::string> pair;
+            if (_logQueue.try_pop(pair))
+                pair.first->write(pair.second);
             else
             {
                 std::unique_lock<std::mutex> lock(_queueMutex);
@@ -156,7 +158,7 @@ namespace logging
         }
     }
 
-    std::shared_ptr<Logger> LogManager::getLogger(const std::string &name) const
+    Logger *LogManager::getLogger(const std::string &name) const
     {
         auto it = _loggers.find(name);
         return it == _loggers.end() ? nullptr : it->second;
@@ -164,7 +166,7 @@ namespace logging
 
     void LogManager::removeLogger(const std::string &name) { _loggers.erase(name); }
 
-    void LogManager::log(const std::shared_ptr<Logger> &logger, Level level, const char *message, ...)
+    void LogManager::log(Logger *logger, Level level, const char *message, ...)
     {
         if (level > _level) return;
         std::stringstream ss;

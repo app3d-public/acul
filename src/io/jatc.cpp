@@ -56,21 +56,6 @@ namespace io
                 }
             }
 
-            Cache::~Cache()
-            {
-                delete _writeNode;
-                for (auto &group : _config.groups)
-                {
-                    if (group)
-                    {
-                        logInfo("Destroying jatc entrypoint group: %s", group->name.c_str());
-                        delete group;
-                        group = nullptr;
-                    }
-                }
-                _config.groups.clear();
-            }
-
             EntryPoint *Cache::registerEntrypoint(EntryGroup *group)
             {
                 auto entrypoint = new EntryPoint();
@@ -92,7 +77,7 @@ namespace io
                 }
                 group->entrypoints.erase(it);
                 ++_op_count;
-                _dispatch->dispatch([=, this, path = this->path(entrypoint, group)]() mutable {
+                _dispatch.dispatch([=, this, path = this->path(entrypoint, group)]() mutable {
                     {
                         astl::exclusive_lock entrypoint_lock(entrypoint->lock);
                         entrypoint->cv.wait(entrypoint_lock, [&]() { return entrypoint->op_count.load() == 0; });
@@ -183,7 +168,7 @@ namespace io
                 fd->close();
                 ++entrypoint->op_count;
 
-                _dispatch->dispatch([=, this]() mutable {
+                _dispatch.dispatch([=, this]() mutable {
                     logInfo("Overwriting index entries for entrypoint: %llx", entrypoint->id);
                     astl::exclusive_lock write_lock(entrypoint->lock);
                     rewriteFile(entrypoint, indexEntries, dataBuffers, path(entrypoint, group));

@@ -53,4 +53,13 @@ namespace astl
     template <typename Iter>
     using is_forward_iterator_based = std::integral_constant<
         bool, std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<Iter>::iterator_category>>;
+
+    template <typename T, typename U>
+    using is_same_base = std::integral_constant<bool, std::is_base_of_v<U, T> || std::is_base_of_v<T, U>>;
+
+    template <typename... Args>
+    inline constexpr bool has_args()
+    {
+        return sizeof...(Args) > 0;
+    }
 } // namespace astl

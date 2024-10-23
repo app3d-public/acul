@@ -1,7 +1,8 @@
 #pragma once
-#include "../backend/device.hpp"
-#include "../backend/utils.hpp"
 #include "../disposal_queue.hpp"
+#include "device.hpp"
+#include "utils.hpp"
+
 
 /// @brief VK buffer abstraction wrapper
 class APPLIB_API Buffer
@@ -203,10 +204,10 @@ private:
 class BufferMemCache : public MemCache
 {
 public:
-    explicit BufferMemCache(std::unique_ptr<Buffer> &ubo) : _ubo(std::move(ubo)) {}
+    explicit BufferMemCache(Buffer *&buffer) : _buffer(buffer) { buffer = nullptr; }
 
-    virtual void free() override { _ubo.reset(); }
+    virtual void free() override { astl::release(_buffer); }
 
 private:
-    std::unique_ptr<Buffer> _ubo;
+    Buffer *_buffer;
 };

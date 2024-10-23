@@ -58,7 +58,7 @@ namespace io
 
             EntryPoint *Cache::registerEntrypoint(EntryGroup *group)
             {
-                auto entrypoint = new EntryPoint();
+                auto entrypoint = astl::alloc<EntryPoint>();
                 entrypoint->id = astl::IDGen()();
                 entrypoint->op_count = 0;
                 logInfo("Registering entrypoint: %llx", entrypoint->id);
@@ -84,7 +84,7 @@ namespace io
                         if (entrypoint->fd.is_open()) entrypoint->fd.close();
                         entrypoint->cv.notify_all();
                     }
-                    delete entrypoint;
+                    astl::release(entrypoint);
                     if (std::filesystem::exists(path))
                     {
                         logInfo("Deleting cache file: %s", path.string().c_str());
@@ -177,8 +177,8 @@ namespace io
                 });
             }
 
-            const char *Cache::writeToEntryPoint(const Request &request, Response &response, const char *buffer,
-                                                 size_t size, u32 checksum)
+            const char *Cache::writeToEntryPoint(const Request &request, Response &response, IndexEntry &indexEntry,
+                                                 const char *buffer, size_t size)
             {
                 auto fd = getFileStream(request.entrypoint, request.group);
                 if (!fd)
@@ -196,12 +196,8 @@ namespace io
                     }
                     else
                     {
-                        request.entrypoint->pos += dataOffset + request.stream.size();
-                        IndexEntry indexEntry;
+                        request.entrypoint->pos += dataOffset + indexEntry.size;
                         indexEntry.offset = dataOffset;
-                        indexEntry.size = request.stream.size();
-                        indexEntry.compressed = request.compression;
-                        indexEntry.checksum = checksum;
                         response.state = io::file::ReadState::Success;
                         response.entry(indexEntry);
                     }
@@ -214,27 +210,42 @@ namespace io
                 astl::vector<char> compressed;
                 const char *dstBuffer = nullptr, *err = nullptr;
                 size_t dstSize = 0;
-
-                if (request.compression > 0)
+                astl::bin_stream stream;
+                IndexEntry indexEntry;
+                if (!request.write_callback)
                 {
-                    auto data = request.stream.data() + request.stream.pos();
-                    auto size = request.stream.size() - request.stream.pos();
-                    if (io::file::compress(data, size, compressed, request.compression))
+                    err = "Write callback cannot be null.";
+                    goto on_error;
+                }
+                request.write_callback(stream);
+
+                if (stream.size() > JATC_MIN_COMPRESS)
+                {
+                    auto data = stream.data() + stream.pos();
+                    auto size = stream.size() - stream.pos();
+                    if (io::file::compress(data, size, compressed, JATC_COMPRESS_LEVEL))
                     {
                         dstBuffer = compressed.data();
                         dstSize = compressed.size();
+                        indexEntry.compressed = JATC_COMPRESS_LEVEL;
                     }
                     else
+                    {
                         err = "Failed to compress entrypoint index data.";
+                        goto on_error;
+                    }
                 }
                 else
                 {
-                    dstBuffer = request.stream.data();
-                    dstSize = request.stream.size();
+                    dstBuffer = stream.data();
+                    dstSize = stream.size();
+                    indexEntry.compressed = 0;
                 }
-                u32 checksum = astl::crc32(0, request.stream.data(), request.stream.size());
-                astl::exclusive_lock write_lock(request.entrypoint->lock);
-                if (!err) err = writeToEntryPoint(request, response, dstBuffer, dstSize, checksum);
+                indexEntry.size = stream.size();
+                indexEntry.checksum = astl::crc32(0, stream.data(), stream.size());
+                request.entrypoint->lock.lock();
+                err = writeToEntryPoint(request, response, indexEntry, dstBuffer, dstSize);
+            on_error:
                 if (err)
                 {
                     logError("%s", err);
@@ -243,6 +254,7 @@ namespace io
                 --request.entrypoint->op_count;
                 response.ready_promise.set_value();
                 request.entrypoint->cv.notify_all();
+                request.entrypoint->lock.unlock();
             }
 
             std::fstream *Cache::getFileStream(EntryPoint *entrypoint, EntryGroup *group)

@@ -48,7 +48,7 @@ namespace events
 
     // Template class for listeners specific to a type of event.
     template <typename E>
-    class EventListener : public BaseEventListener
+    class EventListener final : public BaseEventListener
     {
         std::function<void(E &)> _listener;
 
@@ -56,11 +56,7 @@ namespace events
         explicit EventListener(std::function<void(E &)> listener) : _listener(listener) {}
 
         // Invokes the listener function with the event.
-        void invoke(E &event)
-        {
-            assert(_listener);
-            _listener(event);
-        }
+        void invoke(E &event) { _listener(event); }
     };
 
     struct ListenerInfo
@@ -80,7 +76,7 @@ namespace events
         iterator addListener(const std::string &event, std::function<void(E &)> listener, int priority = 5)
         {
             static_assert(std::is_base_of<IEvent, E>::value, "E must inherit from Event");
-            auto eventListener = new EventListener<E>(listener);
+            auto eventListener = astl::alloc<EventListener<E>>(listener);
             return _listeners[event].emplace(priority, eventListener);
         }
 
@@ -98,7 +94,7 @@ namespace events
                 {
                     if (iter->second == listener)
                     {
-                        delete iter->second;
+                        astl::release(iter->second);
                         iter = listeners.erase(iter);
                     }
                     else
@@ -131,9 +127,9 @@ namespace events
         }
 
         template <typename T>
-        inline void dispatch(const std::string &name, T &&data)
+        inline void dispatch(const std::string &name, const T &data)
         {
-            auto event = Event<T>(name, std::forward<T>(data));
+            auto event = Event<T>(name, data);
             dispatch(event);
         }
 
@@ -201,7 +197,7 @@ namespace events
             for (auto &eventPair : _listeners)
             {
                 auto &listeners = eventPair.second;
-                for (auto &listenerPair : listeners) delete listenerPair.second;
+                for (auto &listenerPair : listeners) astl::release(listenerPair.second);
                 listeners.clear();
             }
             _listeners.clear();

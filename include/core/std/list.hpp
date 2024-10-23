@@ -1,20 +1,17 @@
 #pragma once
 
-#include <cassert>
-#include <cstddef>
-#include <iterator>
-#include "../mem/allocator.hpp"
+#include "memory.hpp"
 #include "type_traits.hpp"
 
 namespace astl
 {
 
-    template <typename T, template <typename> class allocator_base_t = mem_allocator>
+    template <typename T, typename Allocator = mem_allocator<T>>
     class list
     {
         struct Node
         {
-            using pointer = typename allocator_base_t<Node>::pointer;
+            using pointer = Node *;
             T data;
             pointer next;
             pointer prev;
@@ -28,13 +25,12 @@ namespace astl
         };
 
     public:
-        using allocator_t = allocator_base_t<Node>;
-        static allocator_t allocator;
+        using node_allocator = typename Allocator::template rebind<Node>::other;
         using value_type = T;
         using reference = T &;
         using const_reference = const T &;
-        using pointer = typename allocator_t::pointer;
-        using const_pointer = const typename allocator_t::pointer;
+        using pointer = Node *;
+        using const_pointer = const Node *;
         using size_type = size_t;
 
         class Iterator;
@@ -108,10 +104,10 @@ namespace astl
         {
             while (_head != nullptr)
             {
-                pointer p = _head;
+                Node *p = _head;
                 _head = _head->next;
-                if constexpr (std::is_trivially_destructible_v<T>) allocator.destroy(p);
-                allocator.deallocate(p, 1);
+                node_allocator::destroy(p);
+                node_allocator::deallocate(p, 1);
             }
         }
 
@@ -134,8 +130,8 @@ namespace astl
             while (current != nullptr)
             {
                 pointer next = current->next;
-                if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(current);
-                allocator.deallocate(current, 1);
+                node_allocator::destroy(current);
+                node_allocator::deallocate(current, 1);
                 current = next;
             }
             _head = _last = nullptr;
@@ -149,11 +145,11 @@ namespace astl
 
         void push_front(const_reference value) noexcept
         {
-            pointer node = allocator.allocate(1);
+            pointer node = node_allocator::allocate(1);
             if constexpr (std::is_trivially_constructible_v<T>)
                 node->data = value;
             else
-                allocator.construct(node, value);
+                node_allocator::construct(node, value);
             node->next = _head;
             node->prev = nullptr;
             if (_head)
@@ -165,11 +161,11 @@ namespace astl
 
         void push_front(T &&value) noexcept
         {
-            pointer node = allocator.allocate(1);
+            pointer node = node_allocator::allocate(1);
             if constexpr (std::is_trivially_constructible_v<T>)
                 node->data = std::forward<T>(value);
             else
-                allocator.construct(node, std::forward<T>(value));
+                node_allocator::construct(node, std::forward<T>(value));
             node->next = _head;
             node->prev = nullptr;
             if (_head)
@@ -181,11 +177,11 @@ namespace astl
 
         void push_back(const_reference value) noexcept
         {
-            pointer p = allocator.allocate(1);
+            pointer p = node_allocator::allocate(1);
             if constexpr (std::is_trivially_constructible_v<T>)
                 p->data = value;
             else
-                allocator.construct(p, value);
+                node_allocator::construct(p, value);
             p->prev = _last;
             p->next = nullptr;
             if (_last)
@@ -197,11 +193,11 @@ namespace astl
 
         void push_back(T &&value) noexcept
         {
-            pointer p = allocator.allocate(1);
+            pointer p = node_allocator::allocate(1);
             if constexpr (std::is_trivially_constructible_v<T>)
                 p->data = std::forward<T>(value);
             else
-                allocator.construct(p, std::forward<T>(value));
+                node_allocator::construct(p, std::forward<T>(value));
             p->prev = _last;
             p->next = nullptr;
             if (_last)
@@ -220,8 +216,8 @@ namespace astl
                 _head->prev = nullptr;
             else
                 _last = nullptr;
-            if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(temp);
-            allocator.deallocate(temp, 1);
+            node_allocator::destroy(temp);
+            node_allocator::deallocate(temp, 1);
         }
 
         void pop_back() noexcept
@@ -233,18 +229,15 @@ namespace astl
                 _last->next = nullptr;
             else
                 _head = nullptr;
-            if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(temp);
-            allocator.deallocate(temp, 1);
+            node_allocator::destroy(temp);
+            node_allocator::deallocate(temp, 1);
         }
 
         template <typename... Args>
         void emplace_front(Args &&...args)
         {
-            pointer node = allocator.allocate(1);
-            if constexpr (std::is_trivially_constructible_v<T>)
-                node->data = T(std::forward<Args>(args)...);
-            else
-                allocator.construct(node, std::forward<Args>(args)...);
+            pointer node = node_allocator::allocate(1);
+            node_allocator::construct(node, std::forward<Args>(args)...);
             node->next = _head;
             node->prev = nullptr;
             if (_head)
@@ -257,11 +250,8 @@ namespace astl
         template <typename... Args>
         void emplace_back(Args &&...args)
         {
-            pointer node = allocator.allocate(1);
-            if constexpr (std::is_trivially_constructible_v<T>)
-                node->data = T(std::forward<Args>(args)...);
-            else
-                allocator.construct(node, std::forward<Args>(args)...);
+            pointer node = node_allocator::allocate(1);
+            node_allocator::construct(node, std::forward<Args>(args)...);
             node->next = nullptr;
             node->prev = _last;
             if (_last)
@@ -299,11 +289,11 @@ namespace astl
                 push_back(value);
                 return --end();
             }
-            pointer node = allocator.allocate(1);
+            pointer node = node_allocator::allocate(1);
             if constexpr (std::is_trivially_constructible_v<T>)
                 node->data = value;
             else
-                allocator.construct(node, value);
+                node_allocator::construct(node, value);
             auto prev = pos._ptr->prev;
             node->next = pos._ptr;
             node->prev = prev;
@@ -342,9 +332,8 @@ namespace astl
             {
                 pos._ptr->prev->next = pos._ptr->next;
                 pos._ptr->next->prev = pos._ptr->prev;
-
-                if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(pos._ptr);
-                allocator.deallocate(pos._ptr, 1);
+                node_allocator::destroy(pos._ptr);
+                node_allocator::deallocate(pos._ptr, 1);
             }
             return nextIter;
         }
@@ -363,7 +352,7 @@ namespace astl
             return count;
         }
 
-        size_type max_size() const noexcept { return allocator.max_size(); }
+        size_type max_size() const noexcept { return node_allocator::max_size(); }
 
         bool empty() const { return _head == nullptr; }
 
@@ -371,7 +360,6 @@ namespace astl
         {
             std::swap(_head, other._head);
             std::swap(_last, other._last);
-            std::swap(allocator, other.allocator);
         }
 
         void reverse() noexcept
@@ -491,8 +479,8 @@ namespace astl
                         to_delete->next->prev = it;
                     else
                         _last = it;
-                    if constexpr (!std::is_trivially_destructible_v<T>) allocator.destroy(to_delete);
-                    allocator.deallocate(to_delete, 1);
+                    node_allocator::destroy(to_delete);
+                    node_allocator::deallocate(to_delete, 1);
                 }
                 else
                     it = it->next;
@@ -540,10 +528,7 @@ namespace astl
         }
     };
 
-    template <typename T, template <typename> class allocator_base_t>
-    typename list<T, allocator_base_t>::allocator_t list<T, allocator_base_t>::allocator{};
-
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     class list<T, Allocator>::Iterator
     {
     public:
@@ -602,7 +587,7 @@ namespace astl
         pointer _ptr;
     };
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     class list<T, Allocator>::ReverseIterator
     {
         using iterator_category = std::bidirectional_iterator_tag;
@@ -660,21 +645,21 @@ namespace astl
         pointer _ptr;
     };
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     template <typename InputIt>
     void list<T, Allocator>::insert(iterator pos, InputIt first, InputIt last)
     {
         for (; first != last; ++first) insert(pos, *first);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     list<T, Allocator>::iterator list<T, Allocator>::erase(iterator first, iterator last)
     {
         while (first != last) first = erase(first);
         return last;
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &other)
     {
         if (other.empty() || this == &other) return;
@@ -686,7 +671,7 @@ namespace astl
         other._head = other._last = nullptr;
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &other, iterator it)
     {
         if (it._ptr == other._last || this == &other) return;
@@ -701,19 +686,19 @@ namespace astl
         if (it._ptr == other._last) other._last = it._ptr->prev;
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &&other, iterator it)
     {
         splice_after(pos, other, it);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &&other)
     {
         splice_after(pos, other);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &other, iterator first, iterator last)
     {
         if (first == last || this == &other) return;
@@ -728,46 +713,46 @@ namespace astl
         if (pos._ptr == _last) _last = last_node;
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_after(iterator pos, list &&other, iterator first, iterator last)
     {
         splice_after(pos, other, first, last);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &other)
     {
         if (other.empty() || this == &other || pos == begin()) return;
         splice_after(--pos, other);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &other, iterator it)
     {
         if (pos == begin() || it == other.begin()) return;
         splice_after(--pos, other, it);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &&other, iterator it)
     {
         splice_before(pos, other, it);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &&other)
     {
         splice_before(pos, other);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &other, iterator first, iterator last)
     {
         if (pos == begin() || first == other.begin() || first == last) return;
         splice_after(--pos, other, first, last);
     }
 
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     void list<T, Allocator>::splice_before(iterator pos, list &&other, iterator first, iterator last)
     {
         splice_before(pos, other, first, last);

@@ -16,12 +16,12 @@ template <typename T>
 class APPLIB_API SharedMemCache : public MemCache
 {
 public:
-    SharedMemCache(const std::shared_ptr<T> &ptr) : _ptr(ptr) {}
+    SharedMemCache(const astl::shared_ptr<T> &ptr) : _ptr(ptr) {}
 
     virtual void free() override {}
 
 private:
-    std::shared_ptr<T> _ptr;
+    astl::shared_ptr<T> _ptr;
 };
 
 class APPLIB_API DisposalQueue

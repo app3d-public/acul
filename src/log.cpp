@@ -126,7 +126,7 @@ namespace logging
 
     void LogManager::init()
     {
-        mng = new LogManager();
+        mng = astl::alloc<LogManager>();
         mng->_taskThread = std::thread(&LogManager::workerThread, mng);
     }
 
@@ -138,8 +138,8 @@ namespace logging
             mng->_queueChanged.notify_one();
         }
         mng->_taskThread.join();
-        for (auto &logger : mng->_loggers) delete logger.second;
-        delete mng;
+        for (auto &logger : mng->_loggers) astl::release(logger.second);
+        astl::release(mng);
         mng = nullptr;
     }
 

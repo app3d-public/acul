@@ -81,7 +81,7 @@ namespace task
                 using R = std::invoke_result_t<F>;
                 auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task), _ctx);
                 _next = nextTask;
-                return this;
+                return this->shared_from_this();
             }
             else
             {
@@ -89,7 +89,7 @@ namespace task
                 auto nextTask =
                     std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); }, _ctx);
                 _next = nextTask;
-                return this;
+                return this->shared_from_this();
             }
         }
 

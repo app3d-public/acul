@@ -20,30 +20,24 @@ namespace meta
         virtual const u32 signature() const = 0;
     };
 
-    class APPLIB_API Stream
+    struct Stream
     {
-    public:
-        virtual ~Stream() = default;
-
-        virtual Block *readFromStream(astl::bin_stream &stream) = 0;
-
-        virtual void writeToStream(astl::bin_stream &stream, Block *block) = 0;
+        Block *(*read)(astl::bin_stream &stream);
+        void (*write)(astl::bin_stream &stream, Block *block);
     };
-
-    constexpr u32 sign_block_external = SIGN_APP_PART_DEFAULT << 16 | 0x3F84;
 
     /**
      * @brief Registers a stream handler for a specific block signature.
      * @param signature The signature identifying the block type.
      * @param stream The stream handler to register.
      */
-    APPLIB_API void addStream(u32 signature, Stream *stream);
+    APPLIB_API void addStream(u32 signature, const Stream *stream);
 
     /**
      * @brief Initializes the stream handlers.
      * @param streams The stream handlers to initialize.
      */
-    APPLIB_API void initStreams(const astl::vector<std::pair<u32, Stream *>> &streams);
+    APPLIB_API void initStreams(const astl::vector<std::pair<u32, const Stream *>> &streams);
 
     /**
      * @brief Clears all registered stream handlers.
@@ -55,7 +49,7 @@ namespace meta
      * @param signature The signature identifying the block type.
      * @return The stream handler for the specified signature, or nullptr if not found.
      */
-    APPLIB_API Stream *getStream(u32 signature);
+    APPLIB_API const Stream *getStream(u32 signature);
 
     /*********************************
      **
@@ -63,23 +57,27 @@ namespace meta
      **
      *********************************/
 
+    namespace sign_block
+    {
+        constexpr u32 external_block = SIGN_APP_PART_DEFAULT << 16 | 0x3F84;
+    }
+
     // Meta block reserved for common external resourcees
     struct ExternalBlock : public meta::Block
     {
         char *data = nullptr;
         u64 dataSize = 0;
 
-        virtual const u32 signature() const { return sign_block_external; }
+        virtual const u32 signature() const { return sign_block::external_block; }
 
-        ~ExternalBlock() { delete data; }
+        ~ExternalBlock() { astl::release(data); }
     };
 
-    class APPLIB_API ExternalStream final : public meta::Stream
+    namespace streams
     {
-    public:
-        virtual meta::Block *readFromStream(astl::bin_stream &stream) override;
+        APPLIB_API Block *readExternalBlock(astl::bin_stream &stream);
+        APPLIB_API void writeExternalBlock(astl::bin_stream &stream, Block *block);
 
-        virtual void writeToStream(astl::bin_stream &stream, meta::Block *block) override;
-    };
-
+        constexpr Stream external_block = {readExternalBlock, writeExternalBlock};
+    } // namespace streams
 } // namespace meta

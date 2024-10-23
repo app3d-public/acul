@@ -176,7 +176,7 @@ namespace logging
         template <typename T, typename... Args>
         T *addLogger(const std::string &name, Args &&...args)
         {
-            auto *logger = new T(name, std::forward<Args>(args)...);
+            auto *logger = astl::alloc<T>(name, std::forward<Args>(args)...);
             _loggers[name] = logger;
             return logger;
         }

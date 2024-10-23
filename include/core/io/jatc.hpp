@@ -17,6 +17,13 @@
 #define JATC_VERSION_PATCH 0
 #define JATC_VERSION       (JATC_VERSION_MAJOR << 16 | JATC_VERSION_MINOR << 8 | JATC_VERSION_PATCH)
 #define JATC_MAGIC_NUMBER  0x4A1950B9
+// Default compression settings
+#ifndef JATC_MIN_COMPRESS
+    #define JATC_MIN_COMPRESS 10240
+#endif
+#ifndef JATC_COMPRESS_LEVEL
+    #define JATC_COMPRESS_LEVEL 5
+#endif
 
 namespace io
 {
@@ -24,7 +31,7 @@ namespace io
     {
         namespace jatc
         {
-            struct IndexEntry
+            struct alignas(8) IndexEntry
             {
                 u64 offset;
                 u64 size;
@@ -65,8 +72,7 @@ namespace io
 
             struct Request
             {
-                astl::bin_stream stream;
-                u8 compression;
+                std::function<void(astl::bin_stream &)> write_callback;
                 EntryGroup *group = nullptr;
                 EntryPoint *entrypoint = nullptr;
             };
@@ -102,13 +108,13 @@ namespace io
                 Cache(const std::filesystem::path &path, task::ThreadDispatch &dispatch)
                     : _path(path),
                       _dispatch(dispatch),
-                      _writeNode(new oneapi::tbb::flow::function_node<FlowOutput>(
+                      _writeNode(astl::alloc<oneapi::tbb::flow::function_node<FlowOutput>>(
                           _graph, tbb::flow::unlimited,
                           [this](const FlowOutput &output) { this->writeToEntrypoint(output.req, *output.res); }))
                 {
                 }
 
-                ~Cache() { delete _writeNode; }
+                ~Cache() { astl::release(_writeNode); }
 
                 std::filesystem::path path(EntryPoint *entrypoint, EntryGroup *group)
                 {
@@ -119,13 +125,13 @@ namespace io
 
                 void deregisterEntrypoint(EntryPoint *entrypoint, EntryGroup *group);
 
-                void addRequest(const Request &request, Response &response)
+                void addRequest(const Request &request, Response *response)
                 {
-                    response.state = io::file::ReadState::Undefined;
-                    response.group = request.group;
-                    response.entrypoint = request.entrypoint;
+                    response->state = io::file::ReadState::Undefined;
+                    response->group = request.group;
+                    response->entrypoint = request.entrypoint;
                     ++request.entrypoint->op_count;
-                    _writeNode->try_put({request, &response});
+                    _writeNode->try_put({request, response});
                 }
 
                 void await()
@@ -151,14 +157,28 @@ namespace io
                 std::atomic<int> _op_count = 0;
 
                 // Returns nullptr if success, otherwise returns error message.
-                const char *writeToEntryPoint(const Request &request, Response &response, const char *buffer,
-                                              size_t size, u32 checksum);
+                const char *writeToEntryPoint(const Request &request, Response &response, IndexEntry &indexEntry,
+                                              const char *buffer, size_t size);
 
                 void writeToEntrypoint(const Request &request, Response &response);
 
                 std::fstream *getFileStream(EntryPoint *entrypoint, EntryGroup *group);
             };
-
         } // namespace jatc
     } // namespace file
 } // namespace io
+
+namespace astl
+{
+    template <>
+    inline bin_stream &bin_stream::write(const io::file::jatc::IndexEntry &entry)
+    {
+        return write(entry.offset).write(entry.size).write(entry.checksum).write(entry.compressed);
+    }
+
+    template <>
+    inline bin_stream &bin_stream::read(io::file::jatc::IndexEntry &entry)
+    {
+        return read(entry.offset).read(entry.size).read(entry.checksum).read(entry.compressed);
+    }
+} // namespace astl

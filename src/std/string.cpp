@@ -97,9 +97,9 @@ namespace astl
             result = "";
         else
         {
-            std::unique_ptr<char[]> buf(new char[size]);
-            vsnprintf(buf.get(), size, format, args);
-            result = std::string(buf.get(), buf.get() + size - 1);
+            char buf[size];
+            vsnprintf(buf, size, format, args);
+            result = std::string(buf, buf + size - 1);
         }
         va_end(args);
         return result;
@@ -113,9 +113,9 @@ namespace astl
             result = "";
         else
         {
-            std::unique_ptr<char[]> buf(new char[size]);
-            vsnprintf(buf.get(), size, format, args);
-            result = std::string(buf.get(), buf.get() + size - 1);
+            char buf[size];
+            vsnprintf(buf, size, format, args);
+            result = std::string(buf, buf + size - 1);
         }
         return result;
     }

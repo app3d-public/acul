@@ -10,7 +10,7 @@ void DisposalQueue::flush()
         for (auto &buffer : data.cacheList)
         {
             buffer->free();
-            delete buffer;
+            astl::release(buffer);
         }
     }
 }

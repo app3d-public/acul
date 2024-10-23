@@ -183,8 +183,8 @@ namespace astl
         {
             if (data == nullptr) throw std::invalid_argument("Null pointer passed to write");
 
-            _data.insert(_data.end(), reinterpret_cast<char *>(data),
-                         reinterpret_cast<char *>(data) + size * sizeof(T));
+            _data.insert(_data.end(), reinterpret_cast<const char *>(data),
+                         reinterpret_cast<const char *>(data) + size * sizeof(T));
             return *this;
         }
 

@@ -2,7 +2,6 @@
 #define APP_CORE_TASK_H
 
 #include <future>
-#include <memory>
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
@@ -31,7 +30,7 @@ namespace task
      * @tparam T The return type of the task.
      */
     template <typename T>
-    class Task final : public ITask, public std::enable_shared_from_this<Task<T>>
+    class Task final : public ITask, public astl::enable_shared_from_this<Task<T>>
     {
     public:
         /**
@@ -63,34 +62,6 @@ namespace task
             }
             else
                 _promise.set_value(_handler());
-            if (_next) _next->run();
-        }
-
-        /**
-         * @brief Chains another task to be executed after the current task.
-         *
-         * @tparam F The type of the next task function.
-         * @param task The next task function to be executed.
-         * @return A shared pointer to the next task.
-         */
-        template <typename F>
-        auto next(F &&task)
-        {
-            if constexpr (std::is_void_v<T>)
-            {
-                using R = std::invoke_result_t<F>;
-                auto nextTask = std::make_shared<Task<R>>(std::forward<F>(task), _ctx);
-                _next = nextTask;
-                return this->shared_from_this();
-            }
-            else
-            {
-                using R = std::invoke_result_t<F, T>;
-                auto nextTask =
-                    std::make_shared<Task<R>>([this, task = std::forward<F>(task)] { task(_future.get()); }, _ctx);
-                _next = nextTask;
-                return this->shared_from_this();
-            }
         }
 
         /**
@@ -118,7 +89,6 @@ namespace task
         std::function<T()> _handler;
         std::promise<T> _promise;
         std::shared_future<T> _future;
-        std::shared_ptr<ITask> _next;
     };
 
     template <typename F>
@@ -127,7 +97,7 @@ namespace task
         if constexpr (std::is_invocable<F>::value)
         {
             using R = std::invoke_result_t<F>;
-            auto ptr = std::make_shared<Task<R>>(std::forward<F>(task));
+            auto ptr = astl::make_shared<Task<R>>(std::forward<F>(task));
             return ptr;
         }
         else
@@ -140,12 +110,12 @@ namespace task
     class MemCache : public ::MemCache
     {
     public:
-        explicit MemCache(const std::shared_ptr<ITask> &task) : _task(task) {}
+        explicit MemCache(const astl::shared_ptr<ITask> &task) : _task(task) {}
 
         virtual void free() override { _task->run(); }
 
     private:
-        std::shared_ptr<ITask> _task;
+        astl::shared_ptr<ITask> _task;
     };
 
     /**

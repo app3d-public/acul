@@ -1,3 +1,4 @@
+#include <cassert>
 #include <core/disposal_queue.hpp>
 
 void DisposalQueue::flush()
@@ -9,6 +10,7 @@ void DisposalQueue::flush()
         if (data.onWait) data.onWait();
         for (auto &buffer : data.cacheList)
         {
+            assert(buffer);
             buffer->free();
             astl::release(buffer);
         }

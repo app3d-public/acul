@@ -34,9 +34,9 @@ namespace app
 
             /// @brief Create a descriptor set layout by added bindings
             /// @return Shared pointer to the descriptor set layout wrapper
-            std::shared_ptr<DescriptorSetLayout> build() const
+            astl::shared_ptr<DescriptorSetLayout> build() const
             {
-                return std::make_shared<DescriptorSetLayout>(_device, _bindings);
+                return astl::make_shared<DescriptorSetLayout>(_device, _bindings);
             }
 
         private:
@@ -111,9 +111,9 @@ namespace app
 
             /// @brief Build descriptor pool
             /// @return Shared descriptor pool wrapper
-            std::shared_ptr<DescriptorPool> build() const
+            astl::shared_ptr<DescriptorPool> build() const
             {
-                return std::make_shared<DescriptorPool>(_device, _maxSets, _poolFlags, _poolSizes);
+                return astl::make_shared<DescriptorPool>(_device, _maxSets, _poolFlags, _poolSizes);
             }
 
         private:

@@ -4,7 +4,6 @@
 #include <core/api.hpp>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <oneapi/tbb/concurrent_queue.h>
 #include <string>
 #include <string_view>
@@ -30,7 +29,7 @@ namespace logging
         virtual void handle(Level level, const char *message, std::stringstream &ss) const = 0;
     };
 
-    using TokenHandlerList = astl::vector<std::shared_ptr<TokenHandler>>;
+    using TokenHandlerList = astl::vector<astl::shared_ptr<TokenHandler>>;
 
     class TextTokenHandler final : public TokenHandler
     {
@@ -96,7 +95,7 @@ namespace logging
     class APPLIB_API Logger
     {
     public:
-        Logger(const std::string &name) : _name(name), _tokens(std::make_shared<TokenHandlerList>()) {}
+        Logger(const std::string &name) : _name(name), _tokens(astl::make_shared<TokenHandlerList>()) {}
 
         virtual ~Logger() = default;
 
@@ -115,7 +114,7 @@ namespace logging
 
     private:
         std::string _name;
-        std::shared_ptr<TokenHandlerList> _tokens;
+        astl::shared_ptr<TokenHandlerList> _tokens;
     };
 
     class APPLIB_API FileLogger final : public Logger

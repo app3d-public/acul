@@ -101,13 +101,44 @@ namespace io
             ReadState Cache::read(EntryPoint *entrypoint, EntryGroup *group, const IndexEntry &entry,
                                   astl::bin_stream &dst)
             {
+                logInfo("Reading index entry");
+                if (entry.size == 0)
+                {
+                    logError("Entry size is zero.");
+                    return ReadState::Error;
+                }
+
+                if (!entrypoint || !group)
+                {
+                    logError("Invalid entrypoint or group pointer.");
+                    return ReadState::Error;
+                }
+
                 astl::vector<char> buffer(entry.size);
+                if (!buffer.data())
+                {
+                    logError("Failed to allocate buffer of size: %llu", entry.size);
+                    return ReadState::Error;
+                }
+
                 {
                     astl::shared_lock lock(entrypoint->lock);
                     entrypoint->cv.wait(lock, [&]() { return entrypoint->op_count.load() == 0; });
+
                     auto fd = getFileStream(entrypoint, group);
-                    if (!fd) return ReadState::Error;
+                    if (!fd)
+                    {
+                        logError("Failed to open file stream.");
+                        return ReadState::Error;
+                    }
+
                     fd->seekg(entry.offset);
+                    if (!fd->good())
+                    {
+                        logError("Failed to seek file to offset: %llu", entry.offset);
+                        return ReadState::Error;
+                    }
+
                     fd->read(buffer.data(), entry.size);
                     if (!fd->good())
                     {
@@ -116,10 +147,13 @@ namespace io
                         return ReadState::Error;
                     }
                 }
+
                 dst = astl::bin_stream(std::move(buffer));
+
                 if (entry.compressed > 0)
                 {
                     astl::vector<char> decompressed;
+                    logInfo("Decompressing data.");
                     if (!io::file::decompress(dst.data() + dst.pos(), dst.size() - dst.pos(), decompressed))
                     {
                         logError("Failed to decompress data at offset: %llu", entry.offset);
@@ -128,11 +162,13 @@ namespace io
                     dst = astl::bin_stream(std::move(decompressed));
                 }
 
+                logInfo("Verifying checksum.");
                 if (astl::crc32(0, dst.data(), dst.size()) != entry.checksum)
                 {
                     logError("Invalid entrypoint index checksum.");
                     return ReadState::ChecksumMismatch;
                 }
+
                 return ReadState::Success;
             }
 
@@ -168,13 +204,11 @@ namespace io
                 fd->close();
                 ++entrypoint->op_count;
 
-                _dispatch.dispatch([=, this]() mutable {
-                    logInfo("Overwriting index entries for entrypoint: %llx", entrypoint->id);
-                    astl::exclusive_lock write_lock(entrypoint->lock);
-                    rewriteFile(entrypoint, indexEntries, dataBuffers, path(entrypoint, group));
-                    --entrypoint->op_count;
-                    entrypoint->cv.notify_all();
-                });
+                logInfo("Overwriting index entries for entrypoint: %llx", entrypoint->id);
+                astl::exclusive_lock write_lock(entrypoint->lock);
+                rewriteFile(entrypoint, indexEntries, dataBuffers, path(entrypoint, group));
+                --entrypoint->op_count;
+                entrypoint->cv.notify_all();
             }
 
             const char *Cache::writeToEntryPoint(const Request &request, Response &response, IndexEntry &indexEntry,

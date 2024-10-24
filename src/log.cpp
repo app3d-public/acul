@@ -98,16 +98,16 @@ namespace logging
             if (pos != last_pos)
             {
                 std::string text = pattern.substr(last_pos, pos - last_pos);
-                _tokens->push_back(std::make_shared<TextTokenHandler>(text));
+                _tokens->push_back(astl::make_shared<TextTokenHandler>(text));
             }
 
-            astl::hashmap<std::string, std::shared_ptr<TokenHandler>> tokenHandlers = {
-                {"ascii_time", std::make_shared<TimeTokenHandler>()},
-                {"level_name", std::make_shared<LevelNameTokenHandler>()},
-                {"thread", std::make_shared<ThreadIdTokenHandler>()},
-                {"message", std::make_shared<MessageTokenHandler>()},
-                {"color_auto", std::make_shared<ColorizeTokenHandler>()},
-                {"color_off", std::make_shared<DecolorizeTokenHandler>()}};
+            astl::hashmap<std::string, astl::shared_ptr<TokenHandler>> tokenHandlers = {
+                {"ascii_time", astl::make_shared<TimeTokenHandler>()},
+                {"level_name", astl::make_shared<LevelNameTokenHandler>()},
+                {"thread", astl::make_shared<ThreadIdTokenHandler>()},
+                {"message", astl::make_shared<MessageTokenHandler>()},
+                {"color_auto", astl::make_shared<ColorizeTokenHandler>()},
+                {"color_off", astl::make_shared<DecolorizeTokenHandler>()}};
 
             std::string token = it->str(1);
             auto handlerIter = tokenHandlers.find(token);
@@ -118,7 +118,7 @@ namespace logging
         if (last_pos != pattern.length())
         {
             std::string text = pattern.substr(last_pos);
-            _tokens->push_back(std::make_shared<TextTokenHandler>(text));
+            _tokens->push_back(astl::make_shared<TextTokenHandler>(text));
         }
     }
 

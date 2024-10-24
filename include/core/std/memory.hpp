@@ -244,7 +244,7 @@ namespace astl
             {
                 release();
                 _ctrl = other._ctrl;
-                _ctrl->increment_strong();
+                if (_ctrl) _ctrl->increment_strong();
                 _data = other._data;
             }
             return *this;
@@ -279,9 +279,6 @@ namespace astl
             _ctrl = nullptr;
             _data = nullptr;
         }
-
-        void operator++() { _ctrl->increment_strong(); }
-        void operator--() { release(); }
 
         template <typename U = T>
         std::enable_if_t<!std::is_void_v<T>, U> &operator*()
@@ -387,6 +384,37 @@ namespace astl
         }
 
         bool expired() const { return !_ctrl || _ctrl->strong_count() == 0; }
+    };
+
+    template <typename T, typename Allocator = mem_allocator<T>>
+    class enable_shared_from_this
+    {
+    protected:
+        enable_shared_from_this() noexcept = default;
+        enable_shared_from_this(const enable_shared_from_this &) noexcept = default;
+        enable_shared_from_this &operator=(const enable_shared_from_this &) noexcept = default;
+        ~enable_shared_from_this() = default;
+
+    public:
+        shared_ptr<T, Allocator> shared_from_this() { return shared_ptr<T>(_weak_this); }
+
+        shared_ptr<T, Allocator> shared_from_this() const { return shared_ptr<const T>(_weak_this); }
+
+        weak_ptr<T, Allocator> weak_from_this() noexcept { return _weak_this; }
+
+        weak_ptr<T, Allocator> weak_from_this() const noexcept { return _weak_this; }
+
+    private:
+        mutable weak_ptr<T, Allocator> _weak_this;
+
+        template <typename U>
+        void _internal_accept_owner(const shared_ptr<U> &shared_ptr) const noexcept
+        {
+            if (_weak_this.expired()) _weak_this = shared_ptr;
+        }
+
+        template <typename U, typename Au>
+        friend class shared_ptr;
     };
 
 } // namespace astl

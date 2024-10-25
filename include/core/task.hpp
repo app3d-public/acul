@@ -2,6 +2,7 @@
 #define APP_CORE_TASK_H
 
 #include <future>
+#include <oneapi/tbb/concurrent_priority_queue.h>
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
@@ -168,6 +169,94 @@ namespace task
             : IEvent(name), ctx(ctx), header(header), message(message), progress(progress)
         {
         }
+    };
+
+    class ServiceDispatch;
+
+    class IService
+    {
+        friend class ServiceDispatch;
+
+    public:
+        virtual ~IService() = default;
+
+        virtual std::chrono::steady_clock::time_point dispatch() = 0;
+
+        virtual void await(bool force = false) = 0;
+
+        void notify();
+
+    protected:
+        ServiceDispatch *_sd{nullptr};
+    };
+
+    class ServiceDispatch
+    {
+    public:
+        ServiceDispatch() : _running(true), _thread(&ServiceDispatch::workerThread, this) {}
+
+        ~ServiceDispatch()
+        {
+            {
+                std::unique_lock<std::mutex> lock(_mutex);
+                _running = false;
+                _cv.notify_all();
+            }
+            if (_thread.joinable()) _thread.join();
+            for (auto service : _services) astl::release(service);
+        }
+
+        void registerService(IService *service)
+        {
+            _services.push_back(service);
+            service->_sd = this;
+        }
+
+    private:
+        bool _running{true};
+        std::thread _thread;
+        std::mutex _mutex;
+        std::condition_variable _cv;
+        std::vector<IService *> _services;
+
+        APPLIB_API void workerThread();
+
+        friend class IService;
+    };
+
+    extern APPLIB_API ServiceDispatch *g_ServiceDispatch;
+
+    inline void IService::notify() { _sd->_cv.notify_one(); }
+
+    class APPLIB_API ScheduleService final : public IService
+    {
+    public:
+        virtual std::chrono::steady_clock::time_point dispatch() override;
+
+        template <typename F>
+        void addTask(F &&task, std::chrono::steady_clock::time_point time)
+        {
+            _tasks.emplace(addTask(std::forward<F>(task)), time);
+            notify();
+        }
+
+        virtual void await(bool force = false) override
+        {
+            if (force) _tasks.clear();
+            while (!_tasks.empty() || _busy.load(std::memory_order_acquire)) std::this_thread::yield();
+        }
+
+    private:
+        struct Task
+        {
+            astl::shared_ptr<ITask> task;
+            std::chrono::steady_clock::time_point time;
+
+            bool operator<(const Task &other) const { return time > other.time; }
+        };
+
+        oneapi::tbb::concurrent_priority_queue<Task> _tasks;
+        std::atomic<bool> _busy{false};
     };
 } // namespace task
 

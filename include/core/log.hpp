@@ -1,14 +1,10 @@
 #ifndef APP_CORE_LOG_H
 #define APP_CORE_LOG_H
 
-#include <core/api.hpp>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <oneapi/tbb/concurrent_queue.h>
-#include <string>
-#include <string_view>
-#include "std/basic_types.hpp"
-#include "std/vector.hpp"
+#include "task.hpp"
 
 namespace logging
 {
@@ -133,7 +129,7 @@ namespace logging
 
         std::ostream &stream() override { return _fs; }
 
-        void write(const std::string &message) override
+        virtual void write(const std::string &message) override
         {
             if (_fs.is_open()) _fs << message;
         }
@@ -150,21 +146,21 @@ namespace logging
 
         std::ostream &stream() override { return std::cout; }
 
-        void write(const std::string &message) override { std::cout << message; }
+        virtual void write(const std::string &message) override { std::cout << message; }
     };
 
     /**
-     * @class LogManager
+     * @class The Log Service
      * @brief Manages loggers for the application.
      *
-     * The LogManager class provides functionality to add, get, and remove loggers. It also allows logging messages with
-     * different log levels. The LogManager is a singleton class, meaning only one instance of it can exist in the
-     * application.
+     * Provides functionality to add, get, and remove loggers. It also allows logging messages with
+     * different log levels.
      */
-    class APPLIB_API LogManager
+    class APPLIB_API LogService final : public task::IService
     {
     public:
-        static void init();
+        ~LogService();
+
         /**
          * @brief Adds a logger with the specified name and file path.
          * @param name The name of the logger.
@@ -185,58 +181,69 @@ namespace logging
          * @param name The name of the logger to retrieve.
          * @return A pointer to the Logger object, or nullptr if the logger was not found.
          */
-        Logger *getLogger(const std::string &name) const;
+        Logger *getLogger(const std::string &name) const
+        {
+            auto it = _loggers.find(name);
+            return it == _loggers.end() ? nullptr : it->second;
+        }
 
         /**
          * @brief Removes the logger with the specified name.
          * @param name The name of the logger to remove.
          */
-        void removeLogger(const std::string &name);
+        void removeLogger(const std::string &name)
+        {
+            auto it = _loggers.find(name);
+            if (it == _loggers.end()) return;
+            astl::release(it->second);
+            _loggers.erase(it);
+        }
 
         __attribute__((format(printf, 4, 5))) APPLIB_API void log(Logger *logger, Level level, const char *message,
                                                                   ...);
-
-        Logger *defaultLogger() const { return _defaultLogger; }
-        void defaultLogger(Logger *logger) { _defaultLogger = logger; }
 
         Level level() const { return _level; }
 
         void level(Level level) { _level = level; }
 
-        /// \brief Perform processing in the worker thread.
-        void workerThread();
+        virtual std::chrono::steady_clock::time_point dispatch() override;
 
-        /// \brief Stop the worker threads for task processing.
-        void stopWorkerThread();
-
-        void await()
+        virtual void await(bool force = false) override
         {
-            while (!_logQueue.empty()) std::this_thread::yield();
+            if (force)
+            {
+                _queue.clear();
+                return;
+            }
+            while (_count.load(std::memory_order_relaxed) > 0) std::this_thread::yield();
         }
-
-        static void destroy();
 
     private:
         Level _level{Level::Error};
         astl::hashmap<std::string, Logger *> _loggers;
-        Logger *_defaultLogger;
-        bool _running{true};
-        std::thread _taskThread;
-        oneapi::tbb::concurrent_queue<std::pair<Logger *, std::string>> _logQueue;
-        std::condition_variable _queueChanged;
-        std::mutex _queueMutex;
+        oneapi::tbb::concurrent_queue<std::pair<Logger *, std::string>> _queue;
+        std::atomic<int> _count{0};
     };
 
-    extern APPLIB_API LogManager *mng;
+    extern APPLIB_API LogService *g_LogService;
+    extern APPLIB_API Logger *g_DefaultLogger;
 
-    inline Logger *getLogger(const std::string &name) { return mng->getLogger(name); }
+    inline Logger *getLogger(const std::string &name) { return g_LogService->getLogger(name); }
+
+    inline LogService::~LogService()
+    {
+        for (auto &logger : _loggers) astl::release(logger.second);
+        _loggers.clear();
+        g_LogService = nullptr;
+        g_DefaultLogger = nullptr;
+    }
 } // namespace logging
 
-#define logInfo(...)  logging::mng->log(logging::mng->defaultLogger(), logging::Level::Info, __VA_ARGS__)
-#define logDebug(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Debug, __VA_ARGS__)
-#define logTrace(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Trace, __VA_ARGS__)
-#define logWarn(...)  logging::mng->log(logging::mng->defaultLogger(), logging::Level::Warn, __VA_ARGS__)
-#define logError(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Error, __VA_ARGS__)
-#define logFatal(...) logging::mng->log(logging::mng->defaultLogger(), logging::Level::Fatal, __VA_ARGS__)
+#define logInfo(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Info, __VA_ARGS__)
+#define logDebug(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Debug, __VA_ARGS__)
+#define logTrace(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Trace, __VA_ARGS__)
+#define logWarn(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Warn, __VA_ARGS__)
+#define logError(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Error, __VA_ARGS__)
+#define logFatal(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Fatal, __VA_ARGS__)
 
 #endif

@@ -3,7 +3,6 @@
 #include <cstdarg>
 #include <ctime>
 #include <regex>
-#include <thread>
 
 namespace logging
 {
@@ -122,59 +121,34 @@ namespace logging
         }
     }
 
-    LogManager *mng{nullptr};
+    LogService *g_LogService{nullptr};
+    Logger *g_DefaultLogger{nullptr};
 
-    void LogManager::init()
+    std::chrono::steady_clock::time_point LogService::dispatch()
     {
-        mng = astl::alloc<LogManager>();
-        mng->_taskThread = std::thread(&LogManager::workerThread, mng);
-    }
-
-    void LogManager::destroy()
-    {
-        {
-            std::unique_lock<std::mutex> lock(mng->_queueMutex);
-            mng->_running = false;
-            mng->_queueChanged.notify_one();
-        }
-        mng->_taskThread.join();
-        for (auto &logger : mng->_loggers) astl::release(logger.second);
-        astl::release(mng);
-        mng = nullptr;
-    }
-
-    void LogManager::workerThread()
-    {
-        while (_running)
+        while (true)
         {
             std::pair<Logger *, std::string> pair;
-            if (_logQueue.try_pop(pair))
-                pair.first->write(pair.second);
-            else
+            if (_queue.try_pop(pair))
             {
-                std::unique_lock<std::mutex> lock(_queueMutex);
-                _queueChanged.wait(lock, [this]() { return !_logQueue.empty() || !_running; });
+                pair.first->write(pair.second);
+                _count.fetch_sub(1, std::memory_order_relaxed);
             }
+            else
+                return std::chrono::steady_clock::now();
         }
     }
 
-    Logger *LogManager::getLogger(const std::string &name) const
-    {
-        auto it = _loggers.find(name);
-        return it == _loggers.end() ? nullptr : it->second;
-    }
-
-    void LogManager::removeLogger(const std::string &name) { _loggers.erase(name); }
-
-    void LogManager::log(Logger *logger, Level level, const char *message, ...)
+    void LogService::log(Logger *logger, Level level, const char *message, ...)
     {
         if (level > _level) return;
         std::stringstream ss;
         logger->parseTokens(level, message, ss);
         va_list args;
         va_start(args, message);
-        _logQueue.push({logger, astl::format_va_list(ss.str().c_str(), args)});
+        _count.fetch_add(1, std::memory_order_relaxed);
+        _queue.emplace(logger, astl::format_va_list(ss.str().c_str(), args));
         va_end(args);
-        _queueChanged.notify_one();
+        notify();
     }
 } // namespace logging

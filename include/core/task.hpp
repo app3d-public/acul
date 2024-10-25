@@ -217,7 +217,7 @@ namespace task
         std::thread _thread;
         std::mutex _mutex;
         std::condition_variable _cv;
-        std::vector<IService *> _services;
+        astl::vector<IService *> _services;
 
         APPLIB_API void workerThread();
 

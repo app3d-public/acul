@@ -1,7 +1,7 @@
 #include <algorithm>
+#include <astl/basic_types.hpp>
 #include <clocale>
 #include <core/locales.hpp>
-#include <core/std/basic_types.hpp>
 #ifdef _WIN32
     #include <winnls.h>
 #endif

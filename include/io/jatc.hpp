@@ -3,11 +3,11 @@
 #include <condition_variable>
 #include <fstream>
 #include <oneapi/tbb/flow_graph.h>
-#include "../std/basic_types.hpp"
-#include "../std/shared_mutex.hpp"
-#include "../std/stream.hpp"
-#include "../std/string.hpp"
-#include "../task.hpp"
+#include "../astl/basic_types.hpp"
+#include "../astl/shared_mutex.hpp"
+#include "../astl/stream.hpp"
+#include "../astl/string.hpp"
+#include "../core/task.hpp"
 #include "file.hpp"
 
 // Journalable Asynchronous Temporary Cache

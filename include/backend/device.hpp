@@ -2,10 +2,10 @@
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
-#include "../std/basic_types.hpp"
-#include "../std/vector.hpp"
-#include "command_pool.hpp"
-#include "fence_pool.hpp"
+#include "../core/api.hpp"
+#include "../astl/basic_types.hpp"
+#include "../astl/vector.hpp"
+#include "pool.hpp"
 
 class DeviceCreateCtx
 {
@@ -55,6 +55,48 @@ protected:
     DeviceCreateCtx(bool enablePresent) : enablePresent(enablePresent), fencePoolSize(0) {}
 };
 
+struct FencePoolAlloc
+{
+    vk::Device *device = nullptr;
+    vk::DispatchLoaderDynamic *loader = nullptr;
+
+    void alloc(vk::Fence *pFences, size_t size)
+    {
+        vk::FenceCreateFlags flags = vk::FenceCreateFlagBits::eSignaled;
+        vk::FenceCreateInfo createInfo(flags);
+        for (size_t i = 0; i < size; ++i) pFences[i] = device->createFence(createInfo, nullptr, *loader);
+    }
+
+    void release(vk::Fence &fence) { device->destroyFence(fence, nullptr, *loader); }
+};
+
+template <vk::CommandBufferLevel Level>
+struct CmdBufAlloc
+{
+    vk::Device *device;
+    vk::CommandPool *commandPool;
+    vk::DispatchLoaderDynamic *loader;
+
+    void alloc(vk::CommandBuffer *pBuffers, size_t size)
+    {
+        vk::CommandBufferAllocateInfo allocInfo(*commandPool, Level, size);
+        auto res = device->allocateCommandBuffers(&allocInfo, pBuffers, *loader);
+        if (res != vk::Result::eSuccess) throw std::bad_alloc();
+    }
+
+    void release(vk::CommandBuffer &buffer)
+    {
+        // No need 'cos all buffers will be destroying after call VkDestroyCommandPool
+    }
+};
+
+struct CommandPool
+{
+    vk::CommandPool vkPool;
+    VkPool<vk::CommandBuffer, CmdBufAlloc<vk::CommandBufferLevel::ePrimary>> primary;
+    VkPool<vk::CommandBuffer, CmdBufAlloc<vk::CommandBufferLevel::eSecondary>> secondary;
+};
+
 struct QueueFamilyInfo
 {
     std::optional<u32> familyIndex;
@@ -98,7 +140,7 @@ public:
     vk::PhysicalDeviceDepthStencilResolveProperties depthResolveProperties;
     VmaAllocator allocator;
     vk::SurfaceKHR surface;
-    FencePool fencePool;
+    VkPool<vk::Fence, FencePoolAlloc> fencePool;
 
     Device() = default;
     Device(const Device &) = delete;
@@ -171,6 +213,8 @@ private:
 
     void findQueueFamilies(std::optional<u32> *dst, vk::PhysicalDevice device);
 
+    void allocateCmdBufPool(const vk::CommandPoolCreateInfo &createInfo, CommandPool &dst, size_t primary,
+                            size_t secondary);
     void allocateCommandPools();
 
     void hasWindowRequiredInstanceExtensions();

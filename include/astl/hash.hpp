@@ -3,7 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <random>
-#include "../api.hpp"
+#include "../core/api.hpp"
 #include "basic_types.hpp"
 
 namespace astl

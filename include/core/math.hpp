@@ -1,8 +1,8 @@
 #pragma once
 
 #include <glm/fwd.hpp>
+#include "../astl/basic_types.hpp"
 #include "api.hpp"
-#include "std/basic_types.hpp"
 
 namespace math
 {

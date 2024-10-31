@@ -3,7 +3,7 @@
 // Based by: https://github.com/Emanem/shared_mutex/tree/master
 
 #include <atomic>
-#include "../api.hpp"
+#include "../core/api.hpp"
 #include "basic_types.hpp"
 #include "vector.hpp"
 

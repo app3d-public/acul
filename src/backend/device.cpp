@@ -1,4 +1,4 @@
-#include <core/backend/device.hpp>
+#include <backend/device.hpp>
 #include <core/log.hpp>
 
 #define DEVICE_QUEUE_GRAPHICS 0
@@ -21,8 +21,8 @@ astl::vector<const char *> getSupportedOptExt(vk::PhysicalDevice device,
 void destroyQueue(DeviceQueue &queue, vk::Device &device, vk::DispatchLoaderDynamic &loader)
 {
     logInfo("Destroying command pools");
-    queue.graphicsQueue.pool.destroy(device, loader);
-    queue.computeQueue.pool.destroy(device, loader);
+    device.destroyCommandPool(queue.graphicsQueue.pool.vkPool, nullptr, loader);
+    device.destroyCommandPool(queue.computeQueue.pool.vkPool, nullptr, loader);
 }
 
 inline bool isFamilyIndicesComplete(std::optional<u32> *dst, bool checkPresent)
@@ -125,19 +125,34 @@ void Device::createInstance(const std::string &appName, u32 version)
     vkLoader.init(vkInstance);
 }
 
+void Device::allocateCmdBufPool(const vk::CommandPoolCreateInfo &createInfo, CommandPool &dst, size_t primary,
+                                size_t secondary)
+{
+    dst.vkPool = vkDevice.createCommandPool(createInfo, nullptr, vkLoader);
+    dst.primary.allocator.device = &vkDevice;
+    dst.primary.allocator.loader = &vkLoader;
+    dst.primary.allocator.commandPool = &dst.vkPool;
+    dst.primary.allocate(primary);
+
+    dst.secondary.allocator.device = &vkDevice;
+    dst.secondary.allocator.loader = &vkLoader;
+    dst.secondary.allocator.commandPool = &graphicsQueue.pool.vkPool;
+    dst.secondary.allocate(secondary);
+}
+
 void Device::allocateCommandPools()
 {
     vk::CommandPoolCreateInfo graphicPoolInfo;
     graphicPoolInfo
         .setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
         .setQueueFamilyIndex(graphicsQueue.familyIndex.value());
-    graphicsQueue.pool.allocate(graphicPoolInfo, vkDevice, vkLoader, 5, 10);
+    allocateCmdBufPool(graphicPoolInfo, graphicsQueue.pool, 5, 10);
 
     vk::CommandPoolCreateInfo computePoolInfo;
     computePoolInfo
         .setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
         .setQueueFamilyIndex(computeQueue.familyIndex.value());
-    computeQueue.pool.allocate(computePoolInfo, vkDevice, vkLoader, 2, 2);
+    allocateCmdBufPool(computePoolInfo, computeQueue.pool, 2, 2);
 }
 
 void Device::init(const std::string &appName, u32 version, DeviceCreateCtx *createCtx)
@@ -156,7 +171,9 @@ void Device::init(const std::string &appName, u32 version, DeviceCreateCtx *crea
     createLogicalDevice();
     createAllocator();
     allocateCommandPools();
-    fencePool.allocate(createCtx->fencePoolSize, vkDevice, vkLoader);
+    fencePool.allocator.device = &vkDevice;
+    fencePool.allocator.loader = &vkLoader;
+    fencePool.allocate(createCtx->fencePoolSize);
     _createCtx = nullptr;
 }
 
@@ -164,7 +181,7 @@ void Device::destroy()
 {
     if (!vkDevice) return;
     destroyQueue(*this, vkDevice, vkLoader);
-    fencePool.destroy(vkDevice, vkLoader);
+    fencePool.destroy();
     if (!std::uncaught_exception()) vmaDestroyAllocator(allocator);
     logInfo("Destroying vk:device");
     vkDevice.destroy(nullptr, vkLoader);

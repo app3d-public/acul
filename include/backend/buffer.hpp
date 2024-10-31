@@ -1,8 +1,7 @@
 #pragma once
-#include "../disposal_queue.hpp"
+#include "../core/disposal_queue.hpp"
 #include "device.hpp"
 #include "utils.hpp"
-
 
 /// @brief VK buffer abstraction wrapper
 class APPLIB_API Buffer

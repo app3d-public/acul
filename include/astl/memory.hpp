@@ -179,9 +179,9 @@ namespace astl
         friend class weak_ptr;
 
     public:
-        shared_ptr() : _ctrl(nullptr) {}
+        shared_ptr() : _ctrl(nullptr), _data(nullptr) {}
 
-        shared_ptr(std::nullptr_t) : _ctrl(nullptr) {}
+        shared_ptr(std::nullptr_t) : _ctrl(nullptr), _data(nullptr) {}
 
         template <typename U = T, std::enable_if_t<std::is_array_v<U>, int> = 0>
         explicit shared_ptr(size_t size)
@@ -233,7 +233,7 @@ namespace astl
             if (weak._ctrl && weak._ctrl->strong_count() > 0)
             {
                 _ctrl = weak._ctrl;
-                _ctrl->increment_strong();
+                if (_ctrl) _ctrl->increment_strong();
                 _data = weak._data;
             }
         }
@@ -417,5 +417,99 @@ namespace astl
         friend class shared_ptr;
     };
 
+    template <typename T, typename Allocator = mem_allocator<T>>
+    class unique_ptr
+    {
+        template <typename U, typename Au, typename... Args>
+        friend unique_ptr<U, Au> make_unique(Args &&...args);
+
+        template <typename U, typename Au>
+        friend class unique_ptr;
+
+    public:
+        using value_type = std::conditional_t<std::is_array_v<T>, std::remove_extent_t<T>, T>;
+        using pointer = value_type *;
+        using size_type = size_t;
+        using allocator = typename Allocator::template rebind<value_type>::other;
+
+        unique_ptr(pointer ptr = nullptr) : _data(ptr) {}
+
+        unique_ptr(std::nullptr_t) : _data(nullptr) {}
+
+        template <typename U = T, std::enable_if_t<std::is_array_v<U>, int> = 0>
+        explicit unique_ptr(size_t size) : _data(allocator::allocate(size))
+        {
+            static_assert(std::is_trivially_constructible_v<value_type>,
+                          "Only trivially constructible arrays supported");
+        }
+
+        unique_ptr(const unique_ptr &) = delete;
+        unique_ptr &operator=(const unique_ptr &) = delete;
+
+        unique_ptr(unique_ptr &&other) noexcept : _data(other._data) { other._data = nullptr; }
+
+        template <typename U, typename Au>
+        unique_ptr(unique_ptr<U, Au> &&other) noexcept : _data(other._data)
+        {
+            other._data = nullptr;
+        }
+
+        unique_ptr &operator=(std::nullptr_t) noexcept
+        {
+            reset();
+            return *this;
+        }
+
+        unique_ptr &operator=(unique_ptr &&other) noexcept
+        {
+            if (this != &other)
+            {
+                allocator::destroy(_data);
+                allocator::deallocate(_data, 1);
+                _data = other._data;
+                other._data = nullptr;
+            }
+            return *this;
+        }
+
+        ~unique_ptr() { reset(); }
+
+        void reset()
+        {
+            allocator::destroy(_data);
+            allocator::deallocate(_data, 1);
+            _data = nullptr;
+        }
+
+        template <typename U = T>
+        std::enable_if_t<!std::is_void_v<T>, U> &operator*()
+        {
+            return *_data;
+        }
+
+        template <typename U = T>
+        std::enable_if_t<!std::is_void_v<T>, U> &operator*() const
+        {
+            return *_data;
+        }
+
+        pointer operator->() noexcept { return _data; }
+        pointer operator->() const noexcept { return _data; }
+        pointer get() noexcept { return _data; }
+        pointer get() const noexcept { return _data; }
+        explicit operator bool() const { return _data != nullptr; }
+
+    private:
+        pointer _data;
+    };
+
+    template <typename T, typename Allocator = mem_allocator<T>, typename... Args>
+    unique_ptr<T, Allocator> make_unique(Args &&...args)
+    {
+        unique_ptr<T, Allocator> result(Allocator::allocate(1));
+        if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
+            mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
+        return result;
+    }
 } // namespace astl
 #endif

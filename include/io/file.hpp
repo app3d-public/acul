@@ -5,9 +5,9 @@
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include <string>
-#include "../api.hpp"
-#include "../std/string_pool.hpp"
-#include "../std/vector.hpp"
+#include "../astl/string_pool.hpp"
+#include "../astl/vector.hpp"
+#include "../core/api.hpp"
 
 #ifdef _WIN32
     #include <windows.h>

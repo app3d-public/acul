@@ -1,6 +1,6 @@
-#include <core/io/jatc.hpp>
+#include <astl/hash.hpp>
 #include <core/log.hpp>
-#include <core/std/hash.hpp>
+#include <io/jatc.hpp>
 
 namespace io
 {

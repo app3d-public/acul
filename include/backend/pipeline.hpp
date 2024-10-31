@@ -1,7 +1,7 @@
 #ifndef APP_GRAPHICS_PIPELINE_H
 #define APP_GRAPHICS_PIPELINE_H
 
-#include "../log.hpp"
+#include "../core/log.hpp"
 #include "device.hpp"
 
 // Сonfiguration settings for a Vulkan graphics pipeline.

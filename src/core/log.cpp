@@ -1,5 +1,5 @@
+#include <astl/string.hpp>
 #include <core/log.hpp>
-#include <core/std/string.hpp>
 #include <cstdarg>
 #include <ctime>
 #include <regex>

@@ -1,5 +1,4 @@
-#include <core/backend/fence_pool.hpp>
-#include <core/backend/utils.hpp>
+#include <backend/utils.hpp>
 #include <core/log.hpp>
 
 #define MEM_DEDICATTED_ALLOC_MIN 536870912u
@@ -7,8 +6,7 @@
 vk::CommandBuffer beginSingleTimeCommands(Device &device, QueueFamilyInfo &queue)
 {
     vk::CommandBuffer commandBuffer;
-    device.graphicsQueue.pool.requestBuffers(&commandBuffer, vk::CommandBufferLevel::ePrimary, 1, device.vkDevice,
-                                             device.vkLoader);
+    device.graphicsQueue.pool.primary.request(&commandBuffer, 1);
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     commandBuffer.begin(beginInfo, device.vkLoader);
@@ -18,7 +16,7 @@ vk::CommandBuffer beginSingleTimeCommands(Device &device, QueueFamilyInfo &queue
 vk::Result endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInfo &queue, Device &device)
 {
     vk::Fence fence;
-    device.fencePool.requestFences(&fence, 1, device.vkDevice, device.vkLoader);
+    device.fencePool.request(&fence, 1);
     device.vkDevice.resetFences(fence, device.vkLoader);
     commandBuffer.end(device.vkLoader);
     vk::SubmitInfo submitInfo;
@@ -26,8 +24,8 @@ vk::Result endSingleTimeCommands(vk::CommandBuffer commandBuffer, QueueFamilyInf
     submitInfo.pCommandBuffers = &commandBuffer;
     queue.vkQueue.submit(submitInfo, fence, device.vkLoader);
     auto res = device.vkDevice.waitForFences(fence, true, UINT64_MAX, device.vkLoader);
-    queue.pool.releaseBuffer(commandBuffer, vk::CommandBufferLevel::ePrimary);
-    device.fencePool.releaseFence(fence);
+    queue.pool.primary.release(commandBuffer);
+    device.fencePool.release(fence);
     return res;
 }
 

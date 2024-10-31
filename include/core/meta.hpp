@@ -1,8 +1,8 @@
 #pragma once
 
 #include "api.hpp"
-#include "std/basic_types.hpp"
-#include "std/stream.hpp"
+#include "astl/basic_types.hpp"
+#include "astl/stream.hpp"
 
 #define SIGN_APP_PART_DEFAULT 0x5828
 

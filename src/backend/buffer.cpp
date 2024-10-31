@@ -1,6 +1,6 @@
+#include <backend/buffer.hpp>
 #include <cassert>
 #include <core/log.hpp>
-#include <core/backend/buffer.hpp>
 
 Buffer::Buffer(Device &device, vk::DeviceSize instanceSize, u32 instanceCount, vk::BufferUsageFlags vkUsageFlags,
                VmaMemoryUsage vmaUsageFlags, vk::MemoryPropertyFlags memoryPropertyFlags, f32 priority,

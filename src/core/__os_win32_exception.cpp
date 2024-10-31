@@ -1,7 +1,7 @@
+#include <astl/basic_types.hpp>
+#include <astl/string.hpp>
+#include <astl/vector.hpp>
 #include <core/exception.hpp>
-#include <core/std/basic_types.hpp>
-#include <core/std/string.hpp>
-#include <core/std/vector.hpp>
 #include <dbghelp.h>
 #include <psapi.h>
 

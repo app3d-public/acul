@@ -500,8 +500,19 @@ namespace astl
     {
         if (pos < begin() || pos > end()) return end();
         std::ptrdiff_t index = pos - begin();
+
         if (_size == _capacity) reserve(_capacity == 0 ? 1 : _capacity * 2);
-        std::move_backward(_data + index, _data + _size, _data + _size + 1);
+        if constexpr (std::is_trivially_move_constructible_v<T>)
+            std::move_backward(_data + index, _data + _size, _data + _size + 1);
+        else
+        {
+            for (size_t i = _size; i > index; --i)
+            {
+                Allocator::construct(_data + i, std::move(_data[i - 1]));
+                Allocator::destroy(_data + i - 1);
+            }
+        }
+
         if constexpr (std::is_trivially_copyable_v<T>)
             _data[index] = value;
         else

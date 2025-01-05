@@ -134,9 +134,9 @@ namespace events
         }
 
         template <typename E, typename = std::enable_if_t<std::is_base_of_v<IEvent, E>>, typename... Args>
-        inline void dispatch(const std::string &name, Args &&...args)
+        inline void dispatch(Args &&...args)
         {
-            E event(name, std::forward<Args>(args)...);
+            E event(std::forward<Args>(args)...);
             dispatch(event);
         }
 

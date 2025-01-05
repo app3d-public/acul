@@ -30,6 +30,8 @@ struct APPLIB_API PipelineConfig<vk::GraphicsPipelineCreateInfo> final : public 
     astl::vector<vk::VertexInputBindingDescription> bindingDescriptions;
     astl::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    vk::SpecializationInfo specializationInfo;
+    astl::vector<vk::SpecializationMapEntry> specializationMap;
     vk::RenderPass renderPass = nullptr;
     u32 subpass = 0;
 

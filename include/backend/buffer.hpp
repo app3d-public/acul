@@ -19,6 +19,15 @@ public:
     Buffer(Device &device, vk::DeviceSize instanceSize, u32 instanceCount, vk::BufferUsageFlags vkUsageFlags,
            VmaMemoryUsage vmaUsageFlags, vk::MemoryPropertyFlags memoryPropertyFlags, f32 priority = 0.5f,
            vk::DeviceSize minOffsetAlignment = 1);
+
+    static astl::unique_ptr<Buffer> UBO(Device &device, vk::DeviceSize instanceSize, u32 instanceCount,
+                                        VmaMemoryUsage vmaUsageFlags, vk::MemoryPropertyFlags memoryPropertyFlags)
+    {
+        return astl::make_unique<Buffer>(device, instanceSize, instanceCount, vk::BufferUsageFlagBits::eUniformBuffer,
+                                         vmaUsageFlags, memoryPropertyFlags, 0.5f,
+                                         device.properties.properties.limits.minUniformBufferOffsetAlignment);
+    }
+
     ~Buffer();
 
     Buffer(const Buffer &) = delete;
@@ -162,7 +171,7 @@ public:
     vk::DeviceSize getInstanceSize() const { return _instanceSize; }
 
     /// @brief Get alignment size in bytes
-    vk::DeviceSize getAlignmentSize() const { return _instanceSize; }
+    vk::DeviceSize getAlignmentSize() const { return _alignmentSize; }
 
     /// @brief Get Vulkan usage flags
     vk::BufferUsageFlags getVkUsageFlags() const { return _vkUsageFlags; }

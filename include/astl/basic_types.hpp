@@ -54,43 +54,79 @@ namespace astl
     using multi_hashmap =
         std::unordered_multimap<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 
+    template <typename T = i32>
     struct point2D
     {
-        i32 x;
-        i32 y;
+        T x;
+        T y;
     };
 
-    inline bool operator==(const point2D &a, const point2D &b) { return a.x == b.x && a.y == b.y; }
+    template <typename T>
+    inline bool operator==(const point2D<T> &a, const point2D<T> &b)
+    {
+        return a.x == b.x && a.y == b.y;
+    }
 
-    inline bool operator!=(const point2D &a, const point2D &b) { return !(a == b); }
+    template <typename T>
+    inline bool operator!=(const point2D<T> &a, const point2D<T> &b)
+    {
+        return !(a == b);
+    }
 
-    inline bool operator<(const point2D &a, const point2D &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); }
+    template <typename T>
+    inline bool operator<(const point2D<T> &a, const point2D<T> &b)
+    {
+        return a.x < b.x || (a.x == b.x && a.y < b.y);
+    }
 
-    inline bool operator>(const point2D &a, const point2D &b) { return b < a; }
+    template <typename T>
+    inline bool operator>(const point2D<T> &a, const point2D<T> &b)
+    {
+        return b < a;
+    }
 
-    inline point2D operator+(const point2D &a, const point2D &b) { return {a.x + b.x, a.y + b.y}; }
+    template <typename T>
+    inline point2D<T> operator+(const point2D<T> &a, const point2D<T> &b)
+    {
+        return {a.x + b.x, a.y + b.y};
+    }
 
-    inline point2D &operator+=(point2D &a, const point2D &b)
+    template <typename T>
+    inline point2D<T> &operator+=(point2D<T> &a, const point2D<T> &b)
     {
         a.x += b.x;
         a.y += b.y;
         return a;
     }
 
-    inline point2D operator-(const point2D &a, const point2D &b) { return {a.x - b.x, a.y - b.y}; }
+    template <typename T>
+    inline point2D<T> operator-(const point2D<T> &a, const point2D<T> &b)
+    {
+        return {a.x - b.x, a.y - b.y};
+    }
 
-    inline point2D &operator-=(point2D &a, const point2D &b)
+    template <typename T>
+    inline point2D<T> &operator-=(point2D<T> &a, const point2D<T> &b)
     {
         a.x -= b.x;
         a.y -= b.y;
         return a;
     }
-
-    inline point2D operator-(const point2D &a) { return {-a.x, -a.y}; }
-
-    inline point2D operator*(const point2D &a, i32 b) { return {a.x * b, a.y * b}; }
-
-    inline point2D operator/(const point2D &a, i32 b) { return {a.x / b, a.y / b}; }
+    template <typename T>
+    inline point2D<T> operator-(const point2D<T> &a)
+    {
+        return {-a.x, -a.y};
+    }
+    template <typename T>
+    inline point2D<T> operator*(const point2D<T> &a, i32 b)
+    {
+        return {a.x * b, a.y * b};
+    }
+    template <typename T>
+    inline point2D<T> operator/(const point2D<T> &a, i32 b)
+    {
+        return {a.x / b, a.y / b};
+    }
 
     template <typename T>
     class proxy

@@ -10,7 +10,7 @@ namespace math
     /// @param screen Vector in screen space [x, y]
     /// @param dimensions Framebuffer dimensions [width, height]
     /// @return Vector in NDC space
-    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, astl::point2D extent);
+    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, astl::point2D<i32> extent);
 
     // Creates a ray in world space from NDC coordinates.
     // @param ndcPos Coordinates in NDC space [x, y]

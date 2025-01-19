@@ -109,6 +109,8 @@ namespace astl
         {
             if (this != &other)
             {
+                if constexpr (!std::is_trivially_destructible_v<T>)
+                    for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
                 const size_type oldCapacity = _capacity;
                 _capacity = other._capacity;
                 if (oldCapacity < other._capacity) reallocate(false);

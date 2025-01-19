@@ -135,7 +135,7 @@ namespace logging
                 _count.fetch_sub(1, std::memory_order_relaxed);
             }
             else
-                return std::chrono::steady_clock::now();
+                return std::chrono::steady_clock::time_point::max();
         }
     }
 

@@ -6,20 +6,18 @@ namespace task
     {
         while (true)
         {
-
             auto next_time = std::chrono::steady_clock::time_point::max();
-            for (auto service : _services)
             {
-                auto service_time = service->dispatch();
-                if (service_time < next_time) next_time = service_time;
+                for (auto service : _services)
+                {
+                    auto st = service->dispatch();
+                    if (st < next_time) next_time = st;
+                }
             }
-
+            
             std::unique_lock<std::mutex> lock(_mutex);
             if (!_running) break;
-            if (next_time == std::chrono::steady_clock::time_point::max())
-                _cv.wait(lock, [this] { return !_running; });
-            else
-                _cv.wait_until(lock, next_time, [this] { return !_running; });
+                _cv.wait_until(lock, next_time);
         }
     }
 

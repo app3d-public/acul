@@ -547,7 +547,7 @@ namespace astl
         }
         else
         {
-            move_elements_backward(_data + posIndex, _data + _size, _data + posIndex + insertCount);
+            move_elements_backward(_data + posIndex, _data + _size, _data + _size + insertCount);
             copy_construct(first, last, _data + posIndex);
         }
         _size += insertCount;

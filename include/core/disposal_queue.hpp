@@ -13,7 +13,7 @@ public:
 };
 
 template <typename T>
-class APPLIB_API SharedMemCache : public MemCache
+class SharedMemCache : public MemCache
 {
 public:
     SharedMemCache(const astl::shared_ptr<T> &ptr) : _ptr(ptr) {}

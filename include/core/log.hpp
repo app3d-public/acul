@@ -229,14 +229,6 @@ namespace logging
     extern APPLIB_API Logger *g_DefaultLogger;
 
     inline Logger *getLogger(const std::string &name) { return g_LogService->getLogger(name); }
-
-    inline LogService::~LogService()
-    {
-        for (auto &logger : _loggers) astl::release(logger.second);
-        _loggers.clear();
-        g_LogService = nullptr;
-        g_DefaultLogger = nullptr;
-    }
 } // namespace logging
 
 #define logInfo(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Info, __VA_ARGS__)

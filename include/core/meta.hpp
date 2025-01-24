@@ -78,6 +78,6 @@ namespace meta
         APPLIB_API Block *readExternalBlock(astl::bin_stream &stream);
         APPLIB_API void writeExternalBlock(astl::bin_stream &stream, Block *block);
 
-        constexpr Stream external_block = {readExternalBlock, writeExternalBlock};
+        inline Stream external_block = {readExternalBlock, writeExternalBlock};
     } // namespace streams
 } // namespace meta

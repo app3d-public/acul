@@ -25,7 +25,7 @@ target_compile_definitions(glm PUBLIC GLM_FORCE_RADIANS GLM_FORCE_DEPTH_ZERO_TO_
 add_subdirectory("modules/vma-impl")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
-target_compile_definitions(${PROJECT_NAME} PUBLIC -DAPPLIB_BUILD)
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DAPPLIB_BUILD)
 
 if(USE_ASAN)
     target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)

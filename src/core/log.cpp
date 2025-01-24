@@ -151,4 +151,12 @@ namespace logging
         va_end(args);
         notify();
     }
+
+    LogService::~LogService()
+    {
+        for (auto &logger : _loggers) astl::release(logger.second);
+        _loggers.clear();
+        g_LogService = nullptr;
+        g_DefaultLogger = nullptr;
+    }
 } // namespace logging

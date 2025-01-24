@@ -1,6 +1,10 @@
 #include <astl/string.hpp>
 #include <cstdarg>
 
+#ifdef _WIN32
+    #include <winnls.h>
+#endif
+
 namespace astl
 {
     std::u16string utf8_to_utf16(const std::string &src)
@@ -57,6 +61,20 @@ namespace astl
         }
         return result;
     }
+
+#ifdef _WIN32
+    std::filesystem::path make_path(const std::string &path)
+    {
+        int wide_size = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
+        if (wide_size <= 0) return {};
+
+        std::wstring wstr;
+        wstr.resize(wide_size - 1);
+        MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &wstr[0], wide_size);
+
+        return std::filesystem::path(wstr);
+    }
+#endif
 
     std::u16string trim(const std::u16string &inputStr, size_t max)
     {

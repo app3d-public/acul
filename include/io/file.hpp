@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
-#include <string>
+#include "../astl/string.hpp"
 #include "../astl/string_pool.hpp"
 #include "../astl/vector.hpp"
 #include "../core/api.hpp"
@@ -77,8 +77,9 @@ namespace io
         ReadState readByBlock(const std::string &filename, T &dstBuffer, void (*callback)(T &, const char *, int))
         {
 #ifdef _WIN32
-            HANDLE fileHandle = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                                           FILE_ATTRIBUTE_NORMAL, NULL);
+            std::u16string lFilename = astl::utf8_to_utf16(filename);
+            HANDLE fileHandle = CreateFileW((LPCWSTR)lFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
             if (fileHandle == INVALID_HANDLE_VALUE) return ReadState::Error;
 
             LARGE_INTEGER fileSize;

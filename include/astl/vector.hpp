@@ -206,9 +206,7 @@ namespace astl
         {
             if (newCapacity <= _capacity) return;
             _capacity = newCapacity;
-            pointer newData = Allocator::reallocate(_data, _capacity);
-            if (!newData) throw std::bad_alloc();
-            _data = newData;
+            reallocate(false);
         }
 
         void resize(size_type newSize)
@@ -291,6 +289,7 @@ namespace astl
         iterator erase(iterator first, iterator last);
 
         iterator insert(iterator pos, const T &value);
+        iterator insert(iterator pos, T &&value);
 
         template <typename InputIt>
         void insert(iterator pos, InputIt first, InputIt last);
@@ -519,6 +518,33 @@ namespace astl
             _data[index] = value;
         else
             Allocator::construct(_data + index, value);
+        ++_size;
+        return iterator(_data + index);
+    }
+
+    template <typename T, typename Allocator>
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::insert(Iterator pos, T &&value)
+    {
+        if (pos < begin() || pos > end()) return end();
+        const std::ptrdiff_t index = pos - begin();
+
+        if (_size == _capacity) reserve(_capacity == 0 ? 1 : _capacity * 2);
+
+        if constexpr (std::is_trivially_move_constructible_v<T>)
+            std::move_backward(_data + index, _data + _size, _data + _size + 1);
+        else
+        {
+            for (size_t i = _size; i > static_cast<size_t>(index); --i)
+            {
+                Allocator::construct(_data + i, std::move(_data[i - 1]));
+                Allocator::destroy(_data + i - 1);
+            }
+        }
+
+        if constexpr (std::is_trivially_move_constructible_v<T>)
+            _data[index] = std::move(value);
+        else
+            Allocator::construct(_data + index, std::move(value));
         ++_size;
         return iterator(_data + index);
     }

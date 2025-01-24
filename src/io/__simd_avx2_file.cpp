@@ -1,5 +1,6 @@
 #include <astl/string_pool.hpp>
 #include <core/api.hpp>
+#include <immintrin.h>
 
 namespace io
 {

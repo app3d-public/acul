@@ -2,6 +2,7 @@
 #define APP_CORE_STD_STRING_H
 
 #include <core/api.hpp>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
 
@@ -15,6 +16,12 @@ namespace astl
     /// @brief Convert string in UTF-16 encoding to string in UTF-8 encoding
     /// @param src String in UTF-16 encoding
     APPLIB_API std::string utf16_to_utf8(const std::u16string &src);
+
+#ifdef _WIN32
+    APPLIB_API std::filesystem::path make_path(const std::string &path);
+#else
+    inline std::filesystem::path make_path(const std::string &path) { return std::filesystem::path(path); }
+#endif
 
     APPLIB_API std::u16string trim(const std::u16string &inputStr, size_t max = std::numeric_limits<size_t>::max());
 

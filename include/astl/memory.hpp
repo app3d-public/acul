@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <limits>
 #include <oneapi/tbb/scalable_allocator.h>
+#include <type_traits>
 #include "type_traits.hpp"
 
 namespace astl
@@ -78,6 +79,14 @@ namespace astl
         auto ptr = mem_allocator<T>::allocate(1);
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(ptr, std::forward<Args>(args)...);
+        return ptr;
+    }
+
+    template <typename T, typename U>
+    inline T *alloc(std::initializer_list<U> init_list)
+    {
+        auto ptr = mem_allocator<T>::allocate(1);
+        mem_allocator<T>::construct(ptr, init_list);
         return ptr;
     }
 

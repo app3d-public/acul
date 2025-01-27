@@ -3,8 +3,9 @@
 
 #include <glm/glm.hpp>
 #include <random>
+#include <unordered_set>
 #include "../core/api.hpp"
-#include "basic_types.hpp"
+#include "scalars.hpp"
 
 namespace astl
 {
@@ -20,6 +21,17 @@ namespace astl
     };
 
     APPLIB_API u32 crc32(u32 crc, const char *buf, size_t len);
+
+    template <typename T>
+    using hashset = std::unordered_set<T, std::hash<T>, std::equal_to<T>, oneapi::tbb::scalable_allocator<T>>;
+
+    template <typename K, typename V, typename H = std::hash<K>>
+    using hashmap =
+        std::unordered_map<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
+
+    template <typename K, typename V, typename H = std::hash<K>>
+    using multi_hashmap =
+        std::unordered_multimap<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
 } // namespace astl
 
 namespace std

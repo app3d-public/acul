@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
-#include "../astl/string.hpp"
 #include "../astl/string_pool.hpp"
 #include "../astl/vector.hpp"
 #include "../core/api.hpp"
@@ -127,18 +126,13 @@ namespace io
             CloseHandle(fileHandle);
 #else
             int fd = open(filename.c_str(), O_RDONLY);
-            if (fd == -1)
-            {
-                error = "Failed to open file: " + filename + " " + strerror(errno);
-                return false;
-            }
+            if (fd == -1) return ReadState::Error;
 
             struct stat fileInfo;
             if (fstat(fd, &fileInfo) != 0)
             {
                 close(fd);
-                error = "Failed to get file size: " + filename + " " + strerror(errno);
-                return false;
+                return ReadState::Error;
             }
             size_t fileSize = fileInfo.st_size;
 
@@ -146,23 +140,23 @@ namespace io
             if (fileData == MAP_FAILED)
             {
                 close(fd);
-                error = "Failed to map file to memory: " + filename + " " + strerror(errno);
-                return false;
+                return ReadState::MapError;
             }
-
+            // Parse the file in parallel
+            ReadState res = ReadState::Success;
             try
             {
-                astl::vector<std::string_view> lines;
-                fillLineBuffer(fileData, fileSize, lines);
-                oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, lines.size(), 512),
+                astl::string_pool<char> stringPool(fileSize);
+                fillLineBuffer(fileData, fileSize, stringPool);
+                oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
                                               for (size_t i = range.begin(); i != range.end(); ++i)
-                                                  callback(dstBuffer, lines[i], i);
+                                                  callback(dstBuffer, stringPool[i], i);
                                           });
             }
             catch (const std::exception &e)
             {
-                error = "Failed to process file with error: " + std::string(e.what());
+                res = ReadState::Error;
             }
 
             munmap(fileData, fileSize);

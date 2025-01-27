@@ -1,4 +1,5 @@
-#include <astl/basic_types.hpp>
+#include <astl/scalars.hpp>
+#include <astl/point2d.hpp>
 #include <core/api.hpp>
 #include <glm/glm.hpp>
 

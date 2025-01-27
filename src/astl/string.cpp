@@ -1,5 +1,6 @@
 #include <astl/string.hpp>
 #include <cstdarg>
+#include <cstring>
 
 #ifdef _WIN32
     #include <winnls.h>
@@ -126,13 +127,18 @@ namespace astl
     std::string format_va_list(const char *format, va_list args) noexcept
     {
         std::string result;
-        int size = vsnprintf(nullptr, 0, format, args) + 1;
+        va_list args_copy;
+        va_copy(args_copy, args);
+        int size = vsnprintf(nullptr, 0, format, args_copy) + 1;
+        va_end(args_copy);
         if (size <= 1)
             result = "";
         else
         {
             char buf[size];
-            vsnprintf(buf, size, format, args);
+            va_copy(args_copy, args);
+            vsnprintf(buf, size, format, args_copy);
+            va_end(args_copy);
             result = std::string(buf, buf + size - 1);
         }
         return result;

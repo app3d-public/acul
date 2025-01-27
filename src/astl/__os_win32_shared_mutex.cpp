@@ -7,7 +7,6 @@ namespace astl
 
     void shared_mutex::lock_shared()
     {
-        int retry_count = 0;
         size_t cur_rw_lock;
         while (true)
         {

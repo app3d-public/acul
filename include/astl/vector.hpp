@@ -217,12 +217,12 @@ namespace astl
                 pointer newData = Allocator::allocate(_capacity);
                 if (!newData) throw std::bad_alloc();
                 if constexpr (std::is_trivially_copyable_v<T>)
-                    std::memcpy(newData, _data, _size * sizeof(T));
+                    memcpy(newData, _data, _size * sizeof(T));
                 else
                 {
                     for (size_type i = 0; i < _size; ++i)
                     {
-                        Allocator::construct(newData + i, std::move(_data[i]));
+                        Allocator::construct(newData + i, move(_data[i]));
                         Allocator::destroy(_data + i);
                     }
                 }
@@ -369,7 +369,7 @@ namespace astl
             if constexpr (std::is_trivially_copyable_v<T>)
             {
                 if constexpr (!std::is_rvalue_reference_v<decltype(*start)>)
-                    std::memcpy(dest, &(*start), (end - start) * sizeof(T));
+                    memcpy(dest, &(*start), (end - start) * sizeof(T));
                 else
                     for (; start != end; ++start, ++dest) *dest = *start;
             }
@@ -381,7 +381,7 @@ namespace astl
         void move_construct(Iter start, Iter end, Dest dest)
         {
             if constexpr (std::is_trivially_move_constructible_v<T>)
-                std::memmove(dest, &(*start), (end - start) * sizeof(T));
+                memmove(dest, &(*start), (end - start) * sizeof(T));
             else
                 for (; start != end; ++start, ++dest) Allocator::construct(dest, std::move(*start));
         }
@@ -390,7 +390,7 @@ namespace astl
         void move_elements_backward(Iter start, Iter end, Iter destEnd)
         {
             if constexpr (std::is_trivially_move_constructible_v<T>)
-                std::memmove(destEnd - (end - start), &(*start), (end - start) * sizeof(T));
+                memmove(destEnd - (end - start), &(*start), (end - start) * sizeof(T));
             else
                 while (end != start) Allocator::construct(--destEnd, std::move(*--end));
         }

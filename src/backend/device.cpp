@@ -1,3 +1,4 @@
+#include <astl/set.hpp>
 #include <backend/device.hpp>
 #include <core/log.hpp>
 
@@ -182,7 +183,7 @@ void Device::destroy()
     if (!vkDevice) return;
     destroyQueue(*this, vkDevice, vkLoader);
     fencePool.destroy();
-    if (!std::uncaught_exception()) vmaDestroyAllocator(allocator);
+    if (!std::uncaught_exceptions()) vmaDestroyAllocator(allocator);
     logInfo("Destroying vk:device");
     vkDevice.destroy(nullptr, vkLoader);
     if (_useValidationLayers) vkInstance.destroyDebugUtilsMessengerEXT(_debugMessenger, nullptr, vkLoader);

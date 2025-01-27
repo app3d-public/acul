@@ -33,17 +33,19 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 find_package(TBB REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
     TBB::tbb TBB::tbbmalloc
     vma
-    intl
     zstd
     glm)
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC
         Synchronization
-        Dbghelp)
+        Dbghelp
+        intl
+        )
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:vma,INCLUDE_DIRECTORIES>)

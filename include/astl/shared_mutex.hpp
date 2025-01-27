@@ -4,7 +4,7 @@
 
 #include <atomic>
 #include "../core/api.hpp"
-#include "basic_types.hpp"
+#include "scalars.hpp"
 #include "vector.hpp"
 
 #ifndef L1_CACHE_LINESIZE

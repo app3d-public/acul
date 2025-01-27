@@ -5,7 +5,8 @@
 #include <functional>
 #include <string>
 #include "api.hpp"
-#include "astl/basic_types.hpp"
+#include "astl/hash.hpp"
+#include "astl/map.hpp"
 #include "astl/type_traits.hpp"
 #include "astl/vector.hpp"
 

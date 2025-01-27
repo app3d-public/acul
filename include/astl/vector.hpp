@@ -222,7 +222,7 @@ namespace astl
                 {
                     for (size_type i = 0; i < _size; ++i)
                     {
-                        Allocator::construct(newData + i, move(_data[i]));
+                        Allocator::construct(newData + i, std::move(_data[i]));
                         Allocator::destroy(_data + i);
                     }
                 }

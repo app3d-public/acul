@@ -10,6 +10,7 @@
 
 #ifdef _WIN32
     #include <windows.h>
+    #include <astl/string.hpp>
 #else
     #include <cstring>
     #include <fcntl.h>

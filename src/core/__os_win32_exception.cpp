@@ -1,4 +1,5 @@
-#include <astl/basic_types.hpp>
+#include <astl/hash.hpp>
+#include <astl/map.hpp>
 #include <astl/string.hpp>
 #include <astl/vector.hpp>
 #include <core/exception.hpp>

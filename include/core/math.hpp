@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/fwd.hpp>
-#include "../astl/basic_types.hpp"
+#include "../astl/point2d.hpp"
 #include "api.hpp"
 
 namespace math

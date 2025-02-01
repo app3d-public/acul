@@ -4,42 +4,53 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-int futex_wait(std::atomic<u64> *addr, u64 expected)
-{
-    return syscall(SYS_futex, reinterpret_cast<i32 *>(addr), FUTEX_WAIT, expected, NULL, NULL, 0);
-}
-
-int futex_wake(std::atomic<u64> *addr, int count)
-{
-    return syscall(SYS_futex, reinterpret_cast<i32 *>(addr), FUTEX_WAKE, count, NULL, NULL, 0);
-}
-
 namespace astl
 {
-    std::atomic<size_t> g_idx_hint{0};
-
-    void shared_mutex::lock_shared()
+    int futex_wait(std::atomic<int> *addr, int expected)
     {
-        entry_lock &lock = _el[get_thread_idx()];
         while (true)
         {
-            u64 current_rw_lock = lock.wr_lock.load(std::memory_order_acquire);
-
-            if (current_rw_lock & entry_lock::W_MASK)
+            int res = syscall(SYS_futex, reinterpret_cast<int *>(addr), FUTEX_WAIT, static_cast<int>(expected), nullptr,
+                            nullptr, 0);
+            if (res == 0) return 0;
+            if (res == -1)
             {
-                futex_wait(&lock.wr_lock, current_rw_lock);
-                continue;
+                if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+                if (errno == EINTR) continue;
+                return -1;
             }
-
-            if (lock.wr_lock.compare_exchange_weak(current_rw_lock, current_rw_lock + 1, std::memory_order_acq_rel,
-                                                   std::memory_order_acquire))
-                break;
         }
     }
 
+    int futex_wake(std::atomic<int> *addr, int count)
+    {
+        return syscall(SYS_futex, reinterpret_cast<int *>(addr), FUTEX_WAKE, count, nullptr, nullptr, 0);
+    }
+
+        std::atomic<size_t> g_idx_hint{0};
+
+        void shared_mutex::lock_shared()
+        {
+            entry_lock &lock = _el[get_thread_idx()];
+            while (true)
+            {
+                int current_rw_lock = lock.wr_lock.load(std::memory_order_acquire);
+
+                if (current_rw_lock & entry_lock::W_MASK)
+                {
+                    futex_wait(&lock.wr_lock, current_rw_lock);
+                    continue;
+                }
+
+                if (lock.wr_lock.compare_exchange_weak(current_rw_lock, current_rw_lock + 1, std::memory_order_acq_rel,
+                                                    std::memory_order_acquire))
+                    break;
+            }
+        }
+
     void shared_mutex::unlock_shared()
     {
-        size_t cur_rw_lock;
+        int cur_rw_lock;
         while (true)
         {
             cur_rw_lock = _el[get_thread_idx()].wr_lock.load(std::memory_order_acquire);
@@ -57,7 +68,7 @@ namespace astl
         for (size_t i = 0; i < _el.size(); ++i)
         {
             entry_lock &lock = _el[i];
-            u64 current_rw_lock;
+            int current_rw_lock;
 
             while (true)
             {
@@ -80,11 +91,19 @@ namespace astl
         for (size_t i = 0; i < _el.size(); ++i)
         {
             entry_lock &lock = _el[i];
-            size_t expected = entry_lock::W_MASK;
-            while (
-                !lock.wr_lock.compare_exchange_weak(expected, 0, std::memory_order_acq_rel, std::memory_order_acquire))
-                futex_wait(&lock.wr_lock, expected);
-            futex_wake(&lock.wr_lock, INT32_MAX);
+            while (true)
+            {
+                int current = lock.wr_lock.load(std::memory_order_acquire);
+
+                if (lock.wr_lock.compare_exchange_weak(current, 0, std::memory_order_acq_rel,
+                                                       std::memory_order_acquire))
+                {
+                    futex_wake(&lock.wr_lock, INT32_MAX);
+                    break;
+                }
+                else
+                    futex_wait(&lock.wr_lock, current);
+            }
         }
     }
 } // namespace astl

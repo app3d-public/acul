@@ -7,7 +7,8 @@ namespace astl
 
     void shared_mutex::lock_shared()
     {
-        size_t cur_rw_lock;
+        int retry_count = 0;
+        int cur_rw_lock;
         while (true)
         {
             cur_rw_lock = _el[get_thread_idx()].wr_lock.load(std::memory_order_acquire);
@@ -24,7 +25,7 @@ namespace astl
 
     void shared_mutex::unlock_shared()
     {
-        size_t cur_rw_lock;
+        int cur_rw_lock;
         while (true)
         {
             cur_rw_lock = _el[get_thread_idx()].wr_lock.load(std::memory_order_acquire);
@@ -41,7 +42,7 @@ namespace astl
     {
         for (size_t i = 0; i < _el.size(); ++i)
         {
-            size_t cur_rw_lock;
+            int cur_rw_lock;
             while (true)
             {
                 cur_rw_lock = _el[i].wr_lock.load(std::memory_order_acquire);
@@ -60,7 +61,7 @@ namespace astl
     {
         for (size_t i = 0; i < _el.size(); ++i)
         {
-            size_t cur_rw_lock;
+            int cur_rw_lock;
             while (true)
             {
                 cur_rw_lock = _el[i].wr_lock.load(std::memory_order_acquire);

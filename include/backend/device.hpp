@@ -1,10 +1,13 @@
 #pragma once
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
 #include <vk_mem_alloc.h>
+#pragma clang diagnostic pop
 #include <vulkan/vulkan.hpp>
-#include "../core/api.hpp"
 #include "../astl/basic_types.hpp"
+#include "../astl/hashset.hpp"
 #include "../astl/vector.hpp"
+#include "../core/api.hpp"
 #include "pool.hpp"
 
 class DeviceCreateCtx

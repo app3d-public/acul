@@ -7,6 +7,7 @@
 #define APP_BACKEND_DESCRIPTORS
 
 #include "device.hpp"
+#include "../astl/hash.hpp"
 
 namespace app
 {

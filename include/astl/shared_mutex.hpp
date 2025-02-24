@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include "../core/api.hpp"
-#include "basic_types.hpp"
 #include "vector.hpp"
 
 #ifndef L1_CACHE_LINESIZE
@@ -30,8 +29,8 @@ namespace astl
     {
         struct entry_lock
         {
-            const static u64 W_MASK = 0x8000000000000000, R_MASK = ~W_MASK;
-            std::atomic<u64> wr_lock;
+            const static int W_MASK = 0x80000000, R_MASK = ~W_MASK;
+            std::atomic<int> wr_lock;
 
             entry_lock() : wr_lock(0) {}
         } __attribute__((aligned(L1_CACHE_LINESIZE)));

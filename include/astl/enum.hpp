@@ -3,108 +3,139 @@
 
 #include <type_traits>
 
-template <typename BitType>
-struct FlagTraits
+namespace astl
 {
-    static constexpr bool isBitmask = false; // По умолчанию false
-};
-
-template <typename BitType>
-class Flags
-{
-public:
-    using MaskType = typename std::underlying_type<BitType>::type;
-
-    constexpr Flags() noexcept : _mask(0) {}
-    constexpr Flags(BitType bit) noexcept : _mask(static_cast<MaskType>(bit)) {}
-    constexpr explicit Flags(MaskType flags) noexcept : _mask(flags) {}
-
-    constexpr Flags operator&(Flags const &rhs) const noexcept { return Flags(_mask & rhs._mask); }
-
-    constexpr Flags operator|(Flags const &rhs) const noexcept { return Flags(_mask | rhs._mask); }
-
-    constexpr Flags operator^(Flags const &rhs) const noexcept { return Flags(_mask ^ rhs._mask); }
-
-    constexpr Flags operator~() const noexcept { return Flags(_mask ^ FlagTraits<BitType>::allFlags._mask); }
-
-    constexpr Flags &operator|=(Flags const &rhs) noexcept
+    template <typename T, typename = void>
+    struct has_flag_bitmask : std::false_type
     {
-        _mask |= rhs._mask;
-        return *this;
+    };
+
+    template <typename T>
+    struct has_flag_bitmask<T, std::void_t<typename T::flag_bitmask>> : std::true_type
+    {
+    };
+
+    template <typename BitType>
+    using is_flags = std::enable_if_t<has_flag_bitmask<BitType>::value>;
+
+    template <typename BitType>
+    constexpr std::underlying_type_t<typename BitType::enum_type> compute_all_flags() noexcept
+    {
+        using mask_t = std::underlying_type_t<typename BitType::enum_type>;
+        mask_t all = 0;
+        for (mask_t i = 0; i < sizeof(mask_t) * 8; ++i) all |= (mask_t{1} << i);
+        return all;
     }
 
-    constexpr Flags &operator&=(Flags const &rhs) noexcept
+    template <typename BitType, typename = is_flags<BitType>>
+    struct flag_traits
     {
-        _mask &= rhs._mask;
-        return *this;
-    }
+        using enum_type = typename BitType::enum_type;
+        using mask_t = std::underlying_type_t<enum_type>;
 
-    constexpr Flags &operator^=(Flags const &rhs) noexcept
+        static constexpr enum_type all_flags = static_cast<enum_type>(compute_all_flags<BitType>());
+    };
+
+    template <typename BitType, typename = std::enable_if_t<has_flag_bitmask<BitType>::value>>
+    class flags
     {
-        _mask ^= rhs._mask;
-        return *this;
-    }
+    public:
+        using enum_type = typename BitType::enum_type;
+        using mask_t = typename std::underlying_type_t<enum_type>;
 
-    constexpr operator bool() const noexcept { return _mask != 0; }
+        constexpr flags() noexcept : _mask(0) {}
+        constexpr flags(BitType bit) noexcept : _mask(static_cast<mask_t>(bit)) {}
+        constexpr flags(mask_t value) noexcept : _mask(value) {}
 
-    constexpr operator MaskType() const noexcept { return _mask; }
+        template <typename T>
+        constexpr std::enable_if_t<has_flag_bitmask<T>::value, flags> operator&(flags const &rhs) const noexcept
+        {
+            return flags(_mask & rhs._mask);
+        }
 
-    friend constexpr bool operator==(const Flags &lhs, const Flags &rhs) noexcept { return lhs._mask == rhs._mask; }
+        template <typename T>
+        constexpr std::enable_if_t<has_flag_bitmask<T>::value, flags> operator|(flags const &rhs) const noexcept
+        {
+            return flags(_mask & rhs._mask);
+        }
 
-    constexpr MaskType getMask() const noexcept { return _mask; }
+        constexpr flags operator^(flags const &rhs) const noexcept { return flags(_mask ^ rhs._mask); }
+        constexpr flags operator~() const noexcept
+        {
+            return flags(static_cast<mask_t>(flag_traits<BitType>::all_flags) ^ _mask);
+        }
 
-private:
-    MaskType _mask;
-};
+        constexpr flags &operator|=(flags const &rhs) noexcept
+        {
+            _mask |= rhs._mask;
+            return *this;
+        }
+        constexpr flags &operator&=(flags const &rhs) noexcept
+        {
+            _mask &= rhs._mask;
+            return *this;
+        }
+        constexpr flags &operator^=(flags const &rhs) noexcept
+        {
+            _mask ^= rhs._mask;
+            return *this;
+        }
 
-template <typename BitType>
-constexpr Flags<BitType> operator&(BitType bit, Flags<BitType> const &flags) noexcept
+        constexpr operator mask_t() const noexcept { return _mask; }
+    public:
+        mask_t _mask;
+    };
+
+} // namespace astl
+
+template <typename BitType, typename = astl::is_flags<BitType>>
+constexpr astl::flags<BitType> operator&(BitType bit, astl::flags<BitType> const &flags) noexcept
 {
     return flags.operator&(bit);
 }
 
-template <typename BitType>
-constexpr Flags<BitType> operator|(BitType bit, Flags<BitType> const &flags) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+constexpr astl::flags<BitType> operator|(BitType bit, astl::flags<BitType> const &flags) noexcept
 {
     return flags.operator|(bit);
 }
 
-template <typename BitType>
-constexpr Flags<BitType> operator^(BitType bit, Flags<BitType> const &flags) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+constexpr astl::flags<BitType> operator^(BitType bit, astl::flags<BitType> const &flags) noexcept
 {
     return flags.operator^(bit);
 }
 
 // bitwise operators on BitType
-template <typename BitType, typename std::enable_if<FlagTraits<BitType>::isBitmask, bool>::type = true>
-inline constexpr Flags<BitType> operator&(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+inline constexpr astl::flags<BitType> operator&(BitType lhs, BitType rhs) noexcept
 {
-    return Flags<BitType>(lhs) & rhs;
+    return astl::flags<BitType>(lhs) & rhs;
 }
 
-template <typename BitType, typename std::enable_if<FlagTraits<BitType>::isBitmask, bool>::type = true>
-inline constexpr Flags<BitType> operator|(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+inline constexpr astl::flags<BitType> operator|(BitType lhs, BitType rhs) noexcept
 {
-    return Flags<BitType>(lhs) | rhs;
+    return astl::flags<BitType>(lhs) | rhs;
 }
 
-template <typename BitType, typename std::enable_if<FlagTraits<BitType>::isBitmask, bool>::type = true>
-inline constexpr Flags<BitType> operator^(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+inline constexpr astl::flags<BitType> operator^(BitType lhs, BitType rhs) noexcept
 {
-    return Flags<BitType>(lhs) ^ rhs;
+    return astl::flags<BitType>(lhs) ^ rhs;
 }
 
-template <typename BitType, typename std::enable_if<FlagTraits<BitType>::isBitmask, bool>::type = true>
-inline constexpr Flags<BitType> operator~(BitType bit) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+inline constexpr astl::flags<BitType> operator~(BitType bit) noexcept
 {
-    return ~(Flags<BitType>(bit));
+    return ~(astl::flags<BitType>(bit));
 }
 
-template <typename BitType>
-inline constexpr bool operator&(Flags<BitType> const &flags, BitType bit) noexcept
+template <typename BitType, typename = astl::is_flags<BitType>>
+inline constexpr bool operator&(astl::flags<BitType> const &flags, BitType bit) noexcept
 {
-    using MaskType = typename Flags<BitType>::MaskType;
-    return (static_cast<MaskType>(flags) & static_cast<MaskType>(bit)) != 0;
+    using mask_t = typename astl::flags<BitType>::mask_t;
+    return (static_cast<mask_t>(flags) & static_cast<mask_t>(bit)) != 0;
 }
 
 #endif

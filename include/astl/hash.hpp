@@ -1,6 +1,8 @@
 #ifndef APP_CORE_CRC32_H
 #define APP_CORE_CRC32_H
 
+#include <oneapi/tbb/scalable_allocator.h>
+#include <unordered_map>
 #include <glm/glm.hpp>
 #include <random>
 #include "../core/api.hpp"
@@ -8,6 +10,15 @@
 
 namespace astl
 {
+
+    template <typename K, typename V, typename H = std::hash<K>>
+    using hashmap =
+        std::unordered_map<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
+
+    template <typename K, typename V, typename H = std::hash<K>>
+    using multi_hashmap =
+        std::unordered_multimap<K, V, H, std::equal_to<K>, oneapi::tbb::scalable_allocator<std::pair<const K, V>>>;
+
     struct IDGen
     {
         IDGen() : gen(std::random_device{}()), dist(0, UINT64_MAX) {}

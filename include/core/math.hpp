@@ -51,6 +51,81 @@ namespace math
      * @return The rounded value.
      */
     APPLIB_API f32 round10(f32 value);
+
+    template <typename T>
+    struct is_glm_vector : std::false_type
+    {
+    };
+
+    template <glm::length_t L, typename T, glm::qualifier Q>
+    struct is_glm_vector<glm::vec<L, T, Q>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct is_glm_matrix : std::false_type
+    {
+    };
+
+    template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+    struct is_glm_matrix<glm::mat<C, R, T, Q>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct is_glm_quaternion : std::false_type
+    {
+    };
+
+    template <typename T, glm::qualifier Q>
+    struct is_glm_quaternion<glm::qua<T, Q>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    constexpr T get_type_min() noexcept
+    {
+        if constexpr (std::is_arithmetic_v<T>)
+            return std::numeric_limits<T>::lowest();
+        else if constexpr (is_glm_vector<T>::value || is_glm_matrix<T>::value)
+        {
+            using Scalar = typename T::value_type;
+            return T(std::numeric_limits<Scalar>::lowest());
+        }
+        else if constexpr (is_glm_quaternion<T>::value)
+        {
+            using Scalar = typename T::value_type;
+            return T(std::numeric_limits<Scalar>::lowest(), 0, 0, 0);
+        }
+        else
+            static_assert(sizeof(T) == 0, "get_type_min is not implemented for this type");
+    }
+
+    template <typename T>
+    constexpr T get_type_max() noexcept
+    {
+        if constexpr (std::is_arithmetic_v<T>)
+            return std::numeric_limits<T>::max();
+        else if constexpr (is_glm_vector<T>::value || is_glm_matrix<T>::value)
+        {
+            using Scalar = typename T::value_type;
+            return T(std::numeric_limits<Scalar>::max());
+        }
+        else if constexpr (is_glm_quaternion<T>::value)
+        {
+            using Scalar = typename T::value_type;
+            return T(std::numeric_limits<Scalar>::max(), 0, 0, 0);
+        }
+        else
+            static_assert(sizeof(T) == 0, "get_type_max is not implemented for this type");
+    }
+
+    template <typename T>
+    struct min_max
+    {
+        T min{get_type_max<T>()};
+        T max{get_type_min<T>()};
+    };
 } // namespace math
 
 namespace glm

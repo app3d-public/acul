@@ -6,10 +6,6 @@ project(app3d-core
 
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include")
-
 # GLM
 set(GLM_ENABLE_CXX_20 ON)
 set(BUILD_SHARED_LIBS ON)
@@ -20,7 +16,13 @@ if(USE_ASAN)
     target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif(USE_ASAN)
 
-target_compile_definitions(glm PUBLIC GLM_FORCE_RADIANS GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_ENABLE_EXPERIMENTAL)
+target_compile_definitions(glm PUBLIC
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_ENABLE_EXPERIMENTAL
+    GLM_FORCE_INTRINSICS
+    GLM_FORCE_ALIGNED_GENTYPES
+)
 
 add_subdirectory("modules/vma-impl")
 
@@ -32,6 +34,8 @@ if(USE_ASAN)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
+# TBB
 find_package(TBB REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     TBB::tbb TBB::tbbmalloc
@@ -41,12 +45,31 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     glm)
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PUBLIC
+    target_link_libraries(${PROJECT_NAME} PRIVATE
         Synchronization
         Dbghelp)
 endif()
 
-target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:vma,INCLUDE_DIRECTORIES>)
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include
+)
+
+if(WIN32)
+    # Manifest
+    if(NOT DEFINED BUILD_EXTERNAL_MANIFEST)
+        set(BUILD_EXTERNAL_MANIFEST OFF)
+    endif()
+
+    if(BUILD_EXTERNAL_MANIFEST)
+        gen_manifest_lib("tbb12" ${TBB_VERSION})
+        gen_manifest_lib(tbbmalloc ${TBB_VERSION})
+        set(TBB_MANIFEST_DEPS tbb12:${TBB_VERSION} tbbmalloc:${TBB_VERSION} PARENT_SCOPE)
+    endif()
+
+    gen_manifest_lib(${PROJECT_NAME} ${PROJECT_VERSION})
+endif()
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES

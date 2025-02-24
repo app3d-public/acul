@@ -4,11 +4,18 @@
 #include <vk_mem_alloc.h>
 #pragma clang diagnostic pop
 #include <vulkan/vulkan.hpp>
-#include "../astl/basic_types.hpp"
 #include "../astl/hashset.hpp"
+#include "../astl/scalars.hpp"
 #include "../astl/vector.hpp"
 #include "../core/api.hpp"
 #include "pool.hpp"
+
+#if VK_HEADER_VERSION > 290
+namespace vk
+{
+    using namespace detail;
+}
+#endif
 
 class DeviceCreateCtx
 {

@@ -1,4 +1,3 @@
-#include <astl/basic_types.hpp>
 #include <astl/set.hpp>
 #include <backend/device.hpp>
 #include <core/log.hpp>

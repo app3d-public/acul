@@ -37,17 +37,20 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 # TBB
 find_package(TBB REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
     TBB::tbb TBB::tbbmalloc
     vma
-    intl
     zstd
-    glm)
+    glm
+    intl
+    )
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         Synchronization
-        Dbghelp)
+        Dbghelp
+        )
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC

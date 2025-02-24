@@ -1,5 +1,6 @@
 #include <astl/hash.hpp>
 #include <core/log.hpp>
+#include <inttypes.h>
 #include <io/jatc.hpp>
 
 namespace io
@@ -61,18 +62,18 @@ namespace io
                 auto entrypoint = astl::alloc<EntryPoint>();
                 entrypoint->id = astl::IDGen()();
                 entrypoint->op_count = 0;
-                logInfo("Registering entrypoint: %llx", entrypoint->id);
+                logInfo("Registering entrypoint: %" PRIx64, entrypoint->id);
                 group->entrypoints.push_back(entrypoint);
                 return entrypoint;
             }
 
             void Cache::deregisterEntrypoint(EntryPoint *entrypoint, EntryGroup *group)
             {
-                logInfo("Deregistering entrypoint: %llx", entrypoint->id);
+                logInfo("Deregistering entrypoint: %" PRIx64, entrypoint->id);
                 auto it = std::find(group->entrypoints.begin(), group->entrypoints.end(), entrypoint);
                 if (it == group->entrypoints.end())
                 {
-                    logWarn("Entrypoint %llx not found", entrypoint->id);
+                    logWarn("Entrypoint %" PRIx64 " not found", entrypoint->id);
                     return;
                 }
                 group->entrypoints.erase(it);
@@ -117,7 +118,7 @@ namespace io
                 astl::vector<char> buffer(entry.size);
                 if (!buffer.data())
                 {
-                    logError("Failed to allocate buffer of size: %llu", entry.size);
+                    logError("Failed to allocate buffer of size: %" PRIu64, entry.size);
                     return ReadState::Error;
                 }
 
@@ -135,14 +136,14 @@ namespace io
                     fd->seekg(entry.offset);
                     if (!fd->good())
                     {
-                        logError("Failed to seek file to offset: %llu", entry.offset);
+                        logError("Failed to seek file to offset: %" PRIu64, entry.offset);
                         return ReadState::Error;
                     }
 
                     fd->read(buffer.data(), entry.size);
                     if (!fd->good())
                     {
-                        logError("Failed to read data at offset: %llu", entry.offset);
+                        logError("Failed to read data at offset: %" PRIu64, entry.offset);
                         fd->clear();
                         return ReadState::Error;
                     }
@@ -156,7 +157,7 @@ namespace io
                     logInfo("Decompressing data.");
                     if (!io::file::decompress(dst.data() + dst.pos(), dst.size() - dst.pos(), decompressed))
                     {
-                        logError("Failed to decompress data at offset: %llu", entry.offset);
+                        logError("Failed to decompress data at offset: %" PRIu64, entry.offset);
                         return ReadState::Error;
                     }
                     dst = astl::bin_stream(std::move(decompressed));
@@ -175,7 +176,7 @@ namespace io
             void Cache::filterIndexEntries(EntryPoint *entrypoint, EntryGroup *group,
                                            astl::vector<IndexEntry *> &indexEntries)
             {
-                logInfo("Reading index entries for entrypoint: %llx", entrypoint->id);
+                logInfo("Reading index entries for entrypoint: %" PRIx64, entrypoint->id);
                 {
                     astl::shared_lock read_lock(entrypoint->lock);
                     entrypoint->cv.wait(read_lock, [&]() { return entrypoint->op_count.load() == 0; });
@@ -183,7 +184,7 @@ namespace io
                 auto fd = getFileStream(entrypoint, group);
                 if (!fd)
                 {
-                    logError("Failed to open file stream for entrypoint: %llx", entrypoint->id);
+                    logError("Failed to open file stream for entrypoint: %" PRIx64, entrypoint->id);
                     return;
                 }
                 astl::vector<astl::vector<char>> dataBuffers;
@@ -204,7 +205,7 @@ namespace io
                 fd->close();
                 ++entrypoint->op_count;
 
-                logInfo("Overwriting index entries for entrypoint: %llx", entrypoint->id);
+                logInfo("Overwriting index entries for entrypoint: %" PRIx64, entrypoint->id);
                 astl::exclusive_lock write_lock(entrypoint->lock);
                 rewriteFile(entrypoint, indexEntries, dataBuffers, path(entrypoint, group));
                 --entrypoint->op_count;

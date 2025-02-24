@@ -1,12 +1,12 @@
 #ifndef APP_CORE_CRC32_H
 #define APP_CORE_CRC32_H
 
-#include <oneapi/tbb/scalable_allocator.h>
-#include <unordered_map>
 #include <glm/glm.hpp>
+#include <oneapi/tbb/scalable_allocator.h>
 #include <random>
+#include <unordered_map>
 #include "../core/api.hpp"
-#include "basic_types.hpp"
+#include "scalars.hpp"
 
 namespace astl
 {

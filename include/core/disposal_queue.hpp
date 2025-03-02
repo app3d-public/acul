@@ -1,8 +1,8 @@
 #pragma once
 
+#include <astl/list.hpp>
 #include <oneapi/tbb/concurrent_queue.h>
 #include "api.hpp"
-#include "astl/list.hpp"
 
 class APPLIB_API MemCache
 {
@@ -32,10 +32,7 @@ public:
         _queue.push({cache, onWait});
     }
 
-    void push(MemCache *cache, const std::function<void()> &onWait = nullptr)
-    {
-        push(astl::list<MemCache *>{cache}, onWait);
-    }
+    void push(MemCache *cache, const std::function<void()> &onWait = nullptr) { _queue.push({{cache}, onWait}); }
 
     void flush();
 

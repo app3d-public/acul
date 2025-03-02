@@ -119,10 +119,13 @@ struct PipelineBatch
     struct Artifact
     {
         using create_info_t = T;
+        template <typename V>
+        using custom_data_t = astl::destructible_value<V, Artifact &>;
 
         vk::Pipeline *pipeline;
         PipelineConfig<create_info_t> config;
         create_info_t createInfo;
+        astl::destructible_data<Artifact &> *tmp;
     };
     astl::vector<Artifact> artifacts;   ///< Stores configurations for each pipeline.
     astl::vector<ShaderModule> shaders; ///< Shader modules associated with the pipelines.
@@ -164,6 +167,11 @@ struct PipelineBatch
         for (auto &shader : shaders) shader.destroy(device);
         logInfo("Created %zu pipelines", artifacts.size());
         return true;
+    }
+
+    ~PipelineBatch()
+    {
+        for (auto &a : artifacts) astl::release(a.tmp);
     }
 };
 
@@ -220,18 +228,17 @@ template <typename T>
  * @param device The Vulkan device to be used for the pipeline creation.
  */
 template <typename T>
-inline void addPipelineToBatch(PipelineBatch<typename T::Artifact::create_info_t> &batch, T *instance, Device &device,
+inline void addPipelineToBatch(PipelineBatch<typename T::Artifact::create_info_t> &batch, T &pass, Device &device,
                                vk::RenderPass renderPass = VK_NULL_HANDLE)
 {
-    logInfo("Adding %s pipeline to the batch", instance->name().c_str());
+    logInfo("Adding %s pipeline to the batch", pass.name.c_str());
     batch.artifacts.emplace_back();
     using create_info_t = typename T::Artifact::create_info_t;
     if constexpr (std::is_same_v<create_info_t, vk::GraphicsPipelineCreateInfo>)
-        T::configurePipelineArtifact(batch.artifacts.back(), batch.shaders, renderPass, instance->pipelineLayout,
-                                     device);
+        pass.configurePipelineArtifact(batch.artifacts.back(), batch.shaders, renderPass, pass.layout, device);
     else
-        T::configurePipelineArtifact(batch.artifacts.back(), batch.shaders, instance->pipelineLayout, device);
-    batch.artifacts.back().pipeline = &instance->pipeline;
+        pass.configurePipelineArtifact(batch.artifacts.back(), batch.shaders, pass.layout, device);
+    batch.artifacts.back().pipeline = &pass.pipeline;
 }
 
 /**

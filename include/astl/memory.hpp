@@ -571,5 +571,20 @@ namespace astl
     private:
         T *_ptr;
     };
+
+    template <typename... Args>
+    struct destructible_data
+    {
+        using PFN_destruct = void (*)(Args...);
+        PFN_destruct destruct = nullptr;
+    };
+
+    template <typename T, typename... Args>
+    struct destructible_value : destructible_data<Args...>
+    {
+        T value;
+
+        destructible_value(const T &v) : destructible_data<Args...>{}, value(v) {}
+    };
 } // namespace astl
 #endif

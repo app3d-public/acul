@@ -10,6 +10,9 @@
 #include "disposal_queue.hpp"
 #include "event.hpp"
 
+#define TASK_EVENT_UPDATE_SIGN 0x3E916882EBB697C3
+#define TASK_EVENT_DONE_SIGN   0x2B56484DF4085AA6
+
 namespace task
 {
 
@@ -164,9 +167,9 @@ namespace task
         std::string message;
         f32 progress;
 
-        UpdateEvent(const std::string &name, void *ctx = nullptr, const std::string &header = "",
-                    const std::string &message = "", f32 progress = 0.0f)
-            : IEvent(name), ctx(ctx), header(header), message(message), progress(progress)
+        UpdateEvent(void *ctx = nullptr, const std::string &header = "", const std::string &message = "",
+                    f32 progress = 0.0f)
+            : IEvent(TASK_EVENT_UPDATE_SIGN), ctx(ctx), header(header), message(message), progress(progress)
         {
         }
     };

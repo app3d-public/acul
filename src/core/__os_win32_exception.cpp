@@ -7,6 +7,7 @@
 #include <dbghelp.h>
 #include <psapi.h>
 
+
 void writeExceptionInfo(EXCEPTION_POINTERS *pExceptionInfo, std::ofstream &stream)
 {
     stream << "Exception code: 0x" << std::hex << pExceptionInfo->ExceptionRecord->ExceptionCode << std::endl;

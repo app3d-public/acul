@@ -17,7 +17,7 @@ namespace meta
     {
         virtual ~Block() = default;
 
-        virtual const u32 signature() const = 0;
+        virtual u32 signature() const = 0;
     };
 
     struct Stream
@@ -68,7 +68,7 @@ namespace meta
         char *data = nullptr;
         u64 dataSize = 0;
 
-        virtual const u32 signature() const { return sign_block::external_block; }
+        virtual u32 signature() const { return sign_block::external_block; }
 
         ~ExternalBlock() { astl::release(data); }
     };

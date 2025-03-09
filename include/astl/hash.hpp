@@ -1,12 +1,14 @@
 #ifndef APP_CORE_CRC32_H
 #define APP_CORE_CRC32_H
 
-#include <glm/glm.hpp>
 #include <oneapi/tbb/scalable_allocator.h>
 #include <random>
 #include <unordered_map>
-#include "../core/api.hpp"
+#include "../acul/api.hpp"
 #include "scalars.hpp"
+#ifdef CORE_GLM_ENABLE
+    #include <glm/glm.hpp>
+#endif
 
 namespace astl
 {
@@ -52,7 +54,7 @@ namespace std
             return seed;
         }
     };
-
+#ifdef CORE_GLM_ENABLE
     template <>
     struct hash<glm::ivec3>
     {
@@ -67,7 +69,6 @@ namespace std
     {
         std::size_t operator()(const glm::ivec2 &k) const
         {
-            // Рекомендуется использовать разные простые числа для каждого поля
             return ((std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1)) >> 1);
         }
     };
@@ -94,6 +95,7 @@ namespace std
             return h1 ^ (h2 << 1) ^ (h3 << 2);
         }
     };
+#endif
 } // namespace std
 
 #endif

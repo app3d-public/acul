@@ -1,5 +1,5 @@
 #pragma once
-#include "../core/disposal_queue.hpp"
+#include "../disposal_queue.hpp"
 #include "device.hpp"
 #include "utils.hpp"
 

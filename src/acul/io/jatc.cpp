@@ -1,7 +1,8 @@
+#include <acul/io/jatc.hpp>
+#include <acul/log.hpp>
 #include <astl/hash.hpp>
-#include <core/log.hpp>
-#include <inttypes.h>
-#include <io/jatc.hpp>
+
+#ifndef ACUL_BUILD_MIN
 
 namespace io
 {
@@ -316,3 +317,4 @@ namespace io
         } // namespace jatc
     } // namespace file
 } // namespace io
+#endif

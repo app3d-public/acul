@@ -1,62 +1,72 @@
 cmake_minimum_required(VERSION 3.17)
-project(app3d-core
+project(acul
     VERSION 0.0.1
     LANGUAGES CXX C
-    DESCRIPTION "App3d Core Library")
+    DESCRIPTION "App3d Core Utils Library")
 
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/astl")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
 
-# GLM
-set(GLM_ENABLE_CXX_20 ON)
-set(BUILD_SHARED_LIBS ON)
-add_subdirectory("modules/3rd-party/glm")
-set(BUILD_SHARED_LIBS OFF)
+if(NOT ACUL_BUILD_MIN)
+    add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/backend")
+    add_subdirectory("modules/vma-impl")
 
-if(USE_ASAN)
-    target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-endif(USE_ASAN)
+    # GLM
+    set(GLM_ENABLE_CXX_20 ON)
+    set(BUILD_SHARED_LIBS ON)
+    add_subdirectory("modules/3rd-party/glm")
+    set(BUILD_SHARED_LIBS OFF)
 
-target_compile_definitions(glm PUBLIC
-    GLM_FORCE_RADIANS
-    GLM_FORCE_DEPTH_ZERO_TO_ONE
-    GLM_ENABLE_EXPERIMENTAL
-    GLM_FORCE_INTRINSICS
-    GLM_FORCE_ALIGNED_GENTYPES
-)
+    if(USE_ASAN)
+        target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    endif(USE_ASAN)
 
-add_subdirectory("modules/vma-impl")
-
-add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
-target_compile_definitions(${PROJECT_NAME} PRIVATE -DAPPLIB_BUILD)
-
-if(USE_ASAN)
-    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    target_compile_definitions(glm PUBLIC
+        GLM_FORCE_RADIANS
+        GLM_FORCE_DEPTH_ZERO_TO_ONE
+        GLM_ENABLE_EXPERIMENTAL
+        GLM_FORCE_INTRINSICS
+        GLM_FORCE_ALIGNED_GENTYPES
+    )
+else()
+    add_compile_definitions(ACUL_BUILD_MIN)
+    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/math.cpp")
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+set(ACUL_LIB_NAME ${PROJECT_NAME}-${APP_SIMD_ARCH})
+
+add_library(${ACUL_LIB_NAME} SHARED ${SOURCE_FILES})
+target_compile_definitions(${ACUL_LIB_NAME} PRIVATE -DAPPLIB_BUILD)
+
+if(USE_ASAN)
+    target_link_options(${ACUL_LIB_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif()
+
+set_target_properties(${ACUL_LIB_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 # TBB
 find_package(TBB REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    TBB::tbb TBB::tbbmalloc
-    vma
-    zstd
-    glm
-    intl
-    )
+target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc)
 
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        Synchronization
-        Dbghelp
-        )
+if(NOT ACUL_BUILD_MIN)
+    target_include_directories(${ACUL_LIB_NAME} PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
+    )
+    target_compile_definitions(${ACUL_LIB_NAME} PUBLIC ASTL_HALF_ENABLE ACUL_LOG_ENABLE ACUL_GLM_ENABLE)
+    target_link_libraries(${ACUL_LIB_NAME} PUBLIC glm vma zstd)
 endif()
 
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_link_libraries(${ACUL_LIB_NAME} PUBLIC intl)
+
+if(WIN32)
+    target_link_libraries(${ACUL_LIB_NAME} PRIVATE Dbghelp Synchronization)
+endif()
+
+target_include_directories(${ACUL_LIB_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
-    ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include
 )
 
 if(WIN32)
@@ -71,12 +81,14 @@ if(WIN32)
         set(TBB_MANIFEST_DEPS tbb12:${TBB_VERSION} tbbmalloc:${TBB_VERSION} PARENT_SCOPE)
     endif()
 
-    gen_manifest_lib(${PROJECT_NAME} ${PROJECT_VERSION})
+    gen_manifest_lib(${ACUL_LIB_NAME} ${PROJECT_VERSION})
 endif()
 
-set_target_properties(${PROJECT_NAME}
+set_target_properties(${ACUL_LIB_NAME}
     PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS YES
 )
+
+set(ACUL_LIB_NAME ${ACUL_LIB_NAME} PARENT_SCOPE)

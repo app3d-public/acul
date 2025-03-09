@@ -1,4 +1,5 @@
 #include <astl/string.hpp>
+#include <cmath>
 #include <cstdarg>
 #include <cstring>
 
@@ -301,7 +302,7 @@ namespace astl
 
         return ptr - buffer;
     }
-
+#ifdef CORE_GLM_ENABLE
     int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
     {
         int written = to_string(vec.x, buffer + offset, buffer_size - offset, 5);
@@ -343,6 +344,7 @@ namespace astl
 
         return offset;
     }
+#endif
 
     bool stoi(const char *&str, int &value)
     {

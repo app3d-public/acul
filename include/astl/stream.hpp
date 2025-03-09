@@ -1,12 +1,14 @@
 #ifndef APP_CORE_STD_STREAM_H
 #define APP_CORE_STD_STREAM_H
 
-#include <glm/glm.hpp>
 #include <stdexcept>
 #include <string>
-#include "../core/api.hpp"
+#include "../acul/api.hpp"
 #include "list.hpp"
 #include "vector.hpp"
+#ifdef CORE_GLM_ENABLE
+    #include <glm/glm.hpp>
+#endif
 
 namespace astl
 {
@@ -70,6 +72,7 @@ namespace astl
             _data.push_back('\0');
             return *this;
         }
+#ifdef CORE_GLM_ENABLE
 
         bin_stream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
 
@@ -94,6 +97,7 @@ namespace astl
                 .write(mat[3][2])
                 .write(mat[3][3]);
         }
+#endif
 
         /**
          * @brief Reads a value of type T from the stream.
@@ -147,6 +151,7 @@ namespace astl
             }
             return *this;
         }
+#ifdef CORE_GLM_ENABLE
 
         bin_stream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
         bin_stream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
@@ -170,6 +175,7 @@ namespace astl
                 .read(mat[3][2])
                 .read(mat[3][3]);
         }
+#endif
 
         /**
          * @brief Writes raw data to the stream.

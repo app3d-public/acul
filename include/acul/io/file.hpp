@@ -4,13 +4,13 @@
 #include <filesystem>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
-#include "../astl/string_pool.hpp"
-#include "../astl/vector.hpp"
-#include "../core/api.hpp"
+#include "../../astl/string_pool.hpp"
+#include "../../astl/vector.hpp"
+#include "../api.hpp"
 
 #ifdef _WIN32
-    #include <windows.h>
     #include <astl/string.hpp>
+    #include <windows.h>
 #else
     #include <cstring>
     #include <fcntl.h>

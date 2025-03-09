@@ -3,7 +3,7 @@
 // Based by: https://github.com/Emanem/shared_mutex/tree/master
 
 #include <atomic>
-#include "../core/api.hpp"
+#include "../acul/api.hpp"
 #include "vector.hpp"
 
 #ifndef L1_CACHE_LINESIZE

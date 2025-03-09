@@ -231,11 +231,19 @@ namespace logging
     inline Logger *getLogger(const std::string &name) { return g_LogService->getLogger(name); }
 } // namespace logging
 
-#define logInfo(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Info, __VA_ARGS__)
-#define logDebug(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Debug, __VA_ARGS__)
-#define logTrace(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Trace, __VA_ARGS__)
-#define logWarn(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Warn, __VA_ARGS__)
-#define logError(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Error, __VA_ARGS__)
-#define logFatal(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Fatal, __VA_ARGS__)
-
+#ifdef CORE_LOG_ENABLE
+    #define logInfo(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Info, __VA_ARGS__)
+    #define logDebug(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Debug, __VA_ARGS__)
+    #define logTrace(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Trace, __VA_ARGS__)
+    #define logWarn(...)  logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Warn, __VA_ARGS__)
+    #define logError(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Error, __VA_ARGS__)
+    #define logFatal(...) logging::g_LogService->log(logging::g_DefaultLogger, logging::Level::Fatal, __VA_ARGS__)
+#else
+    #define logInfo(...)  ((void)0)
+    #define logDebug(...) ((void)0)
+    #define logTrace(...) ((void)0)
+    #define logWarn(...)  ((void)0)
+    #define logError(...) ((void)0)
+    #define logFatal(...) ((void)0)
+#endif
 #endif

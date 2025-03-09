@@ -1,5 +1,5 @@
+#include <acul/disposal_queue.hpp>
 #include <cassert>
-#include <core/disposal_queue.hpp>
 
 void DisposalQueue::flush()
 {

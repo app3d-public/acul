@@ -1,5 +1,5 @@
 #include <core/api.hpp>
-#include <core/std/string_pool.hpp>
+#include <astl/string_pool.hpp>
 
 namespace io
 {

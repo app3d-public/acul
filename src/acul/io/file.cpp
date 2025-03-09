@@ -1,5 +1,5 @@
-#include <core/log.hpp>
-#include <io/file.hpp>
+#include <acul/io/file.hpp>
+#include <acul/log.hpp>
 #include <zstd.h>
 
 namespace io
@@ -121,6 +121,7 @@ namespace io
             }
         }
 
+#ifndef ACUL_BUILD_MIN
         bool compress(const char *data, size_t size, astl::vector<char> &compressed, int quality)
         {
             size_t const maxCompressedSize = ZSTD_compressBound(size);
@@ -162,5 +163,6 @@ namespace io
 
             return true;
         }
+#endif
     } // namespace file
 } // namespace io

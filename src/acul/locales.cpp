@@ -1,7 +1,7 @@
+#include <acul/locales.hpp>
 #include <algorithm>
-#include <clocale>
-#include <core/locales.hpp>
 #include <array>
+#include <clocale>
 #ifdef _WIN32
     #include <winnls.h>
 #endif

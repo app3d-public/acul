@@ -1,5 +1,5 @@
-#include <core/log.hpp>
-#include <core/meta.hpp>
+#include <acul/log.hpp>
+#include <acul/meta.hpp>
 
 namespace meta
 {

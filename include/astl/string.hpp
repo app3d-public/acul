@@ -1,9 +1,11 @@
 #ifndef APP_CORE_STD_STRING_H
 #define APP_CORE_STD_STRING_H
 
-#include <core/api.hpp>
+#include <acul/api.hpp>
 #include <filesystem>
-#include <glm/glm.hpp>
+#ifdef CORE_GLM_ENABLE
+    #include <glm/glm.hpp>
+#endif
 #include <string>
 
 namespace astl
@@ -56,6 +58,24 @@ namespace astl
     APPLIB_API int to_string(float value, char *buffer, size_t buffer_size, int precision);
 
     /**
+     * @brief Deserialize the C-style string to the integer
+     * @param str Source string
+     * @param value Destination value
+     * @return True if successful. Otherwise false
+     **/
+    APPLIB_API bool stoi(const char *&str, int &value);
+
+    /**
+     * @brief Deserialize the C-style string to the float
+     * @param str Source string
+     * @param value Destination value
+     * @return True if successful. Otherwise false
+     **/
+    APPLIB_API bool stof(const char *&str, float &value);
+
+#ifdef CORE_GLM_ENABLE
+
+    /**
      * @brief Converts the 2-dimensional vector to the C-style string
      * @param vec Source vector
      * @param buffer Destination buffer
@@ -72,22 +92,6 @@ namespace astl
      * @return The number of characters written
      **/
     APPLIB_API int to_string(const glm::vec3 &vec, char *buffer, size_t buffer_size, size_t offset);
-
-    /**
-     * @brief Deserialize the C-style string to the integer
-     * @param str Source string
-     * @param value Destination value
-     * @return True if successful. Otherwise false
-     **/
-    APPLIB_API bool stoi(const char *&str, int &value);
-
-    /**
-     * @brief Deserialize the C-style string to the float
-     * @param str Source string
-     * @param value Destination value
-     * @return True if successful. Otherwise false
-     **/
-    APPLIB_API bool stof(const char *&str, float &value);
 
     /**
      * @brief Deserialize the C-style string to the 2-dimensional vector.
@@ -136,6 +140,8 @@ namespace astl
         if (!stof(str, vec.y)) return;
         if (!stof(str, vec.z)) return;
     }
+
+#endif
 
     /**
      * @brief Extracts a substring from the input string, from the first space character to the last one.

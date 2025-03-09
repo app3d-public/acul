@@ -1,12 +1,11 @@
+#include <acul/exception.hpp>
 #include <algorithm>
 #include <astl/hash.hpp>
 #include <astl/map.hpp>
 #include <astl/string.hpp>
 #include <astl/vector.hpp>
-#include <core/exception.hpp>
 #include <dbghelp.h>
 #include <psapi.h>
-
 
 void writeExceptionInfo(EXCEPTION_POINTERS *pExceptionInfo, std::ofstream &stream)
 {
@@ -262,7 +261,6 @@ void writeStackTrace(std::ofstream &stream, CONTEXT *context)
                 name = "<unknown>";
             else
             {
-                const std::string &moduleName = it->second.first;
                 const astl::map<DWORD64, SymbolInfo> &symbolMap = it->second.second;
                 if (symbolMap.empty()) // Try get symbol info from .edata
                 {

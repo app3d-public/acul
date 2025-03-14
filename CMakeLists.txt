@@ -5,7 +5,6 @@ project(acul
     DESCRIPTION "App3d Core Utils Library")
 
 add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/astl")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
 
 if(NOT ACUL_BUILD_MIN)
@@ -55,7 +54,7 @@ if(NOT ACUL_BUILD_MIN)
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
     )
-    target_compile_definitions(${ACUL_LIB_NAME} PUBLIC ASTL_HALF_ENABLE ACUL_LOG_ENABLE ACUL_GLM_ENABLE)
+    target_compile_definitions(${ACUL_LIB_NAME} PUBLIC ACUL_HALF_ENABLE ACUL_LOG_ENABLE ACUL_GLM_ENABLE)
     target_link_libraries(${ACUL_LIB_NAME} PUBLIC glm vma zstd)
 endif()
 

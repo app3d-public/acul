@@ -10,7 +10,7 @@
     #define L1_CACHE_LINESIZE 64
 #endif
 
-namespace astl
+namespace acul
 {
     extern std::atomic<size_t> g_idx_hint;
 
@@ -35,7 +35,7 @@ namespace astl
             entry_lock() : wr_lock(0) {}
         } __attribute__((aligned(L1_CACHE_LINESIZE)));
 
-        astl::vector<entry_lock> _el;
+        acul::vector<entry_lock> _el;
 
     public:
         shared_mutex() : _el(std::thread::hardware_concurrency()) {}
@@ -78,4 +78,4 @@ namespace astl
     private:
         shared_mutex &_sm;
     };
-} // namespace astl
+} // namespace acul

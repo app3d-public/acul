@@ -12,7 +12,7 @@ void DisposalQueue::flush()
         {
             assert(buffer);
             buffer->free();
-            astl::release(buffer);
+            acul::release(buffer);
         }
     }
 }

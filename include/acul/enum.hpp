@@ -3,7 +3,7 @@
 
 #include <type_traits>
 
-namespace astl
+namespace acul
 {
     template <typename T, typename = void>
     struct has_flag_bitmask : std::false_type
@@ -86,55 +86,55 @@ namespace astl
         mask_t _mask;
     };
 
-} // namespace astl
+} // namespace acul
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-constexpr astl::flags<BitType> operator&(BitType bit, astl::flags<BitType> const &flags) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+constexpr acul::flags<BitType> operator&(BitType bit, acul::flags<BitType> const &flags) noexcept
 {
     return flags.operator&(bit);
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-constexpr astl::flags<BitType> operator|(BitType bit, astl::flags<BitType> const &flags) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+constexpr acul::flags<BitType> operator|(BitType bit, acul::flags<BitType> const &flags) noexcept
 {
     return flags.operator|(bit);
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-constexpr astl::flags<BitType> operator^(BitType bit, astl::flags<BitType> const &flags) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+constexpr acul::flags<BitType> operator^(BitType bit, acul::flags<BitType> const &flags) noexcept
 {
     return flags.operator^(bit);
 }
 
 // bitwise operators on BitType
-template <typename BitType, typename = astl::is_flags<BitType>>
-inline constexpr astl::flags<BitType> operator&(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+inline constexpr acul::flags<BitType> operator&(BitType lhs, BitType rhs) noexcept
 {
-    return astl::flags<BitType>(lhs) & rhs;
+    return acul::flags<BitType>(lhs) & rhs;
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-inline constexpr astl::flags<BitType> operator|(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+inline constexpr acul::flags<BitType> operator|(BitType lhs, BitType rhs) noexcept
 {
-    return astl::flags<BitType>(lhs) | rhs;
+    return acul::flags<BitType>(lhs) | rhs;
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-inline constexpr astl::flags<BitType> operator^(BitType lhs, BitType rhs) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+inline constexpr acul::flags<BitType> operator^(BitType lhs, BitType rhs) noexcept
 {
-    return astl::flags<BitType>(lhs) ^ rhs;
+    return acul::flags<BitType>(lhs) ^ rhs;
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-inline constexpr astl::flags<BitType> operator~(BitType bit) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+inline constexpr acul::flags<BitType> operator~(BitType bit) noexcept
 {
-    return ~(astl::flags<BitType>(bit));
+    return ~(acul::flags<BitType>(bit));
 }
 
-template <typename BitType, typename = astl::is_flags<BitType>>
-inline constexpr bool operator&(astl::flags<BitType> const &flags, BitType bit) noexcept
+template <typename BitType, typename = acul::is_flags<BitType>>
+inline constexpr bool operator&(acul::flags<BitType> const &flags, BitType bit) noexcept
 {
-    using mask_t = typename astl::flags<BitType>::mask_t;
+    using mask_t = typename acul::flags<BitType>::mask_t;
     return (static_cast<mask_t>(flags) & static_cast<mask_t>(bit)) != 0;
 }
 

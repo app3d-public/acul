@@ -1,8 +1,8 @@
 #pragma once
 
 #include "api.hpp"
-#include "../astl/stream.hpp"
-#include "../astl/scalars.hpp"
+#include "../acul/stream.hpp"
+#include "../acul/scalars.hpp"
 
 #define SIGN_APP_PART_DEFAULT 0x5828
 
@@ -22,8 +22,8 @@ namespace meta
 
     struct Stream
     {
-        Block *(*read)(astl::bin_stream &stream);
-        void (*write)(astl::bin_stream &stream, Block *block);
+        Block *(*read)(acul::bin_stream &stream);
+        void (*write)(acul::bin_stream &stream, Block *block);
     };
 
     /**
@@ -37,7 +37,7 @@ namespace meta
      * @brief Initializes the stream handlers.
      * @param streams The stream handlers to initialize.
      */
-    APPLIB_API void initStreams(const astl::vector<std::pair<u32, const Stream *>> &streams);
+    APPLIB_API void initStreams(const acul::vector<std::pair<u32, const Stream *>> &streams);
 
     /**
      * @brief Clears all registered stream handlers.
@@ -70,13 +70,13 @@ namespace meta
 
         virtual u32 signature() const { return sign_block::external_block; }
 
-        ~ExternalBlock() { astl::release(data); }
+        ~ExternalBlock() { acul::release(data); }
     };
 
     namespace streams
     {
-        APPLIB_API Block *readExternalBlock(astl::bin_stream &stream);
-        APPLIB_API void writeExternalBlock(astl::bin_stream &stream, Block *block);
+        APPLIB_API Block *readExternalBlock(acul::bin_stream &stream);
+        APPLIB_API void writeExternalBlock(acul::bin_stream &stream, Block *block);
 
         inline Stream external_block = {readExternalBlock, writeExternalBlock};
     } // namespace streams

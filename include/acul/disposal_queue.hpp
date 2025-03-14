@@ -1,6 +1,6 @@
 #pragma once
 
-#include <astl/list.hpp>
+#include <acul/list.hpp>
 #include <oneapi/tbb/concurrent_queue.h>
 #include "api.hpp"
 
@@ -16,18 +16,18 @@ template <typename T>
 class SharedMemCache : public MemCache
 {
 public:
-    SharedMemCache(const astl::shared_ptr<T> &ptr) : _ptr(ptr) {}
+    SharedMemCache(const acul::shared_ptr<T> &ptr) : _ptr(ptr) {}
 
     virtual void free() override {}
 
 private:
-    astl::shared_ptr<T> _ptr;
+    acul::shared_ptr<T> _ptr;
 };
 
 class APPLIB_API DisposalQueue
 {
 public:
-    void push(const astl::list<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
+    void push(const acul::list<MemCache *> &cache, const std::function<void()> &onWait = nullptr)
     {
         _queue.push({cache, onWait});
     }
@@ -41,7 +41,7 @@ public:
 private:
     struct MemData
     {
-        astl::list<MemCache *> cacheList;
+        acul::list<MemCache *> cacheList;
         std::function<void()> onWait = nullptr;
     };
     oneapi::tbb::concurrent_queue<MemData> _queue;

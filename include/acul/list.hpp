@@ -3,7 +3,7 @@
 #include "memory.hpp"
 #include "type_traits.hpp"
 
-namespace astl
+namespace acul
 {
 
     template <typename T, typename Allocator = mem_allocator<T>>
@@ -758,4 +758,4 @@ namespace astl
         splice_before(pos, other, first, last);
     }
 
-} // namespace astl
+} // namespace acul

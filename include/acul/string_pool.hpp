@@ -6,7 +6,7 @@
 #include <iterator>
 #include "vector.hpp"
 
-namespace astl
+namespace acul
 {
     template <typename T>
     struct is_string_char
@@ -246,4 +246,4 @@ namespace astl
         size_t _pos;
     };
 
-} // namespace astl
+} // namespace acul

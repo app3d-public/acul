@@ -4,9 +4,9 @@
 #include <vk_mem_alloc.h>
 #pragma clang diagnostic pop
 #include <vulkan/vulkan.hpp>
-#include "../astl/hashset.hpp"
-#include "../astl/scalars.hpp"
-#include "../astl/vector.hpp"
+#include "../acul/hashset.hpp"
+#include "../acul/scalars.hpp"
+#include "../acul/vector.hpp"
 #include "../core/api.hpp"
 #include "pool.hpp"
 
@@ -20,9 +20,9 @@ namespace vk
 class DeviceCreateCtx
 {
 public:
-    astl::vector<const char *> validationLayers;
-    astl::vector<const char *> extensions;
-    astl::vector<const char *> optExtensions;
+    acul::vector<const char *> validationLayers;
+    acul::vector<const char *> extensions;
+    acul::vector<const char *> optExtensions;
     bool enablePresent;
     size_t fencePoolSize;
 
@@ -35,21 +35,21 @@ public:
         return vk::Result::eSuccess;
     };
 
-    virtual astl::vector<const char *> getWindowExtensions() { return astl::vector<const char *>(); }
+    virtual acul::vector<const char *> getWindowExtensions() { return acul::vector<const char *>(); }
 
-    DeviceCreateCtx &setValidationLayers(const astl::vector<const char *> &validationLayers)
+    DeviceCreateCtx &setValidationLayers(const acul::vector<const char *> &validationLayers)
     {
         this->validationLayers = validationLayers;
         return *this;
     }
 
-    DeviceCreateCtx &setExtensions(const astl::vector<const char *> &extensions)
+    DeviceCreateCtx &setExtensions(const acul::vector<const char *> &extensions)
     {
         this->extensions = extensions;
         return *this;
     }
 
-    DeviceCreateCtx &setOptExtensions(const astl::vector<const char *> &extensions)
+    DeviceCreateCtx &setOptExtensions(const acul::vector<const char *> &extensions)
     {
         this->optExtensions = extensions;
         return *this;
@@ -175,7 +175,7 @@ public:
     /// @param tiling Image tiling type
     /// @param features VK format features
     /// @return Filtered format on success
-    vk::Format findSupportedFormat(const astl::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+    vk::Format findSupportedFormat(const acul::vector<vk::Format> &candidates, vk::ImageTiling tiling,
                                    vk::FormatFeatureFlags features);
 
     SwapchainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
@@ -201,25 +201,25 @@ private:
 
     void pickPhysicalDevice();
 
-    bool isDeviceSuitable(vk::PhysicalDevice device, const astl::hashset<std::string> &allExtensions,
+    bool isDeviceSuitable(vk::PhysicalDevice device, const acul::hashset<std::string> &allExtensions,
                           std::optional<u32> *familyIndices);
 
-    bool validatePhysicalDevice(vk::PhysicalDevice device, astl::hashset<std::string> &ext,
+    bool validatePhysicalDevice(vk::PhysicalDevice device, acul::hashset<std::string> &ext,
                                 std::optional<u32> *indices);
 
     void createLogicalDevice();
 
     void createAllocator();
 
-    bool checkValidationLayerSupport(const astl::vector<const char *> &validationLayers);
+    bool checkValidationLayerSupport(const acul::vector<const char *> &validationLayers);
 
     void setupDebugMessenger();
 
-    astl::vector<const char *> getRequiredExtensions();
+    acul::vector<const char *> getRequiredExtensions();
 
-    bool checkDeviceExtensionSupport(const astl::hashset<std::string> &allExtensions) const;
+    bool checkDeviceExtensionSupport(const acul::hashset<std::string> &allExtensions) const;
 
-    int getDeviceRating(const astl::vector<const char *> &optExtensions);
+    int getDeviceRating(const acul::vector<const char *> &optExtensions);
 
     void findQueueFamilies(std::optional<u32> *dst, vk::PhysicalDevice device);
 

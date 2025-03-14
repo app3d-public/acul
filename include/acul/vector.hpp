@@ -4,7 +4,7 @@
 #include "memory.hpp"
 #include "type_traits.hpp"
 
-namespace astl
+namespace acul
 {
     template <typename T, typename Allocator = mem_allocator<T>>
     class vector
@@ -578,6 +578,6 @@ namespace astl
         }
         _size += insertCount;
     }
-} // namespace astl
+} // namespace acul
 
 #endif

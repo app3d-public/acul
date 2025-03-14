@@ -6,7 +6,7 @@ namespace io
 {
     namespace file
     {
-        ReadState readBinary(const std::string &filename, astl::vector<char> &buffer)
+        ReadState readBinary(const std::string &filename, acul::vector<char> &buffer)
         {
             FILE *file = fopen(filename.c_str(), "rb");
             if (!file)
@@ -121,8 +121,41 @@ namespace io
             }
         }
 
+#ifdef WIN32
+        bool copyFileSafe(const char *src, const char *dst)
+        {
+            HANDLE hSrc = CreateFileA(src, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                                      FILE_ATTRIBUTE_NORMAL, NULL);
+            if (hSrc == INVALID_HANDLE_VALUE) return false;
+
+            HANDLE hDst = CreateFileA(dst, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (hDst == INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(hSrc);
+                return false;
+            }
+
+            char buffer[4096];
+            DWORD bytesRead, bytesWritten;
+            bool success = true;
+
+            while (ReadFile(hSrc, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0)
+            {
+                if (!WriteFile(hDst, buffer, bytesRead, &bytesWritten, NULL) || bytesRead != bytesWritten)
+                {
+                    success = false;
+                    break;
+                }
+            }
+
+            CloseHandle(hSrc);
+            CloseHandle(hDst);
+            return success;
+        }
+#endif
+
 #ifndef ACUL_BUILD_MIN
-        bool compress(const char *data, size_t size, astl::vector<char> &compressed, int quality)
+        bool compress(const char *data, size_t size, acul::vector<char> &compressed, int quality)
         {
             size_t const maxCompressedSize = ZSTD_compressBound(size);
             compressed.resize(maxCompressedSize);
@@ -140,7 +173,7 @@ namespace io
             return true;
         }
 
-        bool decompress(const char *data, size_t size, astl::vector<char> &decompressed)
+        bool decompress(const char *data, size_t size, acul::vector<char> &decompressed)
         {
             size_t decompressedSize = ZSTD_getFrameContentSize(data, size);
             if (decompressedSize == 0 || decompressedSize == ZSTD_CONTENTSIZE_ERROR ||

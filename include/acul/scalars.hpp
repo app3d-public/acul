@@ -2,7 +2,7 @@
 #define CORE_STD_BASIC_TYPES_H
 
 #include <cstdint>
-#ifdef ASTL_HALF_ENABLE
+#ifdef ACUL_HALF_ENABLE
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     #include <half.hpp>
@@ -18,7 +18,7 @@ using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
-#ifdef ASTL_HALF_ENABLE
+#ifdef ACUL_HALF_ENABLE
 using f16 = half_float::half;
 #endif
 using f32 = float;

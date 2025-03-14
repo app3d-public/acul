@@ -25,7 +25,7 @@ namespace logging
         virtual void handle(Level level, const char *message, std::stringstream &ss) const = 0;
     };
 
-    using TokenHandlerList = astl::vector<astl::shared_ptr<TokenHandler>>;
+    using TokenHandlerList = acul::vector<acul::shared_ptr<TokenHandler>>;
 
     class TextTokenHandler final : public TokenHandler
     {
@@ -91,7 +91,7 @@ namespace logging
     class APPLIB_API Logger
     {
     public:
-        Logger(const std::string &name) : _name(name), _tokens(astl::make_shared<TokenHandlerList>()) {}
+        Logger(const std::string &name) : _name(name), _tokens(acul::make_shared<TokenHandlerList>()) {}
 
         virtual ~Logger() = default;
 
@@ -110,7 +110,7 @@ namespace logging
 
     private:
         std::string _name;
-        astl::shared_ptr<TokenHandlerList> _tokens;
+        acul::shared_ptr<TokenHandlerList> _tokens;
     };
 
     class APPLIB_API FileLogger final : public Logger
@@ -171,7 +171,7 @@ namespace logging
         template <typename T, typename... Args>
         T *addLogger(const std::string &name, Args &&...args)
         {
-            auto *logger = astl::alloc<T>(name, std::forward<Args>(args)...);
+            auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
             _loggers[name] = logger;
             return logger;
         }
@@ -195,7 +195,7 @@ namespace logging
         {
             auto it = _loggers.find(name);
             if (it == _loggers.end()) return;
-            astl::release(it->second);
+            acul::release(it->second);
             _loggers.erase(it);
         }
 
@@ -220,7 +220,7 @@ namespace logging
 
     private:
         Level _level{Level::Error};
-        astl::hashmap<std::string, Logger *> _loggers;
+        acul::hashmap<std::string, Logger *> _loggers;
         oneapi::tbb::concurrent_queue<std::pair<Logger *, std::string>> _queue;
         std::atomic<int> _count{0};
     };

@@ -2,7 +2,7 @@
 
 #include "scalars.hpp"
 
-namespace astl
+namespace acul
 {
     template <typename T = i32>
     struct point2D
@@ -77,4 +77,4 @@ namespace astl
     {
         return {a.x / b, a.y / b};
     }
-} // namespace astl
+} // namespace acul

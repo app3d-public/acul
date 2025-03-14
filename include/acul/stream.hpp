@@ -10,7 +10,7 @@
     #include <glm/glm.hpp>
 #endif
 
-namespace astl
+namespace acul
 {
     /**
      * @brief Utility class for binary stream manipulation.
@@ -259,6 +259,6 @@ namespace astl
         vector<char> _data;
         size_t _pos;
     };
-} // namespace astl
+} // namespace acul
 
 #endif

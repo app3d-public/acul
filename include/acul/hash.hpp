@@ -10,7 +10,7 @@
     #include <glm/glm.hpp>
 #endif
 
-namespace astl
+namespace acul
 {
 
     template <typename K, typename V, typename H = std::hash<K>>
@@ -33,7 +33,7 @@ namespace astl
     };
 
     APPLIB_API u32 crc32(u32 crc, const char *buf, size_t len);
-} // namespace astl
+} // namespace acul
 
 namespace std
 {

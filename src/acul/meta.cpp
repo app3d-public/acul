@@ -3,7 +3,7 @@
 
 namespace meta
 {
-    astl::hashmap<u32, const Stream *> g_Streams;
+    acul::hashmap<u32, const Stream *> g_Streams;
 
     void addStream(u32 signature, const Stream *stream)
     {
@@ -11,7 +11,7 @@ namespace meta
         if (!inserted) logWarn("Stream 0x%08x already registered", signature);
     }
 
-    void initStreams(const astl::vector<std::pair<u32, const Stream *>> &streams)
+    void initStreams(const acul::vector<std::pair<u32, const Stream *>> &streams)
     {
         g_Streams.insert(streams.begin(), streams.end());
     }
@@ -37,16 +37,16 @@ namespace meta
 
     namespace streams
     {
-        Block *readExternalBlock(astl::bin_stream &stream)
+        Block *readExternalBlock(acul::bin_stream &stream)
         {
-            ExternalBlock *block = astl::alloc<ExternalBlock>();
+            ExternalBlock *block = acul::alloc<ExternalBlock>();
             stream.read(block->dataSize);
-            block->data = astl::alloc_n<char>(block->dataSize);
+            block->data = acul::alloc_n<char>(block->dataSize);
             stream.read(block->data, block->dataSize);
             return block;
         }
 
-        void writeExternalBlock(astl::bin_stream &stream, Block *content)
+        void writeExternalBlock(acul::bin_stream &stream, Block *content)
         {
             ExternalBlock *ext = static_cast<ExternalBlock *>(content);
             stream.write(ext->dataSize).write(ext->data, ext->dataSize);

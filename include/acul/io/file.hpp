@@ -4,12 +4,12 @@
 #include <filesystem>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
-#include "../../astl/string_pool.hpp"
-#include "../../astl/vector.hpp"
+#include "../../acul/string_pool.hpp"
+#include "../../acul/vector.hpp"
 #include "../api.hpp"
 
 #ifdef _WIN32
-    #include <astl/string.hpp>
+    #include <acul/string.hpp>
     #include <windows.h>
 #else
     #include <cstring>
@@ -40,7 +40,7 @@ namespace io
          * @param buffer A reference to a variable to store the data.
          * @return Success if the file was successfully read, error otherwise.
          **/
-        APPLIB_API ReadState readBinary(const std::string &filename, astl::vector<char> &buffer);
+        APPLIB_API ReadState readBinary(const std::string &filename, acul::vector<char> &buffer);
 
         /**
          * @brief Writes a binary buffer to a file
@@ -59,7 +59,7 @@ namespace io
          * @param size Size of the data buffer
          * @param dst Dynamic array to store the parsed lines
          */
-        void fillLineBuffer(const char *data, size_t size, astl::string_pool<char> &dst);
+        void fillLineBuffer(const char *data, size_t size, acul::string_pool<char> &dst);
 
         /**
          * Reads a file in blocks using in mutithread context, splits it into lines, and processes each line using a
@@ -77,7 +77,7 @@ namespace io
         ReadState readByBlock(const std::string &filename, T &dstBuffer, void (*callback)(T &, const char *, int))
         {
 #ifdef _WIN32
-            std::u16string lFilename = astl::utf8_to_utf16(filename);
+            std::u16string lFilename = acul::utf8_to_utf16(filename);
             HANDLE fileHandle = CreateFileW((LPCWSTR)lFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
                                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
             if (fileHandle == INVALID_HANDLE_VALUE) return ReadState::Error;
@@ -108,7 +108,7 @@ namespace io
             ReadState res = ReadState::Success;
             try
             {
-                astl::string_pool<char> stringPool(fileSize.QuadPart);
+                acul::string_pool<char> stringPool(fileSize.QuadPart);
                 fillLineBuffer(fileData, fileSize.QuadPart, stringPool);
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
@@ -147,7 +147,7 @@ namespace io
             ReadState res = ReadState::Success;
             try
             {
-                astl::string_pool<char> stringPool(fileSize);
+                acul::string_pool<char> stringPool(fileSize);
                 fillLineBuffer(fileData, fileSize, stringPool);
                 oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
                                           [&](const oneapi::tbb::blocked_range<size_t> &range) {
@@ -190,6 +190,8 @@ namespace io
         APPLIB_API bool copyFile(const std::filesystem::path &src, const std::filesystem::path &dst,
                                  const std::filesystem::copy_options options);
 
+        APPLIB_API bool copyFileSafe(const char* src, const char* dst);
+
         /**
          * @brief Compresses the given data using zstd.
          *
@@ -206,7 +208,7 @@ namespace io
          * provides maximum compression (at the cost of speed).
          * @return Returns true if the compression was successful, false otherwise.
          */
-        APPLIB_API bool compress(const char *data, size_t size, astl::vector<char> &compressed, int quality);
+        APPLIB_API bool compress(const char *data, size_t size, acul::vector<char> &compressed, int quality);
 
         /**
          * @brief Decompresses the given data using zstd.
@@ -220,7 +222,7 @@ namespace io
          * vector.
          * @return Returns true if the decompression was successful, false otherwise.
          */
-        APPLIB_API bool decompress(const char *data, size_t size, astl::vector<char> &decompressed);
+        APPLIB_API bool decompress(const char *data, size_t size, acul::vector<char> &decompressed);
     } // namespace file
 } // namespace io
 

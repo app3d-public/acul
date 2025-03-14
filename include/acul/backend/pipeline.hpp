@@ -7,7 +7,7 @@
 // Сonfiguration settings for a Vulkan graphics pipeline.
 struct IPipelineConfig
 {
-    astl::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+    acul::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
     vk::PipelineLayout pipelineLayout = nullptr;
 };
 
@@ -25,13 +25,13 @@ struct APPLIB_API PipelineConfig<vk::GraphicsPipelineCreateInfo> final : public 
     vk::PipelineColorBlendStateCreateInfo colorBlendInfo;
     vk::PipelineDepthStencilStateCreateInfo depthStencilInfo;
     vk::PipelineRasterizationConservativeStateCreateInfoEXT conservativeState;
-    astl::vector<vk::DynamicState> dynamicStateEnables;
+    acul::vector<vk::DynamicState> dynamicStateEnables;
     vk::PipelineDynamicStateCreateInfo dynamicStateInfo;
-    astl::vector<vk::VertexInputBindingDescription> bindingDescriptions;
-    astl::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+    acul::vector<vk::VertexInputBindingDescription> bindingDescriptions;
+    acul::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vk::SpecializationInfo specializationInfo;
-    astl::vector<vk::SpecializationMapEntry> specializationMap;
+    acul::vector<vk::SpecializationMapEntry> specializationMap;
     vk::RenderPass renderPass = nullptr;
     u32 subpass = 0;
 
@@ -81,7 +81,7 @@ struct APPLIB_API ShaderModule
 {
     std::filesystem::path path; ///< Path to the shader file.
     vk::ShaderModule module;    ///< Vulkan shader module object.
-    astl::vector<char> code;    ///< Raw shader code.
+    acul::vector<char> code;    ///< Raw shader code.
 
     /**
      * @brief Load the shader module from the specified device.
@@ -103,7 +103,7 @@ struct APPLIB_API ShaderModule
     void destroy(Device &device) { device.vkDevice.destroyShaderModule(module, nullptr, device.vkLoader); }
 };
 
-using Shaders = astl::vector<ShaderModule>;
+using Shaders = acul::vector<ShaderModule>;
 
 /**
  * @brief Template struct for batching Vulkan pipeline creation.
@@ -120,15 +120,15 @@ struct PipelineBatch
     {
         using create_info_t = T;
         template <typename V>
-        using custom_data_t = astl::destructible_value<V, Artifact &>;
+        using custom_data_t = acul::destructible_value<V, Artifact &>;
 
         vk::Pipeline *pipeline;
         PipelineConfig<create_info_t> config;
         create_info_t createInfo;
-        astl::destructible_data<Artifact &> *tmp;
+        acul::destructible_data<Artifact &> *tmp;
     };
-    astl::vector<Artifact> artifacts;   ///< Stores configurations for each pipeline.
-    astl::vector<ShaderModule> shaders; ///< Shader modules associated with the pipelines.
+    acul::vector<Artifact> artifacts;   ///< Stores configurations for each pipeline.
+    acul::vector<ShaderModule> shaders; ///< Shader modules associated with the pipelines.
     vk::PipelineCache cache;            ///< Pipeline cache used for pipeline creation.
 
     /**
@@ -171,7 +171,7 @@ struct PipelineBatch
 
     ~PipelineBatch()
     {
-        for (auto &a : artifacts) astl::release(a.tmp);
+        for (auto &a : artifacts) acul::release(a.tmp);
     }
 };
 

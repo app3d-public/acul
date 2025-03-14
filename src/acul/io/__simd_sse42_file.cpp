@@ -1,11 +1,11 @@
 #include <core/api.hpp>
-#include <astl/string_pool.hpp>
+#include <acul/string_pool.hpp>
 
 namespace io
 {
     namespace file
     {
-        APPLIB_API void fillLineBuffer(const char *data, size_t size, astl::string_pool<char> &pool)
+        APPLIB_API void fillLineBuffer(const char *data, size_t size, acul::string_pool<char> &pool)
         {
             const char *dataEnd = data + size;
 

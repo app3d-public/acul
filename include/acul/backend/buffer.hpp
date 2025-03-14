@@ -20,10 +20,10 @@ public:
            VmaMemoryUsage vmaUsageFlags, vk::MemoryPropertyFlags memoryPropertyFlags, f32 priority = 0.5f,
            vk::DeviceSize minOffsetAlignment = 1);
 
-    static astl::unique_ptr<Buffer> UBO(Device &device, vk::DeviceSize instanceSize, u32 instanceCount,
+    static acul::unique_ptr<Buffer> UBO(Device &device, vk::DeviceSize instanceSize, u32 instanceCount,
                                         VmaMemoryUsage vmaUsageFlags, vk::MemoryPropertyFlags memoryPropertyFlags)
     {
-        return astl::make_unique<Buffer>(device, instanceSize, instanceCount, vk::BufferUsageFlagBits::eUniformBuffer,
+        return acul::make_unique<Buffer>(device, instanceSize, instanceCount, vk::BufferUsageFlagBits::eUniformBuffer,
                                          vmaUsageFlags, memoryPropertyFlags, 0.5f,
                                          device.properties.properties.limits.minUniformBufferOffsetAlignment);
     }
@@ -214,7 +214,7 @@ class BufferMemCache : public MemCache
 public:
     explicit BufferMemCache(Buffer *&buffer) : _buffer(buffer) { buffer = nullptr; }
 
-    virtual void free() override { astl::release(_buffer); }
+    virtual void free() override { acul::release(_buffer); }
 
 private:
     Buffer *_buffer;

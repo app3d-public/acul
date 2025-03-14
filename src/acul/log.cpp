@@ -1,5 +1,5 @@
 #include <acul/log.hpp>
-#include <astl/string.hpp>
+#include <acul/string.hpp>
 #include <cstdarg>
 #include <ctime>
 #include <regex>
@@ -23,7 +23,7 @@ namespace logging
         localtime_r(&time_t_now, &tm_now);
 #endif
 
-        ss << astl::format("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
+        ss << acul::format("%04d-%02d-%02d %02d:%02d:%02d.%09lld", tm_now.tm_year + 1900, tm_now.tm_mon + 1,
                            tm_now.tm_mday, tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ns);
     }
 
@@ -97,16 +97,16 @@ namespace logging
             if (pos != last_pos)
             {
                 std::string text = pattern.substr(last_pos, pos - last_pos);
-                _tokens->push_back(astl::make_shared<TextTokenHandler>(text));
+                _tokens->push_back(acul::make_shared<TextTokenHandler>(text));
             }
 
-            astl::hashmap<std::string, astl::shared_ptr<TokenHandler>> tokenHandlers = {
-                {"ascii_time", astl::make_shared<TimeTokenHandler>()},
-                {"level_name", astl::make_shared<LevelNameTokenHandler>()},
-                {"thread", astl::make_shared<ThreadIdTokenHandler>()},
-                {"message", astl::make_shared<MessageTokenHandler>()},
-                {"color_auto", astl::make_shared<ColorizeTokenHandler>()},
-                {"color_off", astl::make_shared<DecolorizeTokenHandler>()}};
+            acul::hashmap<std::string, acul::shared_ptr<TokenHandler>> tokenHandlers = {
+                {"ascii_time", acul::make_shared<TimeTokenHandler>()},
+                {"level_name", acul::make_shared<LevelNameTokenHandler>()},
+                {"thread", acul::make_shared<ThreadIdTokenHandler>()},
+                {"message", acul::make_shared<MessageTokenHandler>()},
+                {"color_auto", acul::make_shared<ColorizeTokenHandler>()},
+                {"color_off", acul::make_shared<DecolorizeTokenHandler>()}};
 
             std::string token = it->str(1);
             auto handlerIter = tokenHandlers.find(token);
@@ -117,7 +117,7 @@ namespace logging
         if (last_pos != pattern.length())
         {
             std::string text = pattern.substr(last_pos);
-            _tokens->push_back(astl::make_shared<TextTokenHandler>(text));
+            _tokens->push_back(acul::make_shared<TextTokenHandler>(text));
         }
     }
 
@@ -147,14 +147,14 @@ namespace logging
         va_list args;
         va_start(args, message);
         _count.fetch_add(1, std::memory_order_relaxed);
-        _queue.emplace(logger, astl::format_va_list(ss.str().c_str(), args));
+        _queue.emplace(logger, acul::format_va_list(ss.str().c_str(), args));
         va_end(args);
         notify();
     }
 
     LogService::~LogService()
     {
-        for (auto &logger : _loggers) astl::release(logger.second);
+        for (auto &logger : _loggers) acul::release(logger.second);
         _loggers.clear();
         g_LogService = nullptr;
         g_DefaultLogger = nullptr;

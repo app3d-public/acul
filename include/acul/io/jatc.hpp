@@ -3,9 +3,9 @@
 #include <condition_variable>
 #include <fstream>
 #include <oneapi/tbb/flow_graph.h>
-#include "../../astl/shared_mutex.hpp"
-#include "../../astl/stream.hpp"
-#include "../../astl/string.hpp"
+#include "../../acul/shared_mutex.hpp"
+#include "../../acul/stream.hpp"
+#include "../../acul/string.hpp"
 #include "../task.hpp"
 #include "file.hpp"
 
@@ -52,13 +52,13 @@ namespace io
                 std::fstream fd;
 
                 // Sync
-                astl::shared_mutex lock;
+                acul::shared_mutex lock;
                 std::condition_variable_any cv;
                 std::atomic<int> op_count;
 
                 void await()
                 {
-                    astl::shared_lock read_lock(lock);
+                    acul::shared_lock read_lock(lock);
                     cv.wait(read_lock, [&]() { return op_count.load() == 0; });
                 }
             };
@@ -66,12 +66,12 @@ namespace io
             struct EntryGroup
             {
                 std::string name;
-                astl::vector<EntryPoint *> entrypoints;
+                acul::vector<EntryPoint *> entrypoints;
             };
 
             struct Request
             {
-                std::function<void(astl::bin_stream &)> write_callback;
+                std::function<void(acul::bin_stream &)> write_callback;
                 EntryGroup *group = nullptr;
                 EntryPoint *entrypoint = nullptr;
             };
@@ -107,17 +107,17 @@ namespace io
                 Cache(const std::filesystem::path &path, task::ThreadDispatch &dispatch)
                     : _path(path),
                       _dispatch(dispatch),
-                      _writeNode(astl::alloc<oneapi::tbb::flow::function_node<FlowOutput>>(
+                      _writeNode(acul::alloc<oneapi::tbb::flow::function_node<FlowOutput>>(
                           _graph, tbb::flow::unlimited,
                           [this](const FlowOutput &output) { this->writeToEntrypoint(output.req, *output.res); }))
                 {
                 }
 
-                ~Cache() { astl::release(_writeNode); }
+                ~Cache() { acul::release(_writeNode); }
 
                 std::filesystem::path path(EntryPoint *entrypoint, EntryGroup *group)
                 {
-                    return _path / astl::format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
+                    return _path / acul::format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
                 }
 
                 EntryPoint *registerEntrypoint(EntryGroup *group);
@@ -135,23 +135,23 @@ namespace io
 
                 void await()
                 {
-                    astl::shared_lock read_lock(_lock);
+                    acul::shared_lock read_lock(_lock);
                     _cv.wait(read_lock, [&]() { return _op_count.load() == 0; });
                 }
 
                 ReadState read(EntryPoint *entrypoint, EntryGroup *group, const IndexEntry &entry,
-                               astl::bin_stream &dst);
+                               acul::bin_stream &dst);
 
                 // Filter index blocks and replace them in the file
                 void filterIndexEntries(EntryPoint *entrypoint, EntryGroup *group,
-                                        astl::vector<IndexEntry *> &indexEntries);
+                                        acul::vector<IndexEntry *> &indexEntries);
 
             private:
                 std::filesystem::path _path;
                 task::ThreadDispatch &_dispatch;
                 oneapi::tbb::flow::graph _graph;
                 tbb::flow::function_node<FlowOutput> *_writeNode;
-                astl::shared_mutex _lock;
+                acul::shared_mutex _lock;
                 std::condition_variable_any _cv;
                 std::atomic<int> _op_count = 0;
 
@@ -167,7 +167,7 @@ namespace io
     } // namespace file
 } // namespace io
 
-namespace astl
+namespace acul
 {
     template <>
     inline bin_stream &bin_stream::write(const io::file::jatc::IndexEntry &entry)
@@ -180,4 +180,4 @@ namespace astl
     {
         return read(entry.offset).read(entry.size).read(entry.checksum).read(entry.compressed);
     }
-} // namespace astl
+} // namespace acul

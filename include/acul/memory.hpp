@@ -7,7 +7,7 @@
 #include <type_traits>
 #include "type_traits.hpp"
 
-namespace astl
+namespace acul
 {
     template <typename T>
     class mem_allocator
@@ -102,15 +102,15 @@ namespace astl
     template <typename T>
     inline void release(T *ptr)
     {
-        astl::mem_allocator<T>::destroy(ptr);
-        astl::mem_allocator<T>::deallocate(ptr, 1);
+        acul::mem_allocator<T>::destroy(ptr);
+        acul::mem_allocator<T>::deallocate(ptr, 1);
     }
 
     template <typename T>
     inline void release(T *ptr, size_t size)
     {
         if constexpr (!std::is_trivially_destructible_v<T>)
-            for (size_t i = 0; i < size; ++i) astl::mem_allocator<T>::destroy(ptr + i);
+            for (size_t i = 0; i < size; ++i) acul::mem_allocator<T>::destroy(ptr + i);
         mem_allocator<T>::deallocate(ptr, size);
     }
 
@@ -586,5 +586,5 @@ namespace astl
 
         destructible_value(const T &v) : destructible_data<Args...>{}, value(v) {}
     };
-} // namespace astl
+} // namespace acul
 #endif

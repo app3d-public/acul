@@ -3,7 +3,7 @@
 #include <queue>
 #include "deque.hpp"
 
-namespace astl
+namespace acul
 {
     template <typename T>
     using queue = std::queue<T, deque<T>>;

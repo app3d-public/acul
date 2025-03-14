@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/fwd.hpp>
-#include "../astl/point2d.hpp"
+#include "../acul/point2d.hpp"
 #include "api.hpp"
 
 namespace math
@@ -10,7 +10,7 @@ namespace math
     /// @param screen Vector in screen space [x, y]
     /// @param dimensions Framebuffer dimensions [width, height]
     /// @return Vector in NDC space
-    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, astl::point2D<i32> extent);
+    APPLIB_API glm::vec2 screenToNdc(const glm::vec2 &screen, acul::point2D<i32> extent);
 
     // Creates a ray in world space from NDC coordinates.
     // @param ndcPos Coordinates in NDC space [x, y]

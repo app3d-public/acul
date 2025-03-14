@@ -3,10 +3,10 @@
 
 #include <cassert>
 #include <functional>
-#include "../astl/hash.hpp"
-#include "../astl/map.hpp"
-#include "../astl/type_traits.hpp"
-#include "../astl/vector.hpp"
+#include "../acul/hash.hpp"
+#include "../acul/map.hpp"
+#include "../acul/type_traits.hpp"
+#include "../acul/vector.hpp"
 #include "api.hpp"
 
 namespace events
@@ -74,15 +74,15 @@ namespace events
     class APPLIB_API Manager
     {
     public:
-        using iterator = astl::multimap<int, BaseEventListener *>::iterator;
-        astl::hashmap<void *, astl::vector<ListenerInfo>> pointers;
+        using iterator = acul::multimap<int, BaseEventListener *>::iterator;
+        acul::hashmap<void *, acul::vector<ListenerInfo>> pointers;
 
         // Adds a listener for a specific type of event and returns an iterator to it.
         template <typename E>
         iterator addListener(u64 event, std::function<void(E &)> listener, int priority = 5)
         {
             static_assert(std::is_base_of<IEvent, E>::value, "E must inherit from Event");
-            auto eventListener = astl::alloc<EventListener<E>>(listener);
+            auto eventListener = acul::alloc<EventListener<E>>(listener);
             return _listeners[event].emplace(priority, eventListener);
         }
 
@@ -100,7 +100,7 @@ namespace events
                 {
                     if (iter->second == listener)
                     {
-                        astl::release(iter->second);
+                        acul::release(iter->second);
                         iter = listeners.erase(iter);
                     }
                     else
@@ -149,9 +149,9 @@ namespace events
         // Retrieves a list of all listeners registered for a specific event.
         // Returns a dynamic array of pointers to listeners for the event.
         template <typename E>
-        astl::vector<EventListener<E> *> getListeners(u64 event)
+        acul::vector<EventListener<E> *> getListeners(u64 event)
         {
-            astl::vector<EventListener<E> *> result;
+            acul::vector<EventListener<E> *> result;
             auto it = _listeners.find(event);
             if (it != _listeners.end())
             {
@@ -182,7 +182,7 @@ namespace events
         template <typename Listener>
         void bindEvent(void *owner, u64 event, Listener &&listener, int priority = 5)
         {
-            using arg_type = typename astl::lambda_arg_traits<Listener>::argument_type;
+            using arg_type = typename acul::lambda_arg_traits<Listener>::argument_type;
             using event_type = typename std::remove_reference<arg_type>::type;
             static_assert(std::is_base_of<IEvent, event_type>::value, "EventType must inherit from Event");
             auto id = addListener<event_type>(event, std::forward<Listener>(listener), priority);
@@ -202,7 +202,7 @@ namespace events
             for (auto &eventPair : _listeners)
             {
                 auto &listeners = eventPair.second;
-                for (auto &listenerPair : listeners) astl::release(listenerPair.second);
+                for (auto &listenerPair : listeners) acul::release(listenerPair.second);
                 listeners.clear();
             }
             _listeners.clear();
@@ -210,7 +210,7 @@ namespace events
         }
 
     private:
-        astl::hashmap<u64, astl::multimap<int, BaseEventListener *>> _listeners;
+        acul::hashmap<u64, acul::multimap<int, BaseEventListener *>> _listeners;
     };
 } // namespace events
 

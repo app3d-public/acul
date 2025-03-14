@@ -7,7 +7,7 @@
 #define APP_BACKEND_DESCRIPTORS
 
 #include "device.hpp"
-#include "../astl/hash.hpp"
+#include "../acul/hash.hpp"
 
 namespace app
 {
@@ -35,20 +35,20 @@ namespace app
 
             /// @brief Create a descriptor set layout by added bindings
             /// @return Shared pointer to the descriptor set layout wrapper
-            astl::shared_ptr<DescriptorSetLayout> build() const
+            acul::shared_ptr<DescriptorSetLayout> build() const
             {
-                return astl::make_shared<DescriptorSetLayout>(_device, _bindings);
+                return acul::make_shared<DescriptorSetLayout>(_device, _bindings);
             }
 
         private:
             Device &_device;
-            astl::hashmap<u32, vk::DescriptorSetLayoutBinding> _bindings{};
+            acul::hashmap<u32, vk::DescriptorSetLayoutBinding> _bindings{};
         };
 
         /// @brief Create a descriptor set layout
         /// @param device Current device
         /// @param bindings Map of descriptor bindings
-        DescriptorSetLayout(Device &device, const astl::hashmap<u32, vk::DescriptorSetLayoutBinding> &bindings);
+        DescriptorSetLayout(Device &device, const acul::hashmap<u32, vk::DescriptorSetLayoutBinding> &bindings);
 
         ~DescriptorSetLayout()
         {
@@ -65,7 +65,7 @@ namespace app
     private:
         Device &_device;
         vk::DescriptorSetLayout _descriptorSetLayout;
-        astl::hashmap<u32, vk::DescriptorSetLayoutBinding> _bindings;
+        acul::hashmap<u32, vk::DescriptorSetLayoutBinding> _bindings;
 
         friend class DescriptorWriter;
     };
@@ -112,14 +112,14 @@ namespace app
 
             /// @brief Build descriptor pool
             /// @return Shared descriptor pool wrapper
-            astl::shared_ptr<DescriptorPool> build() const
+            acul::shared_ptr<DescriptorPool> build() const
             {
-                return astl::make_shared<DescriptorPool>(_device, _maxSets, _poolFlags, _poolSizes);
+                return acul::make_shared<DescriptorPool>(_device, _maxSets, _poolFlags, _poolSizes);
             }
 
         private:
             Device &_device;
-            astl::vector<vk::DescriptorPoolSize> _poolSizes;
+            acul::vector<vk::DescriptorPoolSize> _poolSizes;
             u32 _maxSets = 1000;
             vk::DescriptorPoolCreateFlags _poolFlags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
         };
@@ -130,7 +130,7 @@ namespace app
         /// @param poolFlags Descriptor pool flags
         /// @param poolSizes Descriptor pool sizes
         DescriptorPool(Device &device, u32 maxSets, vk::DescriptorPoolCreateFlags poolFlags,
-                       const astl::vector<vk::DescriptorPoolSize> &poolSizes);
+                       const acul::vector<vk::DescriptorPoolSize> &poolSizes);
 
         ~DescriptorPool() { _device.vkDevice.destroyDescriptorPool(_descriptorPool, nullptr, _device.vkLoader); }
 
@@ -146,7 +146,7 @@ namespace app
 
         /// @brief Free allocate descriptor sets by specified vector of descriptors
         /// @param descriptors Vector of descriptors
-        void freeDescriptors(astl::vector<vk::DescriptorSet> &descriptors) const
+        void freeDescriptors(acul::vector<vk::DescriptorSet> &descriptors) const
         {
             _device.vkDevice.freeDescriptorSets(_descriptorPool, static_cast<u32>(descriptors.size()),
                                                 descriptors.data(), _device.vkLoader);
@@ -208,7 +208,7 @@ namespace app
     private:
         DescriptorSetLayout &_setLayout;
         DescriptorPool &_pool;
-        astl::vector<vk::WriteDescriptorSet> _writes;
+        acul::vector<vk::WriteDescriptorSet> _writes;
     };
 } // namespace app
 

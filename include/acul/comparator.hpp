@@ -5,7 +5,7 @@
 #include "map.hpp"
 #include "vector.hpp"
 
-namespace astl
+namespace acul
 {
     /**
      * @brief case_insensitive_comparator uses for sorting strings caseless.
@@ -80,5 +80,5 @@ namespace astl
     private:
         value_type _data;
     };
-} // namespace astl
+} // namespace acul
 #endif

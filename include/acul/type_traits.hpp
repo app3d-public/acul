@@ -2,7 +2,7 @@
 
 #include <functional>
 
-namespace astl
+namespace acul
 {
 
     template <typename T>
@@ -62,4 +62,4 @@ namespace astl
     {
         return sizeof...(Args) > 0;
     }
-} // namespace astl
+} // namespace acul

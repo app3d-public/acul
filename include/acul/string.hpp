@@ -8,9 +8,8 @@
 #endif
 #include <string>
 
-namespace astl
+namespace acul
 {
-
     /// @brief Convert string in UTF-8 encoding to string in UTF-16 encoding
     /// @param src String in UTF-8 encoding
     APPLIB_API std::u16string utf8_to_utf16(const std::string &src);
@@ -149,5 +148,5 @@ namespace astl
     APPLIB_API std::string str_range(const char *&str);
 
     APPLIB_API std::string trim_end(const char *str);
-} // namespace astl
+} // namespace acul
 #endif

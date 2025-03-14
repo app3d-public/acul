@@ -1,4 +1,4 @@
-#include <astl/string.hpp>
+#include <acul/string.hpp>
 #include <cmath>
 #include <cstdarg>
 #include <cstring>
@@ -7,7 +7,7 @@
     #include <winnls.h>
 #endif
 
-namespace astl
+namespace acul
 {
     std::u16string utf8_to_utf16(const std::string &src)
     {
@@ -459,4 +459,4 @@ namespace astl
         while (end != str && (*(end - 1) == '\n' || *(end - 1) == '\r')) --end;
         return std::string(str, end);
     }
-} // namespace astl
+} // namespace acul

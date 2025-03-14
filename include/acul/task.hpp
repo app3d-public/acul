@@ -34,7 +34,7 @@ namespace task
      * @tparam T The return type of the task.
      */
     template <typename T>
-    class Task final : public ITask, public astl::enable_shared_from_this<Task<T>>
+    class Task final : public ITask, public acul::enable_shared_from_this<Task<T>>
     {
     public:
         /**
@@ -101,7 +101,7 @@ namespace task
         if constexpr (std::is_invocable<F>::value)
         {
             using R = std::invoke_result_t<F>;
-            auto ptr = astl::make_shared<Task<R>>(std::forward<F>(task));
+            auto ptr = acul::make_shared<Task<R>>(std::forward<F>(task));
             return ptr;
         }
         else
@@ -114,12 +114,12 @@ namespace task
     class MemCache : public ::MemCache
     {
     public:
-        explicit MemCache(const astl::shared_ptr<ITask> &task) : _task(task) {}
+        explicit MemCache(const acul::shared_ptr<ITask> &task) : _task(task) {}
 
         virtual void free() override { _task->run(); }
 
     private:
-        astl::shared_ptr<ITask> _task;
+        acul::shared_ptr<ITask> _task;
     };
 
     /**
@@ -206,7 +206,7 @@ namespace task
                 _cv.notify_all();
             }
             if (_thread.joinable()) _thread.join();
-            for (auto service : _services) astl::release(service);
+            for (auto service : _services) acul::release(service);
         }
 
         void registerService(IService *service)
@@ -220,7 +220,7 @@ namespace task
         std::thread _thread;
         std::mutex _mutex;
         std::condition_variable _cv;
-        astl::vector<IService *> _services;
+        acul::vector<IService *> _services;
 
         APPLIB_API void workerThread();
 
@@ -252,7 +252,7 @@ namespace task
     private:
         struct Task
         {
-            astl::shared_ptr<ITask> task;
+            acul::shared_ptr<ITask> task;
             std::chrono::steady_clock::time_point time;
 
             bool operator<(const Task &other) const { return time > other.time; }

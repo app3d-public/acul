@@ -1,6 +1,6 @@
 #include <acul/io/jatc.hpp>
 #include <acul/log.hpp>
-#include <astl/hash.hpp>
+#include <acul/hash.hpp>
 
 #ifndef ACUL_BUILD_MIN
 
@@ -24,8 +24,8 @@ namespace io
                 return true;
             }
 
-            void rewriteFile(EntryPoint *entrypoint, astl::vector<IndexEntry *> &indexEntries,
-                             astl::vector<astl::vector<char>> &dataBuffers, const std::filesystem::path &path)
+            void rewriteFile(EntryPoint *entrypoint, acul::vector<IndexEntry *> &indexEntries,
+                             acul::vector<acul::vector<char>> &dataBuffers, const std::filesystem::path &path)
             {
                 auto openFlags = std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc;
                 entrypoint->fd.open(path, openFlags);
@@ -60,8 +60,8 @@ namespace io
 
             EntryPoint *Cache::registerEntrypoint(EntryGroup *group)
             {
-                auto entrypoint = astl::alloc<EntryPoint>();
-                entrypoint->id = astl::IDGen()();
+                auto entrypoint = acul::alloc<EntryPoint>();
+                entrypoint->id = acul::IDGen()();
                 entrypoint->op_count = 0;
                 logInfo("Registering entrypoint: %" PRIx64, entrypoint->id);
                 group->entrypoints.push_back(entrypoint);
@@ -81,19 +81,19 @@ namespace io
                 ++_op_count;
                 _dispatch.dispatch([=, this, path = this->path(entrypoint, group)]() mutable {
                     {
-                        astl::exclusive_lock entrypoint_lock(entrypoint->lock);
+                        acul::exclusive_lock entrypoint_lock(entrypoint->lock);
                         entrypoint->cv.wait(entrypoint_lock, [&]() { return entrypoint->op_count.load() == 0; });
                         if (entrypoint->fd.is_open()) entrypoint->fd.close();
                         entrypoint->cv.notify_all();
                     }
-                    astl::release(entrypoint);
+                    acul::release(entrypoint);
                     if (std::filesystem::exists(path))
                     {
                         logInfo("Deleting cache file: %s", path.string().c_str());
                         std::filesystem::remove(path);
                     }
                     {
-                        astl::exclusive_lock write_lock(_lock);
+                        acul::exclusive_lock write_lock(_lock);
                         --_op_count;
                         _cv.notify_all();
                     }
@@ -101,7 +101,7 @@ namespace io
             }
 
             ReadState Cache::read(EntryPoint *entrypoint, EntryGroup *group, const IndexEntry &entry,
-                                  astl::bin_stream &dst)
+                                  acul::bin_stream &dst)
             {
                 logInfo("Reading index entry");
                 if (entry.size == 0)
@@ -116,7 +116,7 @@ namespace io
                     return ReadState::Error;
                 }
 
-                astl::vector<char> buffer(entry.size);
+                acul::vector<char> buffer(entry.size);
                 if (!buffer.data())
                 {
                     logError("Failed to allocate buffer of size: %" PRIu64, entry.size);
@@ -124,7 +124,7 @@ namespace io
                 }
 
                 {
-                    astl::shared_lock lock(entrypoint->lock);
+                    acul::shared_lock lock(entrypoint->lock);
                     entrypoint->cv.wait(lock, [&]() { return entrypoint->op_count.load() == 0; });
 
                     auto fd = getFileStream(entrypoint, group);
@@ -150,22 +150,22 @@ namespace io
                     }
                 }
 
-                dst = astl::bin_stream(std::move(buffer));
+                dst = acul::bin_stream(std::move(buffer));
 
                 if (entry.compressed > 0)
                 {
-                    astl::vector<char> decompressed;
+                    acul::vector<char> decompressed;
                     logInfo("Decompressing data.");
                     if (!io::file::decompress(dst.data() + dst.pos(), dst.size() - dst.pos(), decompressed))
                     {
                         logError("Failed to decompress data at offset: %" PRIu64, entry.offset);
                         return ReadState::Error;
                     }
-                    dst = astl::bin_stream(std::move(decompressed));
+                    dst = acul::bin_stream(std::move(decompressed));
                 }
 
                 logInfo("Verifying checksum.");
-                if (astl::crc32(0, dst.data(), dst.size()) != entry.checksum)
+                if (acul::crc32(0, dst.data(), dst.size()) != entry.checksum)
                 {
                     logError("Invalid entrypoint index checksum.");
                     return ReadState::ChecksumMismatch;
@@ -175,11 +175,11 @@ namespace io
             }
 
             void Cache::filterIndexEntries(EntryPoint *entrypoint, EntryGroup *group,
-                                           astl::vector<IndexEntry *> &indexEntries)
+                                           acul::vector<IndexEntry *> &indexEntries)
             {
                 logInfo("Reading index entries for entrypoint: %" PRIx64, entrypoint->id);
                 {
-                    astl::shared_lock read_lock(entrypoint->lock);
+                    acul::shared_lock read_lock(entrypoint->lock);
                     entrypoint->cv.wait(read_lock, [&]() { return entrypoint->op_count.load() == 0; });
                 }
                 auto fd = getFileStream(entrypoint, group);
@@ -188,12 +188,12 @@ namespace io
                     logError("Failed to open file stream for entrypoint: %" PRIx64, entrypoint->id);
                     return;
                 }
-                astl::vector<astl::vector<char>> dataBuffers;
+                acul::vector<acul::vector<char>> dataBuffers;
                 dataBuffers.reserve(indexEntries.size());
                 for (IndexEntry *entry : indexEntries)
                 {
                     fd->seekg(entry->offset, std::ios::beg);
-                    astl::vector<char> buffer(entry->size);
+                    acul::vector<char> buffer(entry->size);
                     fd->read(buffer.data(), entry->size);
                     if (!fd->good())
                     {
@@ -207,7 +207,7 @@ namespace io
                 ++entrypoint->op_count;
 
                 logInfo("Overwriting index entries for entrypoint: %" PRIx64, entrypoint->id);
-                astl::exclusive_lock write_lock(entrypoint->lock);
+                acul::exclusive_lock write_lock(entrypoint->lock);
                 rewriteFile(entrypoint, indexEntries, dataBuffers, path(entrypoint, group));
                 --entrypoint->op_count;
                 entrypoint->cv.notify_all();
@@ -243,10 +243,10 @@ namespace io
 
             void Cache::writeToEntrypoint(const Request &request, Response &response)
             {
-                astl::vector<char> compressed;
+                acul::vector<char> compressed;
                 const char *dstBuffer = nullptr, *err = nullptr;
                 size_t dstSize = 0;
-                astl::bin_stream stream;
+                acul::bin_stream stream;
                 IndexEntry indexEntry;
                 if (!request.write_callback)
                 {
@@ -278,7 +278,7 @@ namespace io
                     indexEntry.compressed = 0;
                 }
                 indexEntry.size = stream.size();
-                indexEntry.checksum = astl::crc32(0, stream.data(), stream.size());
+                indexEntry.checksum = acul::crc32(0, stream.data(), stream.size());
                 request.entrypoint->lock.lock();
                 err = writeToEntryPoint(request, response, indexEntry, dstBuffer, dstSize);
             on_error:

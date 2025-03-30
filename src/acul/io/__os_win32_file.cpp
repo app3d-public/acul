@@ -1,5 +1,6 @@
 #include <acul/io/file.hpp>
 #include <acul/log.hpp>
+#include <cassert>
 
 namespace acul
 {
@@ -89,6 +90,32 @@ namespace acul
                 }
             }
 
+            op_state list_files(const acul::string &base_path, acul::vector<acul::string> &dst, bool recursive)
+            {
+                assert(!base_path.empty() && "base_path is null");
+                acul::u16string search_path = acul::utf8_to_utf16(base_path + "\\*");
+                WIN32_FIND_DATAW findData;
+                HANDLE handle = FindFirstFileW((LPCWSTR)search_path.c_str(), &findData);
+                if (handle == INVALID_HANDLE_VALUE)
+                {
+                    logError("Failed to open directory: %s. Error code: %lu", base_path.c_str(), GetLastError());
+                    return op_state::error;
+                }
+                do {
+                    const wchar_t *name = findData.cFileName;
+                    if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0) continue;
+                    acul::string fullPath = base_path + '/' + acul::utf16_to_utf8((const c16 *)name);
+                    if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                    {
+                        if (recursive) list_files(fullPath, dst, true);
+                    }
+                    else
+                        dst.push_back(fullPath);
+
+                } while (FindNextFileW(handle, &findData) != 0);
+                FindClose(handle);
+                return op_state::success;
+            }
         } // namespace file
     } // namespace io
 } // namespace acul

@@ -3,9 +3,10 @@
 #include <cstddef>
 #include <utility>
 
-constexpr static inline size_t null_terminated_length(const char *s) noexcept
+template <typename T>
+constexpr static inline size_t null_terminated_length(const T *s) noexcept
 {
-    const char *p = s;
+    const T *p = s;
     while (*p) ++p;
     return p - s;
 }

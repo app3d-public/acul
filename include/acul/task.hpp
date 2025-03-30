@@ -1,11 +1,16 @@
-#ifndef APP_CORE_TASK_H
-#define APP_CORE_TASK_H
+#ifndef APP_ACUL_TASK_H
+#define APP_ACUL_TASK_H
 
 #include <future>
 #include <oneapi/tbb/concurrent_priority_queue.h>
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
+#include "string/string.hpp"
+
+#ifdef _WIN32
+    #include <processthreadsapi.h>
+#endif
 #include "api.hpp"
 #include "disposal_queue.hpp"
 #include "event.hpp"
@@ -163,11 +168,11 @@ namespace task
     struct UpdateEvent final : public events::IEvent
     {
         void *ctx;
-        std::string header;
-        std::string message;
+        acul::string header;
+        acul::string message;
         f32 progress;
 
-        UpdateEvent(void *ctx = nullptr, const std::string &header = "", const std::string &message = "",
+        UpdateEvent(void *ctx = nullptr, const acul::string &header = {}, const acul::string &message = {},
                     f32 progress = 0.0f)
             : IEvent(TASK_EVENT_UPDATE_SIGN), ctx(ctx), header(header), message(message), progress(progress)
         {
@@ -261,6 +266,15 @@ namespace task
         oneapi::tbb::concurrent_priority_queue<Task> _tasks;
         std::atomic<bool> _busy{false};
     };
+
+    inline int get_thread_id()
+    {
+#ifdef _WIN32
+        return GetCurrentThreadId();
+#else
+        return syscall(SYS_gettid);
+#endif
+    }
 } // namespace task
 
 #endif

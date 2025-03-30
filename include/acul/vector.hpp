@@ -1,6 +1,7 @@
-#ifndef APP_CORE_STD_VECTOR_H
-#define APP_CORE_STD_VECTOR_H
+#ifndef APP_ACUL_STD_VECTOR_H
+#define APP_ACUL_STD_VECTOR_H
 
+#include <acul/exception.hpp>
 #include "memory.hpp"
 #include "type_traits.hpp"
 
@@ -151,13 +152,13 @@ namespace acul
 
         reference at(size_type index)
         {
-            if (index >= _size) throw std::out_of_range("Index out of range");
+            if (index >= _size) throw out_of_range(_size, index);
             return _data[index];
         }
 
         const_reference at(size_type index) const
         {
-            if (index >= _size) throw std::out_of_range("Index out of range");
+            if (index >= _size) throw out_of_range(_size, index);
             return _data[index];
         }
 
@@ -215,7 +216,7 @@ namespace acul
             {
                 _capacity = std::max(_capacity * 2, newSize);
                 pointer newData = Allocator::allocate(_capacity);
-                if (!newData) throw std::bad_alloc();
+                if (!newData) throw bad_alloc(_capacity);
                 if constexpr (std::is_trivially_copyable_v<T>)
                     memcpy(newData, _data, _size * sizeof(T));
                 else
@@ -245,6 +246,20 @@ namespace acul
             if constexpr (!std::is_trivially_destructible_v<T>)
                 for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
             _size = 0;
+        }
+
+        /**
+         * Releases ownership of the internal data pointer without deallocating it.
+         *
+         * @return A pointer to the data that was managed by the vector.
+         */
+        pointer release() noexcept
+        {
+            pointer result = _data;
+            _data = nullptr;
+            _size = 0;
+            _capacity = 0;
+            return result;
         }
 
         void push_back(const_reference value) noexcept
@@ -342,17 +357,17 @@ namespace acul
 
         void reallocate(bool adjustCapacity = true)
         {
-            if (adjustCapacity) _capacity = std::max(_capacity * 2, std::max((size_t)8UL, _capacity + 1));
+            if (adjustCapacity) _capacity = get_growth_size(_capacity, _capacity + 1);
             pointer newData;
             if constexpr (std::is_trivially_copyable_v<T>)
             {
                 newData = Allocator::reallocate(_data, _capacity);
-                if (!newData) throw std::bad_alloc();
+                if (!newData) throw bad_alloc(_capacity);
             }
             else
             {
                 newData = Allocator::allocate(_capacity);
-                if (!newData) throw std::bad_alloc();
+                if (!newData) throw bad_alloc(_capacity);
                 for (size_type i = 0; i < _size; ++i)
                 {
                     Allocator::construct(newData + i, std::move(_data[i]));
@@ -560,7 +575,7 @@ namespace acul
         {
             size_type newCapacity = std::max(_capacity * 2, _size + insertCount);
             pointer newData = Allocator::allocate(newCapacity);
-            if (!newData) throw std::bad_alloc();
+            if (!newData) throw bad_alloc(newCapacity);
 
             move_construct(_data, _data + posIndex, newData);
             copy_construct(first, last, newData + posIndex);

@@ -1,5 +1,5 @@
-#include <backend/pipeline.hpp>
-#include <io/file.hpp>
+#include <acul/backend/pipeline.hpp>
+#include <acul/io/file.hpp>
 
 using GraphicsConfig = PipelineConfig<vk::GraphicsPipelineCreateInfo>;
 GraphicsConfig &GraphicsConfig::loadDefaults()
@@ -55,12 +55,12 @@ GraphicsConfig &GraphicsConfig::enableMSAA(const Device::Config config)
 
 void ShaderModule::load(Device &device)
 {
-    if (io::file::readBinary(path.string(), code) != io::file::ReadState::Success)
-        throw std::runtime_error("Failed to read shader " + path.filename().string());
+    if (acul::io::file::read_binary(path, code) != acul::io::file::op_state::success)
+        throw acul::runtime_error("Failed to read shader: %s" + acul::io::get_filename(path));
     vk::ShaderModuleCreateInfo createInfo;
     createInfo.setCodeSize(code.size()).setPCode(reinterpret_cast<const u32 *>(code.data()));
     if (device.vkDevice.createShaderModule(&createInfo, nullptr, &module, device.vkLoader) != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create shader module");
+        throw acul::runtime_error("Failed to create shader module");
 }
 
 void prepareBasicGraphicsPipeline(PipelineBatch<vk::GraphicsPipelineCreateInfo>::Artifact &artifact, ShaderModule &vert,

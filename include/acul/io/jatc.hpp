@@ -3,9 +3,9 @@
 #include <condition_variable>
 #include <fstream>
 #include <oneapi/tbb/flow_graph.h>
-#include "../../acul/shared_mutex.hpp"
-#include "../../acul/stream.hpp"
-#include "../../acul/string.hpp"
+#include "../shared_mutex.hpp"
+#include "../stream.hpp"
+#include "../string/string.hpp"
 #include "../task.hpp"
 #include "file.hpp"
 
@@ -24,148 +24,152 @@
     #define JATC_COMPRESS_LEVEL 5
 #endif
 
-namespace io
+namespace acul
 {
-    namespace file
+    namespace io
     {
-        namespace jatc
+        namespace file
         {
-            struct alignas(8) IndexEntry
+            namespace jatc
             {
-                u64 offset;
-                u64 size;
-                u32 checksum;
-                u8 compressed;
-                u8 padding[3];
-            };
-
-            struct Header
-            {
-                u32 magicNumber;
-                u32 version;
-            };
-
-            struct EntryPoint
-            {
-                u64 id;
-                u64 pos = 0;
-                std::fstream fd;
-
-                // Sync
-                acul::shared_mutex lock;
-                std::condition_variable_any cv;
-                std::atomic<int> op_count;
-
-                void await()
+                struct alignas(8) IndexEntry
                 {
-                    acul::shared_lock read_lock(lock);
-                    cv.wait(read_lock, [&]() { return op_count.load() == 0; });
-                }
-            };
+                    u64 offset;
+                    u64 size;
+                    u32 checksum;
+                    u8 compressed;
+                    u8 padding[3];
+                };
 
-            struct EntryGroup
-            {
-                std::string name;
-                acul::vector<EntryPoint *> entrypoints;
-            };
-
-            struct Request
-            {
-                std::function<void(acul::bin_stream &)> write_callback;
-                EntryGroup *group = nullptr;
-                EntryPoint *entrypoint = nullptr;
-            };
-
-            struct Response
-            {
-                io::file::ReadState state;
-                std::promise<void> ready_promise;
-                EntryGroup *group = nullptr;
-                EntryPoint *entrypoint = nullptr;
-
-                IndexEntry &entry()
+                struct Header
                 {
-                    if (state == ReadState::Undefined) ready_promise.get_future().wait();
-                    return _entry;
-                }
+                    u32 magicNumber;
+                    u32 version;
+                };
 
-                void entry(const IndexEntry &entry) { _entry = entry; }
-
-            private:
-                IndexEntry _entry;
-            };
-
-            struct FlowOutput
-            {
-                Request req;
-                Response *res;
-            };
-
-            class APPLIB_API Cache
-            {
-            public:
-                Cache(const std::filesystem::path &path, task::ThreadDispatch &dispatch)
-                    : _path(path),
-                      _dispatch(dispatch),
-                      _writeNode(acul::alloc<oneapi::tbb::flow::function_node<FlowOutput>>(
-                          _graph, tbb::flow::unlimited,
-                          [this](const FlowOutput &output) { this->writeToEntrypoint(output.req, *output.res); }))
+                struct EntryPoint
                 {
-                }
+                    u64 id;
+                    u64 pos = 0;
+                    std::fstream fd;
 
-                ~Cache() { acul::release(_writeNode); }
+                    // Sync
+                    acul::shared_mutex lock;
+                    std::condition_variable_any cv;
+                    std::atomic<int> op_count;
 
-                std::filesystem::path path(EntryPoint *entrypoint, EntryGroup *group)
+                    void await()
+                    {
+                        acul::shared_lock read_lock(lock);
+                        cv.wait(read_lock, [&]() { return op_count.load() == 0; });
+                    }
+                };
+
+                struct EntryGroup
                 {
-                    return _path / acul::format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
-                }
+                    std::string name;
+                    acul::vector<EntryPoint *> entrypoints;
+                };
 
-                EntryPoint *registerEntrypoint(EntryGroup *group);
-
-                void deregisterEntrypoint(EntryPoint *entrypoint, EntryGroup *group);
-
-                void addRequest(const Request &request, Response *response)
+                struct Request
                 {
-                    response->state = io::file::ReadState::Undefined;
-                    response->group = request.group;
-                    response->entrypoint = request.entrypoint;
-                    ++request.entrypoint->op_count;
-                    _writeNode->try_put({request, response});
-                }
+                    std::function<void(acul::bin_stream &)> write_callback;
+                    EntryGroup *group = nullptr;
+                    EntryPoint *entrypoint = nullptr;
+                };
 
-                void await()
+                struct Response
                 {
-                    acul::shared_lock read_lock(_lock);
-                    _cv.wait(read_lock, [&]() { return _op_count.load() == 0; });
-                }
+                    io::file::op_state state;
+                    std::promise<void> ready_promise;
+                    EntryGroup *group = nullptr;
+                    EntryPoint *entrypoint = nullptr;
 
-                ReadState read(EntryPoint *entrypoint, EntryGroup *group, const IndexEntry &entry,
-                               acul::bin_stream &dst);
+                    IndexEntry &entry()
+                    {
+                        if (state == op_state::undefined) ready_promise.get_future().wait();
+                        return _entry;
+                    }
 
-                // Filter index blocks and replace them in the file
-                void filterIndexEntries(EntryPoint *entrypoint, EntryGroup *group,
-                                        acul::vector<IndexEntry *> &indexEntries);
+                    void entry(const IndexEntry &entry) { _entry = entry; }
 
-            private:
-                std::filesystem::path _path;
-                task::ThreadDispatch &_dispatch;
-                oneapi::tbb::flow::graph _graph;
-                tbb::flow::function_node<FlowOutput> *_writeNode;
-                acul::shared_mutex _lock;
-                std::condition_variable_any _cv;
-                std::atomic<int> _op_count = 0;
+                private:
+                    IndexEntry _entry;
+                };
 
-                // Returns nullptr if success, otherwise returns error message.
-                const char *writeToEntryPoint(const Request &request, Response &response, IndexEntry &indexEntry,
-                                              const char *buffer, size_t size);
+                struct FlowOutput
+                {
+                    Request req;
+                    Response *res;
+                };
 
-                void writeToEntrypoint(const Request &request, Response &response);
+                class APPLIB_API Cache
+                {
+                public:
+                    Cache(const std::filesystem::path &path, task::ThreadDispatch &dispatch)
+                        : _path(path),
+                          _dispatch(dispatch),
+                          _writeNode(acul::alloc<oneapi::tbb::flow::function_node<FlowOutput>>(
+                              _graph, tbb::flow::unlimited,
+                              [this](const FlowOutput &output) { this->writeToEntrypoint(output.req, *output.res); }))
+                    {
+                    }
 
-                std::fstream *getFileStream(EntryPoint *entrypoint, EntryGroup *group);
-            };
-        } // namespace jatc
-    } // namespace file
-} // namespace io
+                    ~Cache() { release(_writeNode); }
+
+                    std::filesystem::path path(EntryPoint *entrypoint, EntryGroup *group)
+                    {
+                        string name = format("entrypoint-%s-%llx.jatc", group->name.c_str(), entrypoint->id);
+                        return _path / name.c_str();
+                    }
+
+                    EntryPoint *registerEntrypoint(EntryGroup *group);
+
+                    void deregisterEntrypoint(EntryPoint *entrypoint, EntryGroup *group);
+
+                    void addRequest(const Request &request, Response *response)
+                    {
+                        response->state = io::file::op_state::undefined;
+                        response->group = request.group;
+                        response->entrypoint = request.entrypoint;
+                        ++request.entrypoint->op_count;
+                        _writeNode->try_put({request, response});
+                    }
+
+                    void await()
+                    {
+                        acul::shared_lock read_lock(_lock);
+                        _cv.wait(read_lock, [&]() { return _op_count.load() == 0; });
+                    }
+
+                    op_state read(EntryPoint *entrypoint, EntryGroup *group, const IndexEntry &entry,
+                                   acul::bin_stream &dst);
+
+                    // Filter index blocks and replace them in the file
+                    void filterIndexEntries(EntryPoint *entrypoint, EntryGroup *group,
+                                            acul::vector<IndexEntry *> &indexEntries);
+
+                private:
+                    std::filesystem::path _path;
+                    task::ThreadDispatch &_dispatch;
+                    oneapi::tbb::flow::graph _graph;
+                    tbb::flow::function_node<FlowOutput> *_writeNode;
+                    acul::shared_mutex _lock;
+                    std::condition_variable_any _cv;
+                    std::atomic<int> _op_count = 0;
+
+                    // Returns nullptr if success, otherwise returns error message.
+                    const char *writeToEntryPoint(const Request &request, Response &response, IndexEntry &indexEntry,
+                                                  const char *buffer, size_t size);
+
+                    void writeToEntrypoint(const Request &request, Response &response);
+
+                    std::fstream *getFileStream(EntryPoint *entrypoint, EntryGroup *group);
+                };
+            } // namespace jatc
+        } // namespace file
+    } // namespace io
+} // namespace acul
 
 namespace acul
 {

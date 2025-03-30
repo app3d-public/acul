@@ -1,5 +1,5 @@
-#ifndef APP_CORE_STD_COMPARATOR_H
-#define APP_CORE_STD_COMPARATOR_H
+#ifndef APP_ACUL_STD_COMPARATOR_H
+#define APP_ACUL_STD_COMPARATOR_H
 
 #include <string>
 #include "map.hpp"

@@ -1,6 +1,6 @@
+#include <acul/backend/device.hpp>
+#include <acul/log.hpp>
 #include <acul/set.hpp>
-#include <backend/device.hpp>
-#include <core/log.hpp>
 
 #define DEVICE_QUEUE_GRAPHICS 0
 #define DEVICE_QUEUE_PRESENT  1
@@ -95,10 +95,10 @@ void Device::setupDebugMessenger()
 void Device::createInstance(const std::string &appName, u32 version)
 {
     logInfo("Creating vk:instance");
-    if (!vklib().success()) throw std::runtime_error("Failed to load Vulkan library");
+    if (!vklib().success()) throw acul::runtime_error("Failed to load Vulkan library");
     vkLoader.init(vklib().getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
     if (_useValidationLayers && !checkValidationLayerSupport(_createCtx->validationLayers))
-        throw std::runtime_error("Validation layers requested, but not available!");
+        throw acul::runtime_error("Validation layers requested, but not available!");
 
     vk::ApplicationInfo appInfo;
     appInfo.setPApplicationName(appName.c_str())
@@ -122,7 +122,7 @@ void Device::createInstance(const std::string &appName, u32 version)
             .pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
     }
     vkInstance = vk::createInstance(createInfo, nullptr, vkLoader);
-    if (!vkInstance) throw std::runtime_error("Failed to create vk:instance");
+    if (!vkInstance) throw acul::runtime_error("Failed to create vk:instance");
     vkLoader.init(vkInstance);
 }
 
@@ -158,7 +158,7 @@ void Device::allocateCommandPools()
 
 void Device::init(const std::string &appName, u32 version, DeviceCreateCtx *createCtx)
 {
-    if (!createCtx) throw std::runtime_error("Failed to get create context");
+    if (!createCtx) throw acul::runtime_error("Failed to get create context");
     _createCtx = createCtx;
     createInstance(appName, version);
     setupDebugMessenger();
@@ -166,7 +166,7 @@ void Device::init(const std::string &appName, u32 version, DeviceCreateCtx *crea
     {
         hasWindowRequiredInstanceExtensions();
         if (createCtx->createSurface(vkInstance, surface, vkLoader) != vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create window surface");
+            throw acul::runtime_error("Failed to create window surface");
     }
     pickPhysicalDevice();
     createLogicalDevice();
@@ -329,7 +329,7 @@ void Device::pickPhysicalDevice()
             }
         }
 
-        if (!physicalDevice) throw std::runtime_error("Failed to find a suitable GPU");
+        if (!physicalDevice) throw acul::runtime_error("Failed to find a suitable GPU");
     }
     logInfo("Using: %s", static_cast<char *>(properties.properties.deviceName));
     vk::SampleCountFlags msaa = properties.properties.limits.framebufferColorSampleCounts;
@@ -435,7 +435,7 @@ void Device::createAllocator()
     allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
     if (vmaCreateAllocator(&allocatorInfo, &allocator) != VK_SUCCESS)
-        throw std::runtime_error("Failed to create memory allocator");
+        throw acul::runtime_error("Failed to create memory allocator");
 }
 
 void Device::destroyWindowSurface()
@@ -456,7 +456,7 @@ void Device::hasWindowRequiredInstanceExtensions()
 
     for (const auto &required : requiredExtensions)
         if (available.find(required) == available.end())
-            throw std::runtime_error("Missing required window extension: " + std::string(required));
+            throw acul::runtime_error("Missing required window extension: " + acul::string(required));
 }
 
 SwapchainSupportDetails Device::querySwapChainSupport(vk::PhysicalDevice device)
@@ -481,7 +481,7 @@ vk::Format Device::findSupportedFormat(const acul::vector<vk::Format> &candidate
             return format;
     }
 
-    throw std::runtime_error("Failed to find supported format");
+    throw acul::runtime_error("Failed to find supported format");
 }
 
 bool Device::supportsLinearFilter(vk::Format format)

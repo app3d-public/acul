@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <nmmintrin.h>
 #include <wmmintrin.h>
-#include <core/api.hpp>
+#include <acul/api.hpp>
 
 #if defined(_MSC_VER)
 #define CRC_AINLINE static __forceinline

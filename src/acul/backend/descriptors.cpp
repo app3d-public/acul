@@ -1,5 +1,5 @@
-#include <backend/descriptors.hpp>
-#include <core/log.hpp>
+#include <acul/backend/descriptors.hpp>
+#include <acul/log.hpp>
 #include <vulkan/vulkan_to_string.hpp>
 
 namespace app
@@ -27,7 +27,7 @@ namespace app
         descriptorSetLayoutInfo.setBindingCount(setLayoutBindings.size()).setPBindings(setLayoutBindings.data());
         if (_device.vkDevice.createDescriptorSetLayout(&descriptorSetLayoutInfo, nullptr, &_descriptorSetLayout,
                                                        _device.vkLoader) != vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create descriptor set layout");
+            throw acul::runtime_error("Failed to create descriptor set layout");
     }
 
     // *************** Descriptor Pool *********************
@@ -39,7 +39,7 @@ namespace app
         vk::DescriptorPoolCreateInfo descriptorPoolInfo(poolFlags, maxSets, poolSizes.size(), poolSizes.data());
         if (_device.vkDevice.createDescriptorPool(&descriptorPoolInfo, nullptr, &_descriptorPool, _device.vkLoader) !=
             vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create descriptor pool");
+            throw acul::runtime_error("Failed to create descriptor pool");
     }
 
     bool DescriptorPool::allocateDescriptor(const vk::DescriptorSetLayout descriptorSetLayout,

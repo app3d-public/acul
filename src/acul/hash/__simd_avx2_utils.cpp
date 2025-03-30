@@ -2,7 +2,7 @@
 /* E:\Documents\programming\crc32\fast-crc32\generate.exe -i avx2 -p crc32c -a v4s2 */
 /* MIT licensed */
 
-#include <core/api.hpp>
+#include <acul/api.hpp>
 #include <nmmintrin.h>
 #include <stddef.h>
 #include <stdint.h>

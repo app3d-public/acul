@@ -2,18 +2,21 @@
 
 #include <fstream>
 #include "api.hpp"
-#include "hash.hpp"
+#include "fwd/string.hpp"
 #include "scalars.hpp"
-#include "string.hpp"
-#include "vector.hpp"
+#include "string/refstring.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
     // Windows first
     #include <dbghelp.h>
+#endif
+
+#define EXCEPTION_MESSAGE_SIZE 256
 
 namespace acul
 {
+#ifdef _WIN32
     struct except_addr_t
     {
         DWORD64 addr;
@@ -25,7 +28,8 @@ namespace acul
         HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
         CONTEXT context;
-        acul::vector<except_addr_t> addresses;
+        except_addr_t *addresses = NULL;
+        size_t addressesCount = 0;
     };
 
     APPLIB_API void writeFrameRegisters(std::ofstream &stream, const CONTEXT &context);
@@ -34,25 +38,21 @@ namespace acul
 
     APPLIB_API void writeStackTrace(std::ofstream &stream, const except_info_t &except_info);
 
-    APPLIB_API void createMiniDump(EXCEPTION_POINTERS *pep, const std::filesystem::path &path);
+    APPLIB_API void createMiniDump(EXCEPTION_POINTERS *pep, const acul::string &path);
+#endif
 
-    class APPLIB_API exception
+    class APPLIB_API exception : public std::exception
     {
     public:
-        APPLIB_API static std::filesystem::path dump_folder;
+        APPLIB_API static acul::string dump_folder;
         except_info_t except_info;
         u64 id;
 
-        exception() noexcept : except_info({GetCurrentProcess(), GetCurrentThread()}), id(IDGen()())
-        {
-            if (!dump_folder.empty()) createMiniDump(nullptr, dump_folder / format("%llx.dmp", id));
-            RtlCaptureContext(&except_info.context);
-            captureStack();
-        }
+        exception() noexcept;
         exception(const exception &) noexcept = delete;
         exception &operator=(const exception &) noexcept = delete;
 
-        virtual ~exception() noexcept = default;
+        virtual ~exception() noexcept;
         virtual const char *what() const noexcept = 0;
 
     private:
@@ -62,33 +62,54 @@ namespace acul
     class APPLIB_API runtime_error final : public exception
     {
     public:
+        runtime_error(const string &message) noexcept;
         runtime_error(const char *message) noexcept : exception(), _message(message) {}
 
-        const char *what() const noexcept override { return _message; }
+        const char *what() const noexcept override { return _message.c_str(); }
 
         ~runtime_error() noexcept override = default;
 
     private:
-        const char *_message;
+        refstring _message;
     };
 
     class APPLIB_API bad_alloc final : public exception
     {
     public:
-        bad_alloc(size_t size) noexcept : exception()
-        {
-            _message = format("bad_alloc: failed to allocate %zu bytes", size);
-        }
+        bad_alloc(size_t size) noexcept;
 
         const char *what() const noexcept override { return _message.c_str(); }
 
         ~bad_alloc() noexcept override = default;
 
     private:
-        std::string _message;
+        refstring _message;
     };
 
-#else
-    #error "Platform not supported"
-#endif
-}
+    class APPLIB_API bad_cast final : public exception
+    {
+    public:
+        bad_cast(const string &message) noexcept;
+        bad_cast(const char *message) noexcept : exception(), _message(message) {}
+
+        const char *what() const noexcept override { return _message.c_str(); }
+
+        ~bad_cast() noexcept override = default;
+
+    private:
+        refstring _message;
+    };
+
+    class APPLIB_API out_of_range final : public exception
+    {
+    public:
+        out_of_range(size_t max_range, size_t attempt) noexcept;
+
+        const char *what() const noexcept override { return _message.c_str(); }
+
+        ~out_of_range() noexcept override = default;
+
+    private:
+        refstring _message;
+    };
+} // namespace acul

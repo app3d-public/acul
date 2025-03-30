@@ -1,8 +1,9 @@
 #ifndef APP_GRAPHICS_PIPELINE_H
 #define APP_GRAPHICS_PIPELINE_H
 
-#include "../core/log.hpp"
+#include "../log.hpp"
 #include "device.hpp"
+
 
 // Сonfiguration settings for a Vulkan graphics pipeline.
 struct IPipelineConfig
@@ -79,9 +80,9 @@ struct PipelineConfig<vk::ComputePipelineCreateInfo> final : public IPipelineCon
  */
 struct APPLIB_API ShaderModule
 {
-    std::filesystem::path path; ///< Path to the shader file.
-    vk::ShaderModule module;    ///< Vulkan shader module object.
-    acul::vector<char> code;    ///< Raw shader code.
+    acul::string path;     ///< Path to the shader file.
+    vk::ShaderModule module; ///< Vulkan shader module object.
+    acul::vector<char> code; ///< Raw shader code.
 
     /**
      * @brief Load the shader module from the specified device.

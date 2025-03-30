@@ -4,10 +4,11 @@
 #include <vk_mem_alloc.h>
 #pragma clang diagnostic pop
 #include <vulkan/vulkan.hpp>
-#include "../acul/hashset.hpp"
-#include "../acul/scalars.hpp"
-#include "../acul/vector.hpp"
-#include "../core/api.hpp"
+#include "../api.hpp"
+#include "../exception.hpp"
+#include "../hash/hashset.hpp"
+#include "../scalars.hpp"
+#include "../vector.hpp"
 #include "pool.hpp"
 
 #if VK_HEADER_VERSION > 290
@@ -91,7 +92,7 @@ struct CmdBufAlloc
     {
         vk::CommandBufferAllocateInfo allocInfo(*commandPool, Level, size);
         auto res = device->allocateCommandBuffers(&allocInfo, pBuffers, *loader);
-        if (res != vk::Result::eSuccess) throw std::bad_alloc();
+        if (res != vk::Result::eSuccess) throw acul::bad_alloc(size);
     }
 
     void release(vk::CommandBuffer &buffer)

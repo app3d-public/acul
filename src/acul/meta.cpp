@@ -1,55 +1,45 @@
 #include <acul/log.hpp>
 #include <acul/meta.hpp>
 
-namespace meta
+namespace acul
 {
-    acul::hashmap<u32, const Stream *> g_Streams;
-
-    void addStream(u32 signature, const Stream *stream)
+    namespace meta
     {
-        auto [it, inserted] = g_Streams.try_emplace(signature, stream);
-        if (!inserted) logWarn("Stream 0x%08x already registered", signature);
-    }
+        acul::hashmap<u32, const stream *> g_Streams;
 
-    void initStreams(const acul::vector<std::pair<u32, const Stream *>> &streams)
-    {
-        g_Streams.insert(streams.begin(), streams.end());
-    }
-
-    void clearStreams() { g_Streams.clear(); }
-
-    const Stream *getStream(u32 signature)
-    {
-        auto it = g_Streams.find(signature);
-        if (it == g_Streams.end())
+        const stream *get_stream(u32 signature)
         {
-            logError("Failed to recognize meta stream signature: 0x%08x", signature);
-            return nullptr;
-        }
-        return it->second;
-    }
-
-    /*********************************
-     **
-     ** Default metadata
-     **
-     *********************************/
-
-    namespace streams
-    {
-        Block *readExternalBlock(acul::bin_stream &stream)
-        {
-            ExternalBlock *block = acul::alloc<ExternalBlock>();
-            stream.read(block->dataSize);
-            block->data = acul::alloc_n<char>(block->dataSize);
-            stream.read(block->data, block->dataSize);
-            return block;
+            auto it = g_Streams.find(signature);
+            if (it == g_Streams.end())
+            {
+                logError("Failed to recognize meta stream signature: 0x%08x", signature);
+                return nullptr;
+            }
+            return it->second;
         }
 
-        void writeExternalBlock(acul::bin_stream &stream, Block *content)
+        /*********************************
+         **
+         ** Default metadata
+         **
+         *********************************/
+
+        namespace streams
         {
-            ExternalBlock *ext = static_cast<ExternalBlock *>(content);
-            stream.write(ext->dataSize).write(ext->data, ext->dataSize);
-        }
-    } // namespace streams
-} // namespace meta
+            block *readRawBlock(acul::bin_stream &stream)
+            {
+                auto *block = acul::alloc<acul::meta::raw_block>();
+                stream.read(block->dataSize);
+                block->data = acul::alloc_n<char>(block->dataSize);
+                stream.read(block->data, block->dataSize);
+                return block;
+            }
+
+            void writeRawBlock(acul::bin_stream &stream, block *content)
+            {
+                auto *raw = static_cast<acul::meta::raw_block *>(content);
+                stream.write(raw->dataSize).write(raw->data, raw->dataSize);
+            }
+        } // namespace streams
+    } // namespace meta
+} // namespace acul

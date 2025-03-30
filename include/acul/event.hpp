@@ -1,13 +1,14 @@
-#ifndef APP_CORE_EVENT_H
-#define APP_CORE_EVENT_H
+#ifndef APP_ACUL_EVENT_H
+#define APP_ACUL_EVENT_H
 
 #include <cassert>
 #include <functional>
-#include "../acul/hash.hpp"
-#include "../acul/map.hpp"
-#include "../acul/type_traits.hpp"
-#include "../acul/vector.hpp"
 #include "api.hpp"
+#include "hash/hashmap.hpp"
+#include "map.hpp"
+#include "scalars.hpp"
+#include "type_traits.hpp"
+#include "vector.hpp"
 
 namespace events
 {

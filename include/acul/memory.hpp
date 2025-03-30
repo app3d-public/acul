@@ -1,5 +1,5 @@
-#ifndef APP_CORE_MEM_ALLOCATOR_H
-#define APP_CORE_MEM_ALLOCATOR_H
+#ifndef APP_ACUL_MEM_ALLOCATOR_H
+#define APP_ACUL_MEM_ALLOCATOR_H
 
 #include <cstddef>
 #include <limits>
@@ -32,7 +32,7 @@ namespace acul
                                                : scalable_malloc(newSize * sizeof(T)));
         }
 
-        static inline void deallocate(pointer p, size_type num) noexcept { scalable_free(p); }
+        static inline void deallocate(pointer p, size_type num = 0) noexcept { scalable_free(p); }
 
         static inline size_type max_size() noexcept { return std::numeric_limits<size_type>::max() / sizeof(T); }
 
@@ -112,6 +112,17 @@ namespace acul
         if constexpr (!std::is_trivially_destructible_v<T>)
             for (size_t i = 0; i < size; ++i) acul::mem_allocator<T>::destroy(ptr + i);
         mem_allocator<T>::deallocate(ptr, size);
+    }
+
+    /**
+     * \brief Get the recommended memory growth size.
+     * @param csize Current memory size.
+     * @param msize Minimum (preferred) memory size.
+     * @return The recommended memory growth size.
+     */
+    inline size_t get_growth_size(size_t csize, size_t msize)
+    {
+        return std::max(csize * 2, std::max((size_t)8UL, msize));
     }
 
     struct mem_control_block

@@ -1,5 +1,5 @@
-#ifndef CORE_STD_BASIC_TYPES_H
-#define CORE_STD_BASIC_TYPES_H
+#ifndef ACUL_STD_BASIC_TYPES_H
+#define ACUL_STD_BASIC_TYPES_H
 
 #include <cstdint>
 #ifdef ACUL_HALF_ENABLE

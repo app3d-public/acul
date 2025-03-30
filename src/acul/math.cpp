@@ -1,6 +1,6 @@
-#include <acul/scalars.hpp>
+#include <acul/api.hpp>
 #include <acul/point2d.hpp>
-#include <core/api.hpp>
+#include <acul/scalars.hpp>
 #include <glm/glm.hpp>
 
 namespace math

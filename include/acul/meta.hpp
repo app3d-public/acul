@@ -1,83 +1,68 @@
 #pragma once
 
+#include "scalars.hpp"
+#include "stream.hpp"
 #include "api.hpp"
-#include "../acul/stream.hpp"
-#include "../acul/scalars.hpp"
+#include "hash/hashmap.hpp"
 
-#define SIGN_APP_PART_DEFAULT 0x5828
-
-namespace meta
+namespace acul
 {
-    struct Header
+    namespace meta
     {
-        u32 signature;
-        u64 blockSize;
-    };
-    struct Block
-    {
-        virtual ~Block() = default;
+        struct header
+        {
+            u32 signature;
+            u64 blockSize;
+        };
+        struct block
+        {
+            virtual ~block() = default;
 
-        virtual u32 signature() const = 0;
-    };
+            virtual u32 signature() const = 0;
+        };
 
-    struct Stream
-    {
-        Block *(*read)(acul::bin_stream &stream);
-        void (*write)(acul::bin_stream &stream, Block *block);
-    };
+        struct stream
+        {
+            block *(*read)(acul::bin_stream &stream);
+            void (*write)(acul::bin_stream &stream, block *block);
+        };
 
-    /**
-     * @brief Registers a stream handler for a specific block signature.
-     * @param signature The signature identifying the block type.
-     * @param stream The stream handler to register.
-     */
-    APPLIB_API void addStream(u32 signature, const Stream *stream);
+        APPLIB_API const stream *get_stream(u32 signature);
+        extern APPLIB_API acul::hashmap<u32, const stream *> g_Streams;
 
-    /**
-     * @brief Initializes the stream handlers.
-     * @param streams The stream handlers to initialize.
-     */
-    APPLIB_API void initStreams(const acul::vector<std::pair<u32, const Stream *>> &streams);
+        /*********************************
+         **
+         ** Default metadata
+         **
+         *********************************/
 
-    /**
-     * @brief Clears all registered stream handlers.
-     */
-    APPLIB_API void clearStreams();
+        namespace sign_block
+        {
+            enum : u32
+            {
+                raw_block = 0xF82E95C8
+            };
+        }
 
-    /**
-     * @brief Retrieves a stream handler for a specific block signature.
-     * @param signature The signature identifying the block type.
-     * @return The stream handler for the specified signature, or nullptr if not found.
-     */
-    APPLIB_API const Stream *getStream(u32 signature);
+        // Meta block reserved for common external resourcees
+        struct raw_block : public block
+        {
+            char *data;
+            u64 dataSize;
 
-    /*********************************
-     **
-     ** Default metadata
-     **
-     *********************************/
+            raw_block(char *data = nullptr, u64 dataSize = 0) : data(data), dataSize(dataSize) {}
 
-    namespace sign_block
-    {
-        constexpr u32 external_block = SIGN_APP_PART_DEFAULT << 16 | 0x3F84;
-    }
+            virtual u32 signature() const { return sign_block::raw_block; }
 
-    // Meta block reserved for common external resourcees
-    struct ExternalBlock : public meta::Block
-    {
-        char *data = nullptr;
-        u64 dataSize = 0;
+            ~raw_block() { acul::release(data); }
+        };
 
-        virtual u32 signature() const { return sign_block::external_block; }
+        namespace streams
+        {
+            APPLIB_API block *readRawBlock(acul::bin_stream &stream);
+            APPLIB_API void writeRawBlock(acul::bin_stream &stream, block *block);
 
-        ~ExternalBlock() { acul::release(data); }
-    };
-
-    namespace streams
-    {
-        APPLIB_API Block *readExternalBlock(acul::bin_stream &stream);
-        APPLIB_API void writeExternalBlock(acul::bin_stream &stream, Block *block);
-
-        inline Stream external_block = {readExternalBlock, writeExternalBlock};
-    } // namespace streams
-} // namespace meta
+            inline stream raw_block = {readRawBlock, writeRawBlock};
+        } // namespace streams
+    } // namespace meta
+} // namespace acul

@@ -1,12 +1,11 @@
-#ifndef APP_CORE_STD_STREAM_H
-#define APP_CORE_STD_STREAM_H
+#ifndef APP_ACUL_STD_STREAM_H
+#define APP_ACUL_STD_STREAM_H
 
-#include <stdexcept>
-#include <string>
-#include "../acul/api.hpp"
+#include "api.hpp"
 #include "list.hpp"
+#include "string/string.hpp"
 #include "vector.hpp"
-#ifdef CORE_GLM_ENABLE
+#ifdef ACUL_GLM_ENABLE
     #include <glm/glm.hpp>
 #endif
 
@@ -66,13 +65,13 @@ namespace acul
          * @param str String to write.
          * @return Reference to the stream to support chained calls.
          */
-        bin_stream &write(const std::string &str)
+        bin_stream &write(const acul::string &str)
         {
             _data.insert(_data.end(), str.begin(), str.end());
             _data.push_back('\0');
             return *this;
         }
-#ifdef CORE_GLM_ENABLE
+#ifdef ACUL_GLM_ENABLE
 
         bin_stream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
 
@@ -105,7 +104,7 @@ namespace acul
          * @tparam T Type of the value to read.
          * @param val Reference where the read value will be stored.
          * @return Reference to the stream to support chained calls.
-         * @throws std::runtime_error If there's not enough data in the stream.
+         * @throws runtime_error If there's not enough data in the stream.
          */
         template <typename T>
         bin_stream &read(T &val)
@@ -116,7 +115,7 @@ namespace acul
                 _pos += sizeof(T);
             }
             else
-                throw std::runtime_error("Error reading from stream");
+                throw runtime_error("Error reading from stream");
             return *this;
         }
 
@@ -140,7 +139,7 @@ namespace acul
          * @param str Reference where the read string will be stored.
          * @return Reference to the stream to support chained calls.
          */
-        bin_stream &read(std::string &str)
+        bin_stream &read(acul::string &str)
         {
             str.clear();
             while (_pos < _data.size())
@@ -151,7 +150,7 @@ namespace acul
             }
             return *this;
         }
-#ifdef CORE_GLM_ENABLE
+#ifdef ACUL_GLM_ENABLE
 
         bin_stream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
         bin_stream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
@@ -187,7 +186,7 @@ namespace acul
         template <typename T>
         bin_stream &write(T *data, size_t size)
         {
-            if (data == nullptr) throw std::invalid_argument("Null pointer passed to write");
+            if (data == nullptr) throw runtime_error("Null pointer passed to write");
 
             _data.insert(_data.end(), reinterpret_cast<const char *>(data),
                          reinterpret_cast<const char *>(data) + size * sizeof(T));
@@ -204,12 +203,12 @@ namespace acul
         template <typename T>
         bin_stream &read(T *data, size_t size)
         {
-            if (data == nullptr) throw std::invalid_argument("Null pointer passed to read");
+            if (data == nullptr) throw runtime_error("Null pointer passed to read");
 
             size_t byteSize = size * sizeof(T);
-            if (_pos + byteSize > _data.size()) throw std::runtime_error("Error reading from stream");
+            if (_pos + byteSize > _data.size()) throw runtime_error("Error reading from stream");
 
-            std::memcpy(data, &_data[_pos], byteSize);
+            memcpy(data, &_data[_pos], byteSize);
             _pos += byteSize;
 
             return *this;
@@ -239,7 +238,7 @@ namespace acul
          */
         void pos(size_t pos)
         {
-            if (pos > _data.size()) throw std::out_of_range("Invalid position");
+            if (pos > _data.size()) throw out_of_range(_data.size(), pos);
             _pos = pos;
         }
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <glm/fwd.hpp>
-#include "../acul/point2d.hpp"
+#include <glm/glm.hpp>
 #include "api.hpp"
+#include "point2d.hpp"
 
 namespace math
 {
@@ -130,9 +130,53 @@ namespace math
 
 namespace glm
 {
-    APPLIB_API bool operator<(const glm::vec3 &a, const glm::vec3 &b);
-    APPLIB_API bool operator==(const glm::vec3 &a, const glm::vec3 &b);
+    APPLIB_API bool operator<(const vec3 &a, const vec3 &b);
+    APPLIB_API bool operator==(const vec3 &a, const vec3 &b);
 
-    APPLIB_API bool operator<(const glm::vec2 &a, const glm::vec2 &b);
-    APPLIB_API bool operator==(const glm::vec2 &a, const glm::vec2 &b);
+    APPLIB_API bool operator<(const vec2 &a, const vec2 &b);
+    APPLIB_API bool operator==(const vec2 &a, const vec2 &b);
 } // namespace glm
+
+namespace std
+{
+    template <>
+    struct hash<glm::ivec3>
+    {
+        std::size_t operator()(const glm::ivec3 &k) const
+        {
+            return ((std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1)) >> 1) ^ (std::hash<int>()(k.z) << 1);
+        }
+    };
+
+    template <>
+    struct hash<glm::ivec2>
+    {
+        std::size_t operator()(const glm::ivec2 &k) const
+        {
+            return ((std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1)) >> 1);
+        }
+    };
+
+    template <>
+    struct hash<glm::vec2>
+    {
+        size_t operator()(const glm::vec2 &vec) const
+        {
+            size_t h1 = std::hash<f32>()(vec.x);
+            size_t h2 = std::hash<f32>()(vec.y);
+            return h1 ^ (h2 << 1);
+        }
+    };
+
+    template <>
+    struct hash<glm::vec3>
+    {
+        size_t operator()(const glm::vec3 &vec) const
+        {
+            size_t h1 = std::hash<f32>()(vec.x);
+            size_t h2 = std::hash<f32>()(vec.y);
+            size_t h3 = std::hash<f32>()(vec.z);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    };
+} // namespace std

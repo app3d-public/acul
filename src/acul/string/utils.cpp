@@ -1,4 +1,4 @@
-#include <acul/string.hpp>
+#include <acul/string/utils.hpp>
 #include <cmath>
 #include <cstdarg>
 #include <cstring>
@@ -9,9 +9,9 @@
 
 namespace acul
 {
-    std::u16string utf8_to_utf16(const std::string &src)
+    u16string utf8_to_utf16(const string &src)
     {
-        std::u16string out;
+        u16string out;
         unsigned int codepoint;
         for (size_t i = 0; i < src.size();)
         {
@@ -31,59 +31,45 @@ namespace acul
             {
                 if (codepoint > 0xffff)
                 {
-                    out.append(1, static_cast<char16_t>(0xd800 + (codepoint >> 10)));
-                    out.append(1, static_cast<char16_t>(0xdc00 + (codepoint & 0x03ff)));
+                    c16 buf[2] = {static_cast<c16>((codepoint >> 10) + 0xd800),
+                                  static_cast<c16>((codepoint & 0x03ff) + 0xdc00)};
+                    out.append(buf, 2);
                 }
                 else if (codepoint < 0xd800 || codepoint >= 0xe000)
-                    out.append(1, static_cast<char16_t>(codepoint));
+                    out.push_back(codepoint);
             }
         }
         return out;
     }
 
-    std::string utf16_to_utf8(const std::u16string &src)
+    string utf16_to_utf8(const u16string &src)
     {
-        std::string result;
+        string result;
         for (auto cp : src)
         {
             if (cp < 0x80)
-                result.push_back(static_cast<uint8_t>(cp));
+                result.push_back(static_cast<u8>(cp));
             else if (cp < 0x800)
             {
-                uint8_t chs[] = {static_cast<uint8_t>((cp >> 6) | 0xc0), static_cast<uint8_t>((cp & 0x3f) | 0x80)};
+                u8 chs[] = {static_cast<u8>((cp >> 6) | 0xc0), static_cast<u8>((cp & 0x3f) | 0x80)};
                 result.append(std::begin(chs), std::end(chs));
             }
             else
             {
-                uint8_t chs[] = {static_cast<uint8_t>((cp >> 12) | 0xe0),
-                                 static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80),
-                                 static_cast<uint8_t>((cp & 0x3f) | 0x80)};
+                u8 chs[] = {static_cast<u8>((cp >> 12) | 0xe0), static_cast<u8>(((cp >> 6) & 0x3f) | 0x80),
+                            static_cast<u8>((cp & 0x3f) | 0x80)};
                 result.append(std::begin(chs), std::end(chs));
             }
         }
         return result;
     }
 
-#ifdef _WIN32
-    std::filesystem::path make_path(const std::string &path)
+    u16string trim(const u16string &inputStr, size_t max)
     {
-        int wide_size = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
-        if (wide_size <= 0) return {};
-
-        std::wstring wstr;
-        wstr.resize(wide_size - 1);
-        MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &wstr[0], wide_size);
-
-        return std::filesystem::path(wstr);
-    }
-#endif
-
-    std::u16string trim(const std::u16string &inputStr, size_t max)
-    {
-        std::u16string output;
+        u16string output;
         int from = -1;
         int length = -1;
-        for (char16_t v : inputStr)
+        for (c16 v : inputStr)
         {
             if (v != '\f' && v != '\n' && v != '\r' && v != '\t' && v != '\v')
             {
@@ -101,15 +87,15 @@ namespace acul
         return output.substr(from, to);
     }
 
-    std::string trim(const std::string &inputStr, size_t max)
+    string trim(const string &inputStr, size_t max)
     {
-        std::u16string u16string = trim(utf8_to_utf16(inputStr), max);
+        u16string u16string = trim(utf8_to_utf16(inputStr), max);
         return utf16_to_utf8(u16string);
     }
 
-    std::string format(const char *format, ...) noexcept
+    string format(const char *format, ...) noexcept
     {
-        std::string result;
+        string result;
         va_list args;
         va_start(args, format);
         int size = vsnprintf(nullptr, 0, format, args) + 1;
@@ -119,15 +105,15 @@ namespace acul
         {
             char buf[size];
             vsnprintf(buf, size, format, args);
-            result = std::string(buf, buf + size - 1);
+            result = string(buf, buf + size - 1);
         }
         va_end(args);
         return result;
     }
 
-    std::string format_va_list(const char *format, va_list args) noexcept
+    string format_va_list(const char *format, va_list args) noexcept
     {
-        std::string result;
+        string result;
         va_list args_copy;
         va_copy(args_copy, args);
         int size = vsnprintf(nullptr, 0, format, args_copy) + 1;
@@ -140,18 +126,16 @@ namespace acul
             va_copy(args_copy, args);
             vsnprintf(buf, size, format, args_copy);
             va_end(args_copy);
-            result = std::string(buf, buf + size - 1);
+            result = string(buf, buf + size - 1);
         }
         return result;
     }
 
-    int to_string(int value, char *buffer, size_t buffer_size)
+    int to_string(f32 value, char *buffer, size_t buffer_size, int precision)
     {
         if (buffer_size < 2) return 0;
 
         char *ptr = buffer;
-
-        // Sign
         if (value < 0)
         {
             *ptr = '-';
@@ -160,62 +144,6 @@ namespace acul
             buffer_size--;
         }
 
-        // If zero
-        if (value == 0)
-        {
-            if (buffer_size >= 2)
-            {
-                *ptr = '0';
-                ++ptr;
-                return 1;
-            }
-            else
-                return 0;
-        }
-
-        int numDigits = 0;
-        int tempValue = value;
-        while (tempValue > 0)
-        {
-            numDigits++;
-            tempValue /= 10;
-        }
-        if (numDigits > buffer_size - 1) return 0;
-
-        // Reverse order array for storing digits
-        char reverseOrder[numDigits];
-
-        int i = 0;
-        do {
-            reverseOrder[i++] = value % 10;
-            value /= 10;
-        } while (value);
-
-        // Writing digits to the buffer in the correct order
-        while (i--)
-        {
-            *ptr = '0' + reverseOrder[i];
-            ptr++;
-        }
-        return ptr - buffer;
-    }
-
-    int to_string(float value, char *buffer, size_t buffer_size, int precision)
-    {
-        if (buffer_size < 2) return 0;
-
-        char *ptr = buffer;
-
-        // Обработка знака числа
-        if (value < 0)
-        {
-            *ptr = '-';
-            value = -value;
-            ptr++;
-            buffer_size--;
-        }
-
-        // Обработка случая, когда значение меньше единицы
         if (fabs(value) < pow(10, -precision))
         {
             if (buffer_size >= 2)
@@ -242,7 +170,7 @@ namespace acul
                 return 0;
         }
 
-        float tempValue = value;
+        f32 tempValue = value;
         int numDigits = 0;
         if (tempValue >= 1)
         {
@@ -302,7 +230,7 @@ namespace acul
 
         return ptr - buffer;
     }
-#ifdef CORE_GLM_ENABLE
+#ifdef ACUL_GLM_ENABLE
     int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
     {
         int written = to_string(vec.x, buffer + offset, buffer_size - offset, 5);
@@ -435,28 +363,28 @@ namespace acul
             if (exponentNegative) exponentPart = -exponentPart;
         }
 
-        float result = (integerPart + fractionalPart / fractionalDiv) * std::pow(10.0, exponentPart);
+        f32 result = (integerPart + fractionalPart / fractionalDiv) * pow(10.0, exponentPart);
         value = negative ? -result : result;
 
         str = ptr; // Update the input pointer
         return true;
     }
 
-    std::string str_range(const char *&str)
+    string str_range(const char *&str)
     {
         const char *begin = str;
         while (isspace(*begin)) ++begin;
         const char *end = begin;
         while (*end && !isspace(*end)) ++end;
         str = end;
-        return std::string(begin, end);
+        return string(begin, end);
     }
 
-    std::string trim_end(const char *str)
+    string trim_end(const char *str)
     {
         if (!str) return "";
-        const char *end = str + std::strlen(str);
+        const char *end = str + null_terminated_length(str);
         while (end != str && (*(end - 1) == '\n' || *(end - 1) == '\r')) --end;
-        return std::string(str, end);
+        return string(str, end);
     }
 } // namespace acul

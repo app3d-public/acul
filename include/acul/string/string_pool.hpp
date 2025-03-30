@@ -4,7 +4,8 @@
 #include <cstdio>
 #include <cstring>
 #include <iterator>
-#include "vector.hpp"
+#include "../vector.hpp"
+#include "base.hpp"
 
 namespace acul
 {
@@ -19,14 +20,12 @@ namespace acul
     template <typename T>
     inline constexpr bool is_string_char_v = is_string_char<T>::value;
 
-    template <typename T, template <typename> class allocator_base_t = mem_allocator>
+    template <typename T, typename Allocator = mem_allocator<T>>
     class string_pool
     {
         static_assert(is_string_char_v<T>, "string_pool requires a string character type");
 
     public:
-        using allocator_t = allocator_base_t<T>;
-        static allocator_t allocator;
         using value_type = T *;
         using reference = T *&;
         using const_reference = const T *&;
@@ -40,12 +39,12 @@ namespace acul
         using reverse_iterator = std::reverse_iterator<Iterator>;
         using const_reverse_iterator = std::reverse_iterator<Iterator>;
 
-        explicit string_pool(size_type poolSize) : _poolSize(poolSize), _data(allocator.allocate(poolSize)), _pos(0) {}
+        explicit string_pool(size_type poolSize) : _poolSize(poolSize), _data(Allocator::allocate(poolSize)), _pos(0) {}
 
-        ~string_pool() noexcept { allocator.deallocate(_data, _poolSize); }
+        ~string_pool() noexcept { Allocator::deallocate(_data, _poolSize); }
 
         string_pool(const string_pool &other) noexcept
-            : _poolSize(other._poolSize), _data(allocator.allocate(_poolSize)), _pos(other._pos)
+            : _poolSize(other._poolSize), _data(Allocator::allocate(_poolSize)), _pos(other._pos)
         {
             memcpy(_data, other._data, _pos * sizeof(T));
             _lines = other._lines;
@@ -64,7 +63,7 @@ namespace acul
             if (this != &other)
             {
                 _poolSize = other._poolSize;
-                _data = allocator.allocate(_poolSize);
+                _data = Allocator::allocate(_poolSize);
                 _pos = other._pos;
                 memcpy(_data, other._data, _pos * sizeof(T));
                 _lines = other._lines;
@@ -76,7 +75,7 @@ namespace acul
         {
             if (this != &other)
             {
-                allocator.deallocate(_data, _poolSize);
+                Allocator::deallocate(_data, _poolSize);
                 _poolSize = other._poolSize;
                 _data = other._data;
                 _pos = other._pos;
@@ -90,7 +89,7 @@ namespace acul
 
         pointer operator[](size_type index) { return _data + _lines[index]; }
 
-        const_pointer operator[](size_type index) const { return _data[_lines[index]]; }
+        const_pointer operator[](size_type index) const { return _data + _lines[index]; }
 
         bool operator==(const string_pool &other) const
         {
@@ -142,7 +141,7 @@ namespace acul
 
         size_type poolSize() const noexcept { return _poolSize; }
 
-        size_type max_size() const noexcept { return allocator.max_size(); }
+        size_type max_size() const noexcept { return Allocator::max_size(); }
 
         const_pointer data() const { return _data; }
         pointer data() { return _data; }
@@ -151,7 +150,7 @@ namespace acul
         {
             if (_poolSize > newSize) return;
             _poolSize = newSize;
-            _data = allocator.reallocate(_data, _poolSize);
+            _data = Allocator::reallocate(_data, _poolSize);
         }
 
         void clear()
@@ -160,33 +159,29 @@ namespace acul
             _pos = 0;
         }
 
-        void push(const_pointer str, size_t length) noexcept
+        void push(const_pointer str, size_type length) noexcept
         {
-            const size_t newLength = _pos + length + 1;
-            if (newLength > _poolSize) resize(newLength);
+            if (_pos + length + 1 > _poolSize) resize(_pos + length + 1);
             memcpy(_data + _pos, str, length);
             _data[_pos + length] = '\0';
             _lines.push_back(_pos);
-            _pos = newLength;
+            _pos += (length + 1);
         }
 
         void pop() noexcept
         {
-            _pos -= strlen(_data + _lines[_pos]) + 1;
+            _pos -= null_terminated_length(_data + _lines[_pos]) + 1;
             _lines.pop_back();
         }
 
     private:
         size_type _poolSize;
-        T *_data;
+        pointer _data;
         vector<size_type> _lines;
         size_type _pos;
     };
 
-    template <typename T, template <typename> class allocator_base_t>
-    typename string_pool<T, allocator_base_t>::allocator_t string_pool<T, allocator_base_t>::allocator{};
-
-    template <typename T, template <typename> class Allocator>
+    template <typename T, typename Allocator>
     class string_pool<T, Allocator>::Iterator
     {
     public:

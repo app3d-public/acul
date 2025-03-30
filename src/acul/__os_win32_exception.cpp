@@ -1,7 +1,7 @@
 #include <acul/exception.hpp>
-#include <acul/hash.hpp>
+#include <acul/hash/hashmap.hpp>
 #include <acul/map.hpp>
-#include <acul/string.hpp>
+#include <acul/string/utils.hpp>
 #include <acul/vector.hpp>
 #include <dbghelp.h>
 #include <psapi.h>
@@ -12,8 +12,6 @@
 
 namespace acul
 {
-    std::filesystem::path exception::dump_folder;
-
     void writeExceptionInfo(_EXCEPTION_RECORD *pRecord, std::ofstream &stream)
     {
         stream << "Exception code: 0x" << std::hex << pRecord->ExceptionCode << std::endl;
@@ -118,7 +116,6 @@ namespace acul
             --it;
             if (address >= it->first && address < it->second.endAddress) return it->second.name;
         }
-        printf("%llx is out\n", address);
         return "<unknown>";
     }
 
@@ -239,9 +236,11 @@ namespace acul
         stream << "Stack trace:\n";
         int frameIndex = 0;
 
-        for (auto &[addr, offset] : except_info.addresses)
+        for (int i = 0; i < except_info.addressesCount; ++i)
         {
-            stream << acul::format("\t#%d 0x%llx", frameIndex, offset);
+            auto &[addr, offset] = except_info.addresses[i];
+            string line = format("\t#%d 0x%llx", frameIndex, offset);
+            stream << line.c_str();
             if (addr)
             {
                 std::string name, moduleName;
@@ -278,10 +277,9 @@ namespace acul
         SymCleanup(except_info.hProcess);
     }
 
-    void createMiniDump(EXCEPTION_POINTERS *pep, const std::filesystem::path &path)
+    void createMiniDump(EXCEPTION_POINTERS *pep, const acul::string &path)
     {
-        HANDLE hFile =
-            CreateFileA(path.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        HANDLE hFile = CreateFileA(path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) return;
 
         MINIDUMP_EXCEPTION_INFORMATION mdei;
@@ -310,11 +308,13 @@ namespace acul
         stackFrame.AddrPC.Mode = AddrModeFlat;
         stackFrame.AddrFrame.Mode = AddrModeFlat;
         stackFrame.AddrStack.Mode = AddrModeFlat;
+        vector<except_addr_t> addresses;
         while (StackWalk64(machineType, except_info.hProcess, except_info.hThread, &stackFrame, &context, NULL,
                            SymFunctionTableAccess64, SymGetModuleBase64, NULL))
         {
             DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.Offset);
-            except_info.addresses.emplace_back(base, stackFrame.AddrPC.Offset);
+            addresses.emplace_back(base, stackFrame.AddrPC.Offset);
         }
+        except_info.addresses = addresses.release();
     }
 } // namespace acul

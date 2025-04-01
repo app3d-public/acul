@@ -1,8 +1,8 @@
 #ifndef APP_ACUL_STD_COMPARATOR_H
 #define APP_ACUL_STD_COMPARATOR_H
 
-#include <string>
 #include "map.hpp"
+#include "string/string.hpp"
 #include "vector.hpp"
 
 namespace acul
@@ -15,7 +15,7 @@ namespace acul
      */
     struct case_insensitive_comparator
     {
-        bool operator()(const std::string &a, const std::string &b) const noexcept
+        bool operator()(const string &a, const string &b) const noexcept
         {
             return strcasecmp(a.c_str(), b.c_str()) < 0;
         }

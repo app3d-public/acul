@@ -76,7 +76,7 @@ namespace acul
             return *this;
         }
 
-        basic_string<T, Allocator> str() noexcept { return _data; }
+        basic_string<T, Allocator> str() const noexcept { return _data; }
 
         void clear() noexcept { _data.clear(); }
 

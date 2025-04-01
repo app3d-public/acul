@@ -1,9 +1,9 @@
 #pragma once
 
-#include "scalars.hpp"
-#include "stream.hpp"
 #include "api.hpp"
 #include "hash/hashmap.hpp"
+#include "scalars.hpp"
+#include "stream.hpp"
 
 namespace acul
 {
@@ -12,7 +12,7 @@ namespace acul
         struct header
         {
             u32 signature;
-            u64 blockSize;
+            u64 block_size;
         };
         struct block
         {
@@ -23,12 +23,12 @@ namespace acul
 
         struct stream
         {
-            block *(*read)(acul::bin_stream &stream);
-            void (*write)(acul::bin_stream &stream, block *block);
+            block *(*read)(bin_stream &stream);
+            void (*write)(bin_stream &stream, block *block);
         };
 
         APPLIB_API const stream *get_stream(u32 signature);
-        extern APPLIB_API acul::hashmap<u32, const stream *> g_Streams;
+        extern APPLIB_API hashmap<u32, const stream *> registered_streams;
 
         /*********************************
          **
@@ -48,9 +48,9 @@ namespace acul
         struct raw_block : public block
         {
             char *data;
-            u64 dataSize;
+            u64 data_size;
 
-            raw_block(char *data = nullptr, u64 dataSize = 0) : data(data), dataSize(dataSize) {}
+            raw_block(char *data = nullptr, u64 data_size = 0) : data(data), data_size(data_size) {}
 
             virtual u32 signature() const { return sign_block::raw_block; }
 
@@ -59,10 +59,10 @@ namespace acul
 
         namespace streams
         {
-            APPLIB_API block *readRawBlock(acul::bin_stream &stream);
-            APPLIB_API void writeRawBlock(acul::bin_stream &stream, block *block);
+            APPLIB_API block *read_raw_block(bin_stream &stream);
+            APPLIB_API void write_raw_block(bin_stream &stream, block *block);
 
-            inline stream raw_block = {readRawBlock, writeRawBlock};
+            inline stream raw_block = {read_raw_block, write_raw_block};
         } // namespace streams
     } // namespace meta
 } // namespace acul

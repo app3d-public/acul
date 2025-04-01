@@ -8,9 +8,9 @@
 
 namespace acul
 {
-    struct IDGen
+    struct id_gen
     {
-        IDGen() : gen(std::random_device{}()), dist(0, UINT64_MAX) {}
+        id_gen() : gen(std::random_device{}()), dist(0, UINT64_MAX) {}
 
         u64 operator()() { return dist(gen); }
 

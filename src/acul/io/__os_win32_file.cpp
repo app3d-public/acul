@@ -8,7 +8,7 @@ namespace acul
     {
         namespace file
         {
-            bool write_by_block(const string &filename, const char *buffer, size_t blockSize, acul::string &error)
+            bool write_by_block(const string &filename, const char *buffer, size_t blockSize, string &error)
             {
                 HANDLE fileHandle =
                     CreateFile(filename.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -90,29 +90,42 @@ namespace acul
                 }
             }
 
-            op_state list_files(const acul::string &base_path, acul::vector<acul::string> &dst, bool recursive)
+            // todo
+            op_state remove_file(const char *path)
+            {
+                if (DeleteFileA(path))
+                    return op_state::success;
+                else
+                {
+                    DWORD error = GetLastError();
+                    logError("Failed to remove file %s. Error code: %lu", path, error);
+                    return op_state::error;
+                }
+            }
+
+            op_state list_files(const string &base_path, vector<string> &dst, bool recursive)
             {
                 assert(!base_path.empty() && "base_path is null");
-                acul::u16string search_path = acul::utf8_to_utf16(base_path + "\\*");
-                WIN32_FIND_DATAW findData;
-                HANDLE handle = FindFirstFileW((LPCWSTR)search_path.c_str(), &findData);
+                u16string search_path = utf8_to_utf16(base_path + "\\*");
+                WIN32_FIND_DATAW find_data;
+                HANDLE handle = FindFirstFileW((LPCWSTR)search_path.c_str(), &find_data);
                 if (handle == INVALID_HANDLE_VALUE)
                 {
                     logError("Failed to open directory: %s. Error code: %lu", base_path.c_str(), GetLastError());
                     return op_state::error;
                 }
                 do {
-                    const wchar_t *name = findData.cFileName;
+                    const wchar_t *name = find_data.cFileName;
                     if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0) continue;
-                    acul::string fullPath = base_path + '/' + acul::utf16_to_utf8((const c16 *)name);
-                    if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                    string full_path = base_path + '/' + utf16_to_utf8((const c16 *)name);
+                    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                     {
-                        if (recursive) list_files(fullPath, dst, true);
+                        if (recursive) list_files(full_path, dst, true);
                     }
                     else
-                        dst.push_back(fullPath);
+                        dst.push_back(full_path);
 
-                } while (FindNextFileW(handle, &findData) != 0);
+                } while (FindNextFileW(handle, &find_data) != 0);
                 FindClose(handle);
                 return op_state::success;
             }

@@ -5,7 +5,6 @@
 
 namespace acul
 {
-
     template <typename T, typename Allocator = mem_allocator<T>>
     class list
     {

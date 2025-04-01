@@ -8,7 +8,7 @@ namespace acul
     {
         namespace file
         {
-            APPLIB_API void fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
+            APPLIB_API void fill_line_buffer(const char *data, size_t size, string_pool<char> &dst)
             {
                 const char *dataEnd = data + size;
 

@@ -10,62 +10,62 @@ namespace acul
 {
     namespace log
     {
-        enum class Level
+        enum class level
         {
-            Fatal,
-            Error,
-            Warn,
-            Info,
-            Debug,
-            Trace
+            fatal,
+            error,
+            warn,
+            info,
+            debug,
+            trace
         };
 
-        class TokenHandler
+        class token_handler_base
         {
         public:
-            virtual ~TokenHandler() = default;
-            virtual void handle(Level level, const char *message, stringstream &ss) const = 0;
+            virtual ~token_handler_base() = default;
+            virtual void handle(level level, const char *message, stringstream &ss) const = 0;
         };
 
-        using TokenHandlerList = acul::vector<acul::shared_ptr<TokenHandler>>;
+        using token_handler_list = acul::vector<acul::shared_ptr<token_handler_base>>;
 
-        class TextTokenHandler final : public TokenHandler
+        class text_handler final : public token_handler_base
         {
         public:
-            explicit TextTokenHandler(const string_view &text) : _text(text) {}
+            explicit text_handler(const string_view &text) : _text(text) {}
 
-            void handle(Level level, const char *message, stringstream &ss) const override { ss << _text; }
+            void handle(level level, const char *message, stringstream &ss) const override { ss << _text; }
 
         private:
             const string _text;
         };
 
-        class TimeTokenHandler final : public TokenHandler
+        class time_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override;
+            void handle(level level, const char *message, stringstream &ss) const override;
         };
 
-        class ThreadIdTokenHandler final : public TokenHandler
+        class thread_id_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override
+            void handle(level level, const char *message, stringstream &ss) const override
             {
 
                 ss << task::get_thread_id();
             }
         };
 
-        class LevelNameTokenHandler final : public TokenHandler
+        class level_name_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override;
+            void handle(level level, const char *message, stringstream &ss) const override;
         };
 
-        class MessageTokenHandler final : public TokenHandler
+        class message_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override { ss << message; }
+            void handle(level level, const char *message, stringstream &ss) const override { ss << message; }
         };
 
         namespace colors
@@ -79,26 +79,26 @@ namespace acul
             constexpr string_view reset = "\x1b[0m";
         }; // namespace colors
 
-        class ColorizeTokenHandler final : public TokenHandler
+        class color_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override;
+            void handle(level level, const char *message, stringstream &ss) const override;
         };
 
-        class DecolorizeTokenHandler final : public TokenHandler
+        class decolor_handler final : public token_handler_base
         {
         public:
-            void handle(Level level, const char *message, stringstream &ss) const override { ss << colors::reset; }
+            void handle(level level, const char *message, stringstream &ss) const override { ss << colors::reset; }
         };
 
-        class APPLIB_API Logger
+        class APPLIB_API logger_base
         {
         public:
-            Logger(const string &name) : _name(name), _tokens(acul::make_shared<TokenHandlerList>()) {}
+            logger_base(const string &name) : _name(name), _tokens(acul::make_shared<token_handler_list>()) {}
 
-            virtual ~Logger() = default;
+            virtual ~logger_base() = default;
 
-            void setPattern(const string &pattern);
+            void set_pattern(const string &pattern);
 
             string name() const { return _name; }
 
@@ -106,26 +106,26 @@ namespace acul
 
             virtual void write(const string &message) = 0;
 
-            void parseTokens(Level level, const char *message, stringstream &ss)
+            void parse_tokens(level level, const char *message, stringstream &ss)
             {
                 for (auto &token : *_tokens) token->handle(level, message, ss);
             }
 
         private:
             string _name;
-            acul::shared_ptr<TokenHandlerList> _tokens;
+            acul::shared_ptr<token_handler_list> _tokens;
         };
 
-        class APPLIB_API FileLogger final : public Logger
+        class APPLIB_API file_logger final : public logger_base
         {
         public:
-            FileLogger(const string &name, const io::path &path, std::ios_base::openmode flags)
-                : Logger(name), _path(path)
+            file_logger(const string &name, const io::path &path, std::ios_base::openmode flags)
+                : logger_base(name), _path(path)
             {
                 _fs.open(path.str().c_str(), flags);
             }
 
-            ~FileLogger()
+            ~file_logger()
             {
                 if (_fs.is_open()) _fs.close();
             }
@@ -142,10 +142,10 @@ namespace acul
             std::ofstream _fs;
         };
 
-        class ConsoleLogger final : public Logger
+        class console_logger final : public logger_base
         {
         public:
-            explicit ConsoleLogger(const string &name) : Logger(name) {}
+            explicit console_logger(const string &name) : logger_base(name) {}
 
             std::ostream &stream() override { return std::cout; }
 
@@ -159,10 +159,15 @@ namespace acul
          * Provides functionality to add, get, and remove loggers. It also allows logging messages with
          * different log levels.
          */
-        class APPLIB_API LogService final : public task::IService
+        class APPLIB_API log_service final : public task::service_base
         {
         public:
-            ~LogService();
+            APPLIB_API static log_service *instance;
+            logger_base *default_logger;
+            level level;
+
+            log_service() : default_logger(nullptr), level(level::error) { instance = this; }
+            ~log_service();
 
             /**
              * @brief Adds a logger with the specified name and file path.
@@ -172,7 +177,7 @@ namespace acul
              * @return A pointer to the added Logger object.
              */
             template <typename T, typename... Args>
-            T *addLogger(const string &name, Args &&...args)
+            T *add_logger(const string &name, Args &&...args)
             {
                 auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
                 _loggers[name] = logger;
@@ -184,7 +189,7 @@ namespace acul
              * @param name The name of the logger to retrieve.
              * @return A pointer to the Logger object, or nullptr if the logger was not found.
              */
-            Logger *getLogger(const string &name) const
+            logger_base *get_logger(const string &name) const
             {
                 auto it = _loggers.find(name);
                 return it == _loggers.end() ? nullptr : it->second;
@@ -194,7 +199,7 @@ namespace acul
              * @brief Removes the logger with the specified name.
              * @param name The name of the logger to remove.
              */
-            void removeLogger(const string &name)
+            void remove_logger(const string &name)
             {
                 auto it = _loggers.find(name);
                 if (it == _loggers.end()) return;
@@ -202,12 +207,8 @@ namespace acul
                 _loggers.erase(it);
             }
 
-            __attribute__((format(printf, 4, 5))) APPLIB_API void log(Logger *logger, Level level, const char *message,
-                                                                      ...);
-
-            Level level() const { return _level; }
-
-            void level(Level level) { _level = level; }
+            __attribute__((format(printf, 4, 5))) APPLIB_API void log(logger_base *logger, enum level level,
+                                                                      const char *message, ...);
 
             virtual std::chrono::steady_clock::time_point dispatch() override;
 
@@ -222,26 +223,30 @@ namespace acul
             }
 
         private:
-            Level _level{Level::Error};
-            acul::hashmap<string, Logger *> _loggers;
-            oneapi::tbb::concurrent_queue<std::pair<Logger *, string>> _queue;
+            acul::hashmap<string, logger_base *> _loggers;
+            oneapi::tbb::concurrent_queue<std::pair<logger_base *, string>> _queue;
             std::atomic<int> _count{0};
         };
 
-        extern APPLIB_API LogService *g_LogService;
-        extern APPLIB_API Logger *g_DefaultLogger;
+        inline logger_base *get_logger(const string &name) { return log_service::instance->get_logger(name); }
 
-        inline Logger *getLogger(const string &name) { return g_LogService->getLogger(name); }
+        inline logger_base *get_default_logger() { return log_service::instance->default_logger; }
     } // namespace log
 } // namespace acul
 
 #ifdef ACUL_LOG_ENABLE
-    #define logInfo(...)  acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Info, __VA_ARGS__)
-    #define logDebug(...) acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Debug, __VA_ARGS__)
-    #define logTrace(...) acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Trace, __VA_ARGS__)
-    #define logWarn(...)  acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Warn, __VA_ARGS__)
-    #define logError(...) acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Error, __VA_ARGS__)
-    #define logFatal(...) acul::log::g_LogService->log(acul::log::g_DefaultLogger, acul::log::Level::Fatal, __VA_ARGS__)
+    #define logInfo(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
+    #define logDebug(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
+    #define logTrace(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
+    #define logWarn(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
+    #define logError(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
+    #define logFatal(...) \
+        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
 #else
     #define logInfo(...)  ((void)0)
     #define logDebug(...) ((void)0)

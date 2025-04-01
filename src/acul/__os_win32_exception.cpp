@@ -12,7 +12,7 @@
 
 namespace acul
 {
-    void writeExceptionInfo(_EXCEPTION_RECORD *pRecord, std::ofstream &stream)
+    void write_exception_info(_EXCEPTION_RECORD *pRecord, std::ofstream &stream)
     {
         stream << "Exception code: 0x" << std::hex << pRecord->ExceptionCode << std::endl;
         stream << "Exception address: " << std::showbase << reinterpret_cast<uintptr_t>(pRecord->ExceptionAddress)
@@ -27,7 +27,7 @@ namespace acul
         }
     }
 
-    void writeFrameRegisters(std::ofstream &stream, const CONTEXT &context)
+    void write_frame_registers(std::ofstream &stream, const CONTEXT &context)
     {
         stream << "Frame registers:\n";
         stream << "\tRAX: 0x" << std::hex << context.Rax << std::endl;
@@ -41,10 +41,10 @@ namespace acul
         stream << "\tRIP: 0x" << context.Rip << std::dec << std::endl;
     }
 
-    struct SymbolInfo
+    struct symbol_info
     {
-        std::string name;
-        DWORD64 endAddress;
+        string name;
+        DWORD64 end_address;
     };
 
     // Required dummy line in according with Clangd bug.
@@ -72,62 +72,62 @@ namespace acul
 #pragma pack(pop)
 
 #ifdef _MSC_VER
-    std::string demangle(const char *mangledName)
+    string demangle(const char *mangledName)
     {
         char undecorated_name[1024];
         if (UnDecorateSymbolName(mangledName, undecorated_name, sizeof(undecorated_name),
                                  UNDNAME_COMPLETE | UNDNAME_NO_MS_KEYWORDS | UNDNAME_NO_ALLOCATION_MODEL |
                                      UNDNAME_NO_ALLOCATION_LANGUAGE | UNDNAME_NO_MS_THISTYPE | UNDNAME_NO_SPECIAL_SYMS))
-            return std::string(undecorated_name);
-        return std::string(mangledName);
+            return string(undecorated_name);
+        return string(mangledName);
     }
 #else
 
-    std::string demangle(const char *mangledName)
+    string demangle(const char *mangledName)
     {
         int status = 0;
         char *demangled = abi::__cxa_demangle(mangledName, nullptr, nullptr, &status);
         if (status == 0 && demangled)
         {
-            std::string result(demangled);
+            string result(demangled);
             free(demangled);
             return result;
         }
-        return std::string(mangledName);
+        return mangledName;
     }
 #endif
 
-    std::string getSymbolName(const COFFSymbol &symbol, const char *stringTable)
+    string get_symbol_name(const COFFSymbol &symbol, const char *string_table)
     {
         if (symbol.Name.Zeroes == 0)
         {
             DWORD offset = symbol.Name.Offset;
-            return std::string(stringTable + offset);
+            return string_table + offset;
         }
         else
-            return std::string(symbol.ShortName, strnlen(symbol.ShortName, 8));
+            return string(symbol.ShortName, strnlen(symbol.ShortName, 8));
     }
 
-    std::string findSymbolFromTable(DWORD64 address, const acul::map<DWORD64, SymbolInfo> &symbolMap)
+    string find_symbol_from_table(DWORD64 address, const map<DWORD64, symbol_info> &symbolMap)
     {
         auto it = symbolMap.upper_bound(address);
         if (it != symbolMap.begin())
         {
             --it;
-            if (address >= it->first && address < it->second.endAddress) return it->second.name;
+            if (address >= it->first && address < it->second.end_address) return it->second.name;
         }
         return "<unknown>";
     }
 
-    struct __SymbolTempInfo
+    struct __symbol_temp_info
     {
         DWORD64 startAddress;
         DWORD64 endAddress;
-        std::string name;
+        string name;
     };
 
-    void analyzeCOFFSymbols(const acul::vector<char> &fileData, DWORD64 loadedBaseAddr,
-                            acul::map<DWORD64, SymbolInfo> &symbolMap)
+    void analyze_COFF_symbols(const vector<char> &fileData, DWORD64 loadedBaseAddr,
+                              map<DWORD64, symbol_info> &symbolMap)
     {
         PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.data();
         if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return;
@@ -151,9 +151,9 @@ namespace acul
         PIMAGE_SECTION_HEADER sectionHeaders =
             (PIMAGE_SECTION_HEADER)(fileData.data() + dosHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS64));
 
-        acul::vector<__SymbolTempInfo> tempSymbolList;
-        acul::vector<IMAGE_SECTION_HEADER> sortedSections(sectionHeaders,
-                                                          sectionHeaders + ntHeaders->FileHeader.NumberOfSections);
+        vector<__symbol_temp_info> tempSymbolList;
+        vector<IMAGE_SECTION_HEADER> sortedSections(sectionHeaders,
+                                                    sectionHeaders + ntHeaders->FileHeader.NumberOfSections);
 
         std::sort(sortedSections.begin(), sortedSections.end(),
                   [](const IMAGE_SECTION_HEADER &a, const IMAGE_SECTION_HEADER &b) {
@@ -170,13 +170,14 @@ namespace acul
                 PIMAGE_SECTION_HEADER symbolSection = &sectionHeaders[sectionNumber - 1];
                 DWORD64 sectionBase = symbolSection->VirtualAddress + imageBase;
                 DWORD64 startAddress = symbol->Value + sectionBase + baseAddressOffset;
-                tempSymbolList.push_back({startAddress, 0, getSymbolName(*symbol, stringTable)});
+                tempSymbolList.push_back({startAddress, 0, get_symbol_name(*symbol, stringTable)});
             }
             i += symbol->NumberOfAuxSymbols;
         }
 
-        std::sort(tempSymbolList.begin(), tempSymbolList.end(),
-                  [](const __SymbolTempInfo &a, const __SymbolTempInfo &b) { return a.startAddress < b.startAddress; });
+        std::sort(
+            tempSymbolList.begin(), tempSymbolList.end(),
+            [](const __symbol_temp_info &a, const __symbol_temp_info &b) { return a.startAddress < b.startAddress; });
 
         for (size_t i = 0; i < tempSymbolList.size(); ++i)
         {
@@ -199,19 +200,19 @@ namespace acul
         }
     }
 
-    using hmodule_symbol_map_t = acul::hashmap<DWORD64, std::pair<std::string, acul::map<DWORD64, SymbolInfo>>>;
+    using hmodule_symbol_map = hashmap<DWORD64, std::pair<string, map<DWORD64, symbol_info>>>;
 
-    hmodule_symbol_map_t::iterator findSymbolMap(hmodule_symbol_map_t &hmodule_symbol_map, DWORD64 moduleBase,
-                                                 std::string &moduleName)
+    hmodule_symbol_map::iterator find_symbol_map(hmodule_symbol_map &hmodule_symbol_map, DWORD64 module_base,
+                                                 string &module_name)
     {
-        auto it = hmodule_symbol_map.find(moduleBase);
+        auto it = hmodule_symbol_map.find(module_base);
         if (it == hmodule_symbol_map.end())
         {
-            char moduleNameTmp[MAX_PATH];
-            if (!GetModuleFileNameA((HINSTANCE)moduleBase, moduleNameTmp, MAX_PATH)) return hmodule_symbol_map.end();
+            char module_name_tmp[MAX_PATH];
+            if (!GetModuleFileNameA((HINSTANCE)module_base, module_name_tmp, MAX_PATH)) return hmodule_symbol_map.end();
 
-            moduleName = std::string(moduleNameTmp);
-            std::ifstream fd(moduleName, std::ios::binary);
+            module_name = module_name_tmp;
+            std::ifstream fd(module_name.c_str(), std::ios::binary);
             if (!fd)
                 return hmodule_symbol_map.end();
             else
@@ -219,37 +220,37 @@ namespace acul
                 auto fileData =
                     acul::vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
                 fd.close();
-                auto [inserted_it, inserted] = hmodule_symbol_map.emplace(
-                    moduleBase, std::make_pair(moduleName, acul::map<DWORD64, SymbolInfo>()));
-                analyzeCOFFSymbols(fileData, moduleBase, inserted_it->second.second);
+                auto [inserted_it, inserted] =
+                    hmodule_symbol_map.emplace(module_base, std::make_pair(module_name, map<DWORD64, symbol_info>()));
+                analyze_COFF_symbols(fileData, module_base, inserted_it->second.second);
                 return inserted_it;
             }
         }
         return it;
     }
 
-    void writeStackTrace(std::ofstream &stream, const except_info_t &except_info)
+    void write_stack_trace(std::ofstream &stream, const except_info_t &except_info)
     {
-        hmodule_symbol_map_t hmodule_symbol_map;
+        hmodule_symbol_map hmodule_symbol_map;
 
-        HMODULE mainModule = GetModuleHandleA(NULL);
+        HMODULE main_module = GetModuleHandleA(NULL);
         stream << "Stack trace:\n";
         int frameIndex = 0;
 
-        for (int i = 0; i < except_info.addressesCount; ++i)
+        for (int i = 0; i < except_info.addresses_count; ++i)
         {
             auto &[addr, offset] = except_info.addresses[i];
             string line = format("\t#%d 0x%llx", frameIndex, offset);
             stream << line.c_str();
             if (addr)
             {
-                std::string name, moduleName;
-                auto it = findSymbolMap(hmodule_symbol_map, addr, moduleName);
+                string name, module_name;
+                auto it = find_symbol_map(hmodule_symbol_map, addr, module_name);
                 if (it == hmodule_symbol_map.end())
                     name = "<unknown>";
                 else
                 {
-                    const acul::map<DWORD64, SymbolInfo> &symbolMap = it->second.second;
+                    const map<DWORD64, symbol_info> &symbolMap = it->second.second;
                     if (symbolMap.empty()) // Try get symbol info from .edata
                     {
                         DWORD64 displacementSym = 0;
@@ -263,10 +264,10 @@ namespace acul
                             name = "<unknown>";
                     }
                     else
-                        name = findSymbolFromTable(offset, symbolMap);
+                        name = find_symbol_from_table(offset, symbolMap);
                 }
-                stream << " in " << demangle(name.c_str());
-                if (addr != (DWORD64)mainModule && !moduleName.empty()) stream << " at " << moduleName;
+                stream << " in " << demangle(name.c_str()).c_str();
+                if (addr != (DWORD64)main_module && !module_name.empty()) stream << " at " << module_name.c_str();
             }
             else
                 stream << " in <unknown>";
@@ -277,7 +278,7 @@ namespace acul
         SymCleanup(except_info.hProcess);
     }
 
-    void createMiniDump(EXCEPTION_POINTERS *pep, const acul::string &path)
+    void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path)
     {
         HANDLE hFile = CreateFileA(path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) return;

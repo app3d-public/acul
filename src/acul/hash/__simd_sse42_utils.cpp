@@ -2,7 +2,7 @@
 /* E:\Documents\programming\crc32\fast-crc32\generate.exe -i sse -p crc32c -a v2s2 */
 /* MIT licensed */
 
-#include <core/api.hpp>
+#include <acul/api.hpp>
 #include <nmmintrin.h>
 #include <stddef.h>
 #include <stdint.h>

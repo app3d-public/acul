@@ -223,7 +223,10 @@ namespace acul
              */
             APPLIB_API op_state create_directory(const char *path);
 
-            APPLIB_API op_state list_files(const acul::string& base_path, acul::vector<acul::string>& dst, bool recursive = false);
+            APPLIB_API op_state remove_file(const char *path);
+
+            APPLIB_API op_state list_files(const acul::string &base_path, acul::vector<acul::string> &dst,
+                                           bool recursive = false);
 
             /**
              * @brief Compresses the given data using zstd.

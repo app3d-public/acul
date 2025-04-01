@@ -29,22 +29,22 @@ namespace acul
         HANDLE hThread = NULL;
         CONTEXT context;
         except_addr_t *addresses = NULL;
-        size_t addressesCount = 0;
+        size_t addresses_count = 0;
     };
 
-    APPLIB_API void writeFrameRegisters(std::ofstream &stream, const CONTEXT &context);
+    APPLIB_API void write_frame_registers(std::ofstream &stream, const CONTEXT &context);
 
-    APPLIB_API void writeExceptionInfo(_EXCEPTION_RECORD *, std::ofstream &);
+    APPLIB_API void write_exception_info(_EXCEPTION_RECORD *, std::ofstream &);
 
-    APPLIB_API void writeStackTrace(std::ofstream &stream, const except_info_t &except_info);
+    APPLIB_API void write_stack_trace(std::ofstream &stream, const except_info_t &except_info);
 
-    APPLIB_API void createMiniDump(EXCEPTION_POINTERS *pep, const acul::string &path);
+    APPLIB_API void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path);
 #endif
 
     class APPLIB_API exception : public std::exception
     {
     public:
-        APPLIB_API static acul::string dump_folder;
+        APPLIB_API static string dump_folder;
         except_info_t except_info;
         u64 id;
 

@@ -2,16 +2,19 @@
 #define APP_ABC_HPP
 
 #include <libintl.h>
-#include <string>
 #include "api.hpp"
+#include "string/string.hpp"
 
 #define _(STRING) gettext(STRING)
 
-namespace locales
+namespace acul
 {
-    APPLIB_API void setup_i18n(const std::string &locale);
-    
-    APPLIB_API std::string getUserLanguage();
-} // namespace locales
+    namespace locales
+    {
+        APPLIB_API void setup_i18n(const string &locale);
+
+        APPLIB_API string get_user_language();
+    } // namespace locales
+} // namespace acul
 
 #endif

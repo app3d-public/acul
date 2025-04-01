@@ -8,10 +8,9 @@ namespace acul
 {
     namespace log
     {
-        void TimeTokenHandler::handle(Level level, const char *message, stringstream &ss) const
+        void time_handler::handle(level level, const char *message, stringstream &ss) const
         {
             using namespace std::chrono;
-
             auto now = system_clock::now();
             auto now_ns = now.time_since_epoch();
             long long ns = duration_cast<nanoseconds>(now_ns).count() % 1000000000;
@@ -30,26 +29,26 @@ namespace acul
             ss << time.c_str();
         }
 
-        void LevelNameTokenHandler::handle(Level level, const char *message, stringstream &ss) const
+        void level_name_handler::handle(level level, const char *message, stringstream &ss) const
         {
             switch (level)
             {
-                case Level::Info:
+                case level::info:
                     ss << "INFO";
                     break;
-                case Level::Debug:
+                case level::debug:
                     ss << "DEBUG";
                     break;
-                case Level::Trace:
+                case level::trace:
                     ss << "TRACE";
                     break;
-                case Level::Warn:
+                case level::warn:
                     ss << "WARN";
                     break;
-                case Level::Error:
+                case level::error:
                     ss << "ERROR";
                     break;
-                case Level::Fatal:
+                case level::fatal:
                     ss << "FATAL";
                     break;
                 default:
@@ -58,26 +57,26 @@ namespace acul
             }
         }
 
-        void ColorizeTokenHandler::handle(Level level, const char *message, stringstream &ss) const
+        void color_handler::handle(level level, const char *message, stringstream &ss) const
         {
             switch (level)
             {
-                case Level::Fatal:
+                case level::fatal:
                     ss << colors::magenta;
                     break;
-                case Level::Error:
+                case level::error:
                     ss << colors::red;
                     break;
-                case Level::Warn:
+                case level::warn:
                     ss << colors::yellow;
                     break;
-                case Level::Info:
+                case level::info:
                     ss << colors::green;
                     break;
-                case Level::Debug:
+                case level::debug:
                     ss << colors::blue;
                     break;
-                case Level::Trace:
+                case level::trace:
                     ss << colors::cyan;
                     break;
                 default:
@@ -86,7 +85,7 @@ namespace acul
             }
         };
 
-        void Logger::setPattern(const string &pattern)
+        void logger_base::set_pattern(const string &pattern)
         {
             _tokens->clear();
             std::regex token_regex("%\\((.*?)\\)");
@@ -102,16 +101,16 @@ namespace acul
                 if (pos != last_pos)
                 {
                     string text = pattern.substr(last_pos, pos - last_pos);
-                    _tokens->push_back(acul::make_shared<TextTokenHandler>(text));
+                    _tokens->push_back(acul::make_shared<text_handler>(text));
                 }
 
-                acul::hashmap<string, acul::shared_ptr<TokenHandler>> tokenHandlers = {
-                    {"ascii_time", acul::make_shared<TimeTokenHandler>()},
-                    {"level_name", acul::make_shared<LevelNameTokenHandler>()},
-                    {"thread", acul::make_shared<ThreadIdTokenHandler>()},
-                    {"message", acul::make_shared<MessageTokenHandler>()},
-                    {"color_auto", acul::make_shared<ColorizeTokenHandler>()},
-                    {"color_off", acul::make_shared<DecolorizeTokenHandler>()}};
+                acul::hashmap<string, acul::shared_ptr<token_handler_base>> tokenHandlers = {
+                    {"ascii_time", acul::make_shared<time_handler>()},
+                    {"level_name", acul::make_shared<level_name_handler>()},
+                    {"thread", acul::make_shared<thread_id_handler>()},
+                    {"message", acul::make_shared<message_handler>()},
+                    {"color_auto", acul::make_shared<color_handler>()},
+                    {"color_off", acul::make_shared<decolor_handler>()}};
 
                 string token = it->str(1).c_str();
                 auto handlerIter = tokenHandlers.find(token);
@@ -122,18 +121,18 @@ namespace acul
             if (last_pos != pattern.size())
             {
                 string text = pattern.substr(last_pos);
-                _tokens->push_back(acul::make_shared<TextTokenHandler>(text));
+                _tokens->push_back(acul::make_shared<text_handler>(text));
             }
         }
 
-        LogService *g_LogService{nullptr};
-        Logger *g_DefaultLogger{nullptr};
+        log_service *g_log_service{nullptr};
+        logger_base *g_default_logger{nullptr};
 
-        std::chrono::steady_clock::time_point LogService::dispatch()
+        std::chrono::steady_clock::time_point log_service::dispatch()
         {
             while (true)
             {
-                std::pair<Logger *, string> pair;
+                std::pair<logger_base *, string> pair;
                 if (_queue.try_pop(pair))
                 {
                     pair.first->write(pair.second);
@@ -144,11 +143,11 @@ namespace acul
             }
         }
 
-        void LogService::log(Logger *logger, Level level, const char *message, ...)
+        void log_service::log(logger_base *logger, enum level level, const char *message, ...)
         {
-            if (level > _level) return;
+            if (level > this->level) return;
             stringstream ss;
-            logger->parseTokens(level, message, ss);
+            logger->parse_tokens(level, message, ss);
             va_list args;
             va_start(args, message);
             _count.fetch_add(1, std::memory_order_relaxed);
@@ -157,12 +156,14 @@ namespace acul
             notify();
         }
 
-        LogService::~LogService()
+        log_service::~log_service()
         {
             for (auto &logger : _loggers) acul::release(logger.second);
             _loggers.clear();
-            g_LogService = nullptr;
-            g_DefaultLogger = nullptr;
+            g_log_service = nullptr;
+            g_default_logger = nullptr;
         }
+
+        log_service *log_service::instance = nullptr;
     } // namespace log
 } // namespace acul

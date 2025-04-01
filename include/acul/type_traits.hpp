@@ -4,7 +4,6 @@
 
 namespace acul
 {
-
     template <typename T>
     struct lambda_arg_traits;
 

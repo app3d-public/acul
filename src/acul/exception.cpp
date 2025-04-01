@@ -5,15 +5,15 @@
 
 namespace acul
 {
-    acul::string exception::dump_folder;
+    string exception::dump_folder;
 
-    exception::exception() noexcept : except_info({GetCurrentProcess(), GetCurrentThread()}), id(IDGen()())
+    exception::exception() noexcept : except_info({GetCurrentProcess(), GetCurrentThread()}), id(id_gen()())
     {
         if (!dump_folder.empty())
         {
             string relative = format("%llx.dmp", id);
-            acul::io::path p = dump_folder;
-            createMiniDump(nullptr, p / relative);
+            io::path p = dump_folder;
+            create_mini_dump(nullptr, p / relative);
         }
         RtlCaptureContext(&except_info.context);
         captureStack();

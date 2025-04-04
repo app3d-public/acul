@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include "../memory.hpp"
 #include "base.hpp"
 
 namespace acul
@@ -34,7 +35,7 @@ namespace acul
         {
             release();
             size_t len = null_terminated_length(msg);
-            Rep *rep = static_cast<Rep *>(::operator new(sizeof(Rep) + len + 1));
+            Rep *rep = (Rep *)acul::alloc_n<char>(sizeof(Rep) + len + 1);
             rep->count.store(1);
             rep->len = len;
             rep->cap = len;
@@ -45,7 +46,7 @@ namespace acul
     public:
         refstring() noexcept : _data(nullptr) {}
 
-        explicit refstring(const char *msg) { assign(msg); }
+        explicit refstring(const char *msg) : _data(nullptr) { assign(msg); }
 
         refstring(const refstring &other) noexcept : _data(other._data)
         {
@@ -79,7 +80,7 @@ namespace acul
             if (uses_refcount())
             {
                 Rep *rep = rep_from_data(_data);
-                if (rep->count.fetch_sub(1, std::memory_order_acq_rel) == 1) { ::operator delete(rep); }
+                if (rep->count.fetch_sub(1, std::memory_order_acq_rel) == 1) acul::release(rep);
             }
         }
     };

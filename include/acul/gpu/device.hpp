@@ -1,4 +1,5 @@
 #pragma once
+#include "../meta.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 #include <vk_mem_alloc.h>
@@ -136,18 +137,30 @@ namespace acul
             std::vector<vk::PresentModeKHR> present_modes;
         };
 
+        namespace sign_block
+        {
+            enum : u32
+            {
+                device = 0x2AF818FE
+            };
+        }
+
+        // Configuration settings for the Device instance.
+        struct device_config : acul::meta::block
+        {
+            vk::SampleCountFlagBits msaa = vk::SampleCountFlagBits::e1; // The number of samples to use for MSAA.
+            i8 device = -1;                                             // The index of the GPU device to use.
+            // The minimum fraction of sample shading.
+            // A value of 1.0 ensures per-sample shading.
+            f32 sample_shading = 0.0f;
+
+            virtual u32 signature() const override { return sign_block::device; }
+        };
+
         class APPLIB_API device : public device_queue
         {
         public:
-            struct config_t
-            {
-                vk::SampleCountFlagBits msaa = vk::SampleCountFlagBits::e1; // The number of samples to use for MSAA.
-                i8 device = -1;                                             // The index of the GPU device to use.
-                // The minimum fraction of sample shading.
-                // A value of 1.0 ensures per-sample shading.
-                f32 sample_shading = 0.0f;
-            } config; // Configuration settings for the Device instance.
-
+            device_config config;
             vk::DispatchLoaderDynamic loader;
             vk::Instance instance;
             vk::Device vk_device;
@@ -242,5 +255,23 @@ namespace acul
         /// @param properties Physical device properties
         /// @return Maximum MSAA sample count
         APPLIB_API vk::SampleCountFlagBits get_max_MSAA(const vk::PhysicalDeviceProperties2 &properties);
+
+        namespace streams
+        {
+            inline void write_device_config(acul::bin_stream &stream, acul::meta::block *block)
+            {
+                device_config *conf = static_cast<device_config *>(block);
+                stream.write(conf->msaa).write(conf->device).write(conf->sample_shading);
+            }
+
+            inline acul::meta::block *read_device_config(acul::bin_stream &stream)
+            {
+                device_config *conf = acul::alloc<device_config>();
+                stream.read(conf->msaa).read(conf->device).read(conf->sample_shading);
+                return conf;
+            }
+
+            constexpr acul::meta::stream device = {read_device_config, write_device_config};
+        } // namespace streams
     } // namespace gpu
 } // namespace acul

@@ -125,9 +125,6 @@ namespace acul
             }
         }
 
-        log_service *g_log_service{nullptr};
-        logger_base *g_default_logger{nullptr};
-
         std::chrono::steady_clock::time_point log_service::dispatch()
         {
             while (true)
@@ -160,8 +157,8 @@ namespace acul
         {
             for (auto &logger : _loggers) acul::release(logger.second);
             _loggers.clear();
-            g_log_service = nullptr;
-            g_default_logger = nullptr;
+            instance = nullptr;
+            default_logger = nullptr;
         }
 
         log_service *log_service::instance = nullptr;

@@ -2,6 +2,7 @@
 
 #include "api.hpp"
 #include "hash/hashmap.hpp"
+#include "log.hpp"
 #include "scalars.hpp"
 #include "stream.hpp"
 
@@ -27,8 +28,30 @@ namespace acul
             void (*write)(bin_stream &stream, block *block);
         };
 
-        APPLIB_API const stream *get_stream(u32 signature);
-        extern APPLIB_API hashmap<u32, const stream *> registered_streams;
+        class resolver
+        {
+        public:
+            virtual const stream *get_stream(u32 signature) = 0;
+        };
+
+        class hash_resolver final : public resolver
+        {
+        public:
+            hashmap<u32, const stream *> streams;
+
+            virtual const stream *get_stream(u32 signature) override
+            {
+                auto it = streams.find(signature);
+                if (it == streams.end())
+                {
+                    logError("Failed to recognize meta stream signature: 0x%08x", signature);
+                    return nullptr;
+                }
+                return it->second;
+            }
+        };
+
+        extern APPLIB_API resolver* resolver;
 
         /*********************************
          **

@@ -64,20 +64,20 @@ namespace acul
         {
             vert.load(device);
             frag.load(device);
-            artifact.config.shaderStages.emplace_back();
-            artifact.config.shaderStages.back()
+            artifact.config.shader_stages.emplace_back();
+            artifact.config.shader_stages.back()
                 .setStage(vk::ShaderStageFlagBits::eVertex)
                 .setModule(vert.module)
                 .setPName("main");
-            artifact.config.shaderStages.emplace_back();
-            artifact.config.shaderStages.back()
+            artifact.config.shader_stages.emplace_back();
+            artifact.config.shader_stages.back()
                 .setStage(vk::ShaderStageFlagBits::eFragment)
                 .setModule(frag.module)
                 .setPName("main");
             artifact.config.viewport_info.setViewportCount(1).setPViewports(nullptr).setScissorCount(1).setPScissors(
                 nullptr);
             artifact.create_info.setStageCount(2)
-                .setPStages(artifact.config.shaderStages.data())
+                .setPStages(artifact.config.shader_stages.data())
                 .setPVertexInputState(&artifact.config.vertex_input_info)
                 .setPInputAssemblyState(&artifact.config.input_assembly_info)
                 .setPViewportState(&artifact.config.viewport_info)
@@ -86,7 +86,7 @@ namespace acul
                 .setPColorBlendState(&artifact.config.color_blend_info)
                 .setPDepthStencilState(&artifact.config.depth_stencil_info)
                 .setPDynamicState(&artifact.config.dynamic_state_info)
-                .setLayout(artifact.config.pipelineLayout)
+                .setLayout(artifact.config.pipeline_layout)
                 .setRenderPass(artifact.config.render_pass)
                 .setSubpass(artifact.config.subpass)
                 .setBasePipelineIndex(-1)

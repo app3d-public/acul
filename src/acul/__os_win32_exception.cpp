@@ -1,10 +1,12 @@
 #include <acul/exception.hpp>
 #include <acul/hash/hashmap.hpp>
 #include <acul/map.hpp>
+#include <acul/string/sstream.hpp>
 #include <acul/string/utils.hpp>
 #include <acul/vector.hpp>
 #include <dbghelp.h>
 #include <psapi.h>
+
 #ifndef _MSC_VER
     #include <cstdlib>
     #include <cxxabi.h>
@@ -12,6 +14,21 @@
 
 namespace acul
 {
+    struct exception_context exception_context(NULL);
+
+    void init_exception_context()
+    {
+        HANDLE hProcess = GetCurrentProcess();
+        SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME | SYMOPT_FAIL_CRITICAL_ERRORS);
+        if (SymInitialize(hProcess, nullptr, TRUE)) exception_context.hProcess = hProcess;
+    }
+
+    void destroy_exception_context()
+    {
+        if (!exception_context.hProcess) return;
+        SymCleanup(exception_context.hProcess);
+    }
+
     void write_exception_info(_EXCEPTION_RECORD *pRecord, std::ofstream &stream)
     {
         stream << "Exception code: 0x" << std::hex << pRecord->ExceptionCode << std::endl;
@@ -27,18 +44,18 @@ namespace acul
         }
     }
 
-    void write_frame_registers(std::ofstream &stream, const CONTEXT &context)
+    void write_frame_registers(acul::stringstream &stream, const CONTEXT &context)
     {
         stream << "Frame registers:\n";
-        stream << "\tRAX: 0x" << std::hex << context.Rax << std::endl;
-        stream << "\tRBX: 0x" << context.Rbx << std::endl;
-        stream << "\tRCX: 0x" << context.Rcx << std::endl;
-        stream << "\tRDX: 0x" << context.Rdx << std::endl;
-        stream << "\tRSI: 0x" << context.Rsi << std::endl;
-        stream << "\tRDI: 0x" << context.Rdi << std::endl;
-        stream << "\tRBP: 0x" << context.Rbp << std::endl;
-        stream << "\tRSP: 0x" << context.Rsp << std::endl;
-        stream << "\tRIP: 0x" << context.Rip << std::dec << std::endl;
+        stream << format("\tRAX: 0x%llx\n", context.Rax);
+        stream << format("\tRBX: 0x%llx\n", context.Rbx);
+        stream << format("\tRCX: 0x%llx\n", context.Rcx);
+        stream << format("\tRDX: 0x%llx\n", context.Rdx);
+        stream << format("\tRSI: 0x%llx\n", context.Rsi);
+        stream << format("\tRDI: 0x%llx\n", context.Rdi);
+        stream << format("\tRBP: 0x%llx\n", context.Rbp);
+        stream << format("\tRSP: 0x%llx\n", context.Rsp);
+        stream << format("\tRIP: 0x%llx\n", context.Rip);
     }
 
     struct symbol_info
@@ -208,10 +225,12 @@ namespace acul
         auto it = hmodule_symbol_map.find(module_base);
         if (it == hmodule_symbol_map.end())
         {
-            char module_name_tmp[MAX_PATH];
-            if (!GetModuleFileNameA((HINSTANCE)module_base, module_name_tmp, MAX_PATH)) return hmodule_symbol_map.end();
-
-            module_name = module_name_tmp;
+            {
+                char module_name_tmp[MAX_PATH];
+                if (!GetModuleFileNameA((HINSTANCE)module_base, module_name_tmp, MAX_PATH))
+                    return hmodule_symbol_map.end();
+                module_name = (const char *)module_name_tmp;
+            }
             std::ifstream fd(module_name.c_str(), std::ios::binary);
             if (!fd)
                 return hmodule_symbol_map.end();
@@ -229,7 +248,7 @@ namespace acul
         return it;
     }
 
-    void write_stack_trace(std::ofstream &stream, const except_info_t &except_info)
+    void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
 
@@ -258,7 +277,7 @@ namespace acul
                         PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
                         pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
                         pSymbol->MaxNameLen = MAX_SYM_NAME;
-                        if (SymFromAddr(except_info.hProcess, offset, &displacementSym, pSymbol))
+                        if (SymFromAddr(exception_context.hProcess, offset, &displacementSym, pSymbol))
                             name = pSymbol->Name;
                         else
                             name = "<unknown>";
@@ -272,10 +291,9 @@ namespace acul
             else
                 stream << " in <unknown>";
 
-            stream << std::endl;
+            stream << '\n';
             frameIndex++;
         }
-        SymCleanup(except_info.hProcess);
     }
 
     void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path)
@@ -296,26 +314,27 @@ namespace acul
 
     void exception::captureStack()
     {
-        SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS);
-        SymInitialize(except_info.hProcess, NULL, TRUE);
+        if (!exception_context.hProcess) return;
+        STACKFRAME64 stackFrame = {};
+        CONTEXT context = except_info.context;
 
-        STACKFRAME64 stackFrame;
-        memset(&stackFrame, 0, sizeof(STACKFRAME64));
         DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
-        auto &context = except_info.context;
+
         stackFrame.AddrPC.Offset = context.Rip;
         stackFrame.AddrFrame.Offset = context.Rbp;
         stackFrame.AddrStack.Offset = context.Rsp;
         stackFrame.AddrPC.Mode = AddrModeFlat;
         stackFrame.AddrFrame.Mode = AddrModeFlat;
         stackFrame.AddrStack.Mode = AddrModeFlat;
-        vector<except_addr_t> addresses;
-        while (StackWalk64(machineType, except_info.hProcess, except_info.hThread, &stackFrame, &context, NULL,
-                           SymFunctionTableAccess64, SymGetModuleBase64, NULL))
+
+        vector<except_addr> addresses;
+        while (StackWalk64(machineType, exception_context.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
+                           SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
         {
-            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.Offset);
+            DWORD64 base = SymGetModuleBase64(exception_context.hProcess, stackFrame.AddrPC.Offset);
             addresses.emplace_back(base, stackFrame.AddrPC.Offset);
         }
+        except_info.addresses_count = addresses.size();
         except_info.addresses = addresses.release();
     }
 } // namespace acul

@@ -90,7 +90,6 @@ namespace acul
                 }
             }
 
-            // todo
             op_state remove_file(const char *path)
             {
                 if (DeleteFileA(path))

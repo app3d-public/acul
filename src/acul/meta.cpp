@@ -5,18 +5,7 @@ namespace acul
 {
     namespace meta
     {
-        hashmap<u32, const stream *> registered_streams;
-
-        const stream *get_stream(u32 signature)
-        {
-            auto it = registered_streams.find(signature);
-            if (it == registered_streams.end())
-            {
-                logError("Failed to recognize meta stream signature: 0x%08x", signature);
-                return nullptr;
-            }
-            return it->second;
-        }
+        class resolver *resolver = nullptr;
 
         /*********************************
          **

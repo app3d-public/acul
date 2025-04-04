@@ -1,12 +1,13 @@
 #pragma once
 
+#include "../fwd/sstream.hpp"
 #include "string.hpp"
 #include "string_view.hpp"
 #include "utils.hpp"
 
 namespace acul
 {
-    template <typename T, typename Allocator = mem_allocator<T>>
+    template <typename T, typename Allocator>
     class basic_stringstream
     {
     public:
@@ -83,7 +84,4 @@ namespace acul
     private:
         basic_string<T, Allocator> _data;
     };
-
-    using stringstream = basic_stringstream<char>;
-
 } // namespace acul

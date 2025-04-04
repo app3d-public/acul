@@ -59,7 +59,7 @@ namespace acul
             buffer(const buffer &) = delete;
             buffer &operator=(const buffer &) = delete;
 
-            bool allocateBuffer()
+            bool allocate()
             {
                 assert(_buffer_size > 0);
                 return create_buffer(_buffer_size, _vk_usage_flags, _vma_usage_flags, _vk_buffer,

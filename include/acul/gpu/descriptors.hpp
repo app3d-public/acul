@@ -171,7 +171,7 @@ namespace acul
             void reset_pool() { _device.vk_device.resetDescriptorPool(_descriptor_pool, {}, _device.loader); }
 
             /// @brief Get the created descriptor pool
-            vk::DescriptorPool pool() const { return _descriptor_pool; }
+            vk::DescriptorPool vk_pool() const { return _descriptor_pool; }
 
         private:
             device &_device;

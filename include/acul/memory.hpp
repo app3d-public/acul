@@ -317,6 +317,8 @@ namespace acul
         pointer get() noexcept { return _data; }
         pointer get() const noexcept { return _data; }
         explicit operator bool() const { return _ctrl != nullptr; }
+        bool operator==(std::nullptr_t) const noexcept { return _data == nullptr; }
+        bool operator!=(std::nullptr_t) const noexcept { return _data != nullptr; }
 
         size_type use_count() const { return _ctrl ? _ctrl->strong_count() : 0; }
     };

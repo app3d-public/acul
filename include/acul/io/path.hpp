@@ -51,6 +51,8 @@ namespace acul
 
             bool is_unix_like() const { return !(_flags & FLAG_WIN32); }
 
+            bool is_scheme_external() const { return _flags & FLAG_PROTO_EXTERNAL; }
+
             string &front() { return _nodes.front(); }
             const string &front() const { return _nodes.front(); }
 
@@ -76,6 +78,9 @@ namespace acul
 
             string scheme() const { return _scheme; }
 
+            bool operator==(const path &other) const { return str() == other.str(); }
+            bool operator!=(const path &other) const { return str() != other.str(); }
+
         private:
             vector<string> _nodes;
             mutable string _scheme, _path;
@@ -96,40 +101,56 @@ namespace acul
 #else
             const char *pos = strrchr(str.c_str(), ch);
 #endif
-            return pos ? static_cast<size_t>(pos - str.c_str()) : SIZE_MAX;
+            return pos ? static_cast<size_t>(pos - str.c_str()) : acul::string::npos;
         }
 
         inline string get_extension(const string &path)
         {
             size_t dot_pos = find_last_of(path, '.');
             size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == SIZE_MAX) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
-            if (dot_pos == SIZE_MAX || (slash_pos != SIZE_MAX && dot_pos < slash_pos)) return {};
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            if (dot_pos == acul::string::npos || (slash_pos != acul::string::npos && dot_pos < slash_pos)) return {};
             return path.substr(dot_pos);
         }
 
         inline string get_filename(const string &path)
         {
             size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == SIZE_MAX) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
-            return slash_pos == SIZE_MAX ? path : path.substr(slash_pos + 1);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            return slash_pos == acul::string::npos ? path : path.substr(slash_pos + 1);
         }
 
         inline string replace_filename(const string &path, const string &new_filename)
         {
             size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == SIZE_MAX) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
-            return slash_pos == SIZE_MAX ? new_filename : path.substr(0, slash_pos + 1) + new_filename;
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            return slash_pos == acul::string::npos ? new_filename : path.substr(0, slash_pos + 1) + new_filename;
         }
 
         inline string replace_extension(const string &path, const string &new_extension)
         {
             size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == SIZE_MAX) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
             size_t dot_pos = find_last_of(path, '.');
-            if (dot_pos != SIZE_MAX && (slash_pos == SIZE_MAX || dot_pos > slash_pos))
+            if (dot_pos != acul::string::npos && (slash_pos == acul::string::npos || dot_pos > slash_pos))
                 return path.substr(0, dot_pos) + new_extension;
             return path + new_extension;
+        }
+
+        inline path get_current_path() noexcept
+        {
+            char buffer[PATH_MAX];
+#ifdef _WIN32
+            GetModuleFileNameA(NULL, buffer, MAX_PATH);
+            acul::string path = buffer;
+            auto pos = find_last_of(path, '\\');
+#else
+            ssize_t count = readlink("/proc/self/exe", buffer, PATH_MAX);
+            if (count == -1) return {};
+            acul::string path(buffer, count);
+            auto pos = find_last_of(path, '/');
+#endif
+            return pos != acul::string::npos ? path.substr(0, pos) + PATH_CHAR_SEP : "";
         }
 
     } // namespace io

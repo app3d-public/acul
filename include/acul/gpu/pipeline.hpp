@@ -10,8 +10,8 @@ namespace acul
         // Сonfiguration settings for a Vulkan graphics pipeline.
         struct pipeline_config_base
         {
-            acul::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
-            vk::PipelineLayout pipelineLayout = nullptr;
+            acul::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
+            vk::PipelineLayout pipeline_layout = nullptr;
         };
 
         template <typename T>
@@ -69,7 +69,7 @@ namespace acul
              * @param config The device configuration specifying the MSAA settings.
              * @return Reference to the updated pipeline_config object.
              */
-            pipeline_config &enable_MSAA(const device::config_t config)
+            pipeline_config &enable_MSAA(const device_config config)
             {
                 multisample_info.setRasterizationSamples(config.msaa);
                 if (config.msaa > vk::SampleCountFlagBits::e1 && config.sample_shading)
@@ -117,6 +117,44 @@ namespace acul
 
         using shader_list = acul::vector<shader_module>;
 
+        template <typename T>
+        struct pipeline_batch;
+
+        namespace details
+        {
+            template <typename T>
+            struct artifact
+            {
+                template <typename V>
+                using custom_data_t = acul::destructible_value<V, artifact &>;
+
+                vk::Pipeline *pipeline;
+                pipeline_config<T> config;
+                T create_info;
+                destructible_data<artifact &> *tmp;
+            };
+
+            template <typename T>
+            struct pipeline_artifact_configure
+            {
+                static_assert(sizeof(T) == 0, "pipeline_artifact_configure<>: unsupported pipeline type");
+            };
+
+            template <>
+            struct pipeline_artifact_configure<vk::GraphicsPipelineCreateInfo>
+            {
+                using callback_type = void (*)(artifact<vk::GraphicsPipelineCreateInfo> &, shader_list &,
+                                               vk::RenderPass, vk::PipelineLayout &, device &);
+            };
+
+            template <>
+            struct pipeline_artifact_configure<vk::ComputePipelineCreateInfo>
+            {
+                using callback_type = void (*)(artifact<vk::ComputePipelineCreateInfo> &, shader_list &,
+                                               vk::PipelineLayout &, device &);
+            };
+        } // namespace details
+
         /**
          * @brief Template struct for batching Vulkan pipeline creation.
          *
@@ -129,16 +167,8 @@ namespace acul
         struct pipeline_batch
         {
             using create_info = T;
-            struct artifact
-            {
-                template <typename V>
-                using custom_data_t = acul::destructible_value<V, artifact &>;
-
-                vk::Pipeline *pipeline;
-                pipeline_config<create_info> config;
-                create_info create_info;
-                destructible_data<artifact &> *tmp;
-            };
+            using artifact = details::artifact<T>;
+            using PFN_configure_artifact = typename details::pipeline_artifact_configure<create_info>::callback_type;
             vector<artifact> artifacts; ///< Stores configurations for each pipeline.
             shader_list shaders;        ///< Shader modules associated with the pipelines.
             vk::PipelineCache cache;    ///< Pipeline cache used for pipeline creation.
@@ -187,46 +217,8 @@ namespace acul
             }
         };
 
-        /**
-         * @brief Creates a Vulkan pipeline for the given instance.
-         *
-         * This function prepares the pipeline configuration, loads the necessary shaders,
-         * and creates a Vulkan pipeline for the specified instance.
-         *
-         * @tparam T The type of the instance for which the pipeline is being created.
-         * @param instance A pointer to the instance containing the pipeline layout and other settings.
-         * @param device The Vulkan device to be used for the pipeline creation.
-         * @param render_pass The render pass to be used by the pipeline.
-         * @param cache The pipeline cache to be used for the pipeline creation.
-         * @return The result of the pipeline creation operation. Returns vk::Result::eSuccess if
-         * the pipeline was successfully created, otherwise returns the appropriate Vulkan error code.
-         */
-        template <typename T>
-        [[nodiscard]] vk::Result create_pipeline(T *instance, device &device,
-                                                 vk::RenderPass render_pass = VK_NULL_HANDLE,
-                                                 vk::PipelineCache cache = nullptr)
-        {
-            logInfo("Creating %s pipeline", instance->name().c_str());
-            typename T::Artifact artifact;
-            shader_list shaders;
-            vk::Result res;
-            if constexpr (std::is_same_v<typename T::Artifact, vk::GraphicsPipelineCreateInfo>)
-            {
-                T::configure_pipeline_artifact(artifact, shaders, render_pass, instance->pipelineLayout, device);
-                auto rv = device.vk_device.createGraphicsPipeline(cache, artifact.create_info, nullptr, device.loader);
-                if (rv.result == vk::Result::eSuccess) instance->pipeline = rv.value;
-                res = rv.result;
-            }
-            else
-            {
-                T::configure_pipeline_artifact(artifact, shaders, instance->pipelineLayout, device);
-                auto rv = device.vk_device.createComputePipeline(cache, artifact.create_info, nullptr, device.loader);
-                if (rv.result == vk::Result::eSuccess) instance->pipeline = rv.value;
-                res = rv.result;
-            }
-            for (auto &shader : shaders) shader.destroy(device);
-            return res;
-        }
+        using graphics_pipeline_batch = pipeline_batch<vk::GraphicsPipelineCreateInfo>;
+        using compute_pipeline_batch = pipeline_batch<vk::ComputePipelineCreateInfo>;
 
         /**
          * @brief Adds a pipeline configuration to the batch for later creation.
@@ -240,17 +232,17 @@ namespace acul
          * @param instance A pointer to the instance containing the pipeline layout and other settings.
          * @param device The Vulkan device to be used for the pipeline creation.
          */
-        template <typename T>
-        inline void add_pipeline_to_batch(pipeline_batch<T> &batch, T &pass, device &device,
+        template <typename B, typename T>
+        inline void add_pipeline_to_batch(pipeline_batch<B> &batch, T &pass, device &device,
+                                          typename pipeline_batch<B>::PFN_configure_artifact callback,
                                           vk::RenderPass render_pass = VK_NULL_HANDLE)
         {
             logInfo("Adding %s pipeline to the batch", pass.name.c_str());
             batch.artifacts.emplace_back();
-            if constexpr (std::is_same_v<T, vk::GraphicsPipelineCreateInfo>)
-                pass.configure_pipeline_artifact(batch.artifacts.back(), batch.shaders, render_pass, pass.layout,
-                                                 device);
+            if constexpr (std::is_same_v<B, vk::GraphicsPipelineCreateInfo>)
+                callback(batch.artifacts.back(), batch.shaders, render_pass, pass.layout, device);
             else
-                pass.configure_pipeline_artifact(batch.artifacts.back(), batch.shaders, pass.layout, device);
+                callback(batch.artifacts.back(), batch.shaders, pass.layout, device);
             batch.artifacts.back().pipeline = &pass.pipeline;
         }
 

@@ -5,22 +5,6 @@
 
 namespace acul
 {
-    string exception::dump_folder;
-
-    exception::exception() noexcept : except_info({GetCurrentProcess(), GetCurrentThread()}), id(id_gen()())
-    {
-        if (!dump_folder.empty())
-        {
-            string relative = format("%llx.dmp", id);
-            io::path p = dump_folder;
-            create_mini_dump(nullptr, p / relative);
-        }
-        RtlCaptureContext(&except_info.context);
-        captureStack();
-    }
-
-    exception::~exception() noexcept { release(except_info.addresses); }
-
     runtime_error::runtime_error(const string &message) noexcept : exception(), _message(message.c_str()) {}
     bad_cast::bad_cast(const string &message) noexcept : exception(), _message(message.c_str()) {}
 

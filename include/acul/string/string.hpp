@@ -26,6 +26,11 @@ namespace acul
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+        enum : size_type
+        {
+            npos = SIZE_MAX
+        };
+
         constexpr basic_string() noexcept : _salloc{{ALLOC_STACK, 0}, {}} {}
 
         template <size_type N>
@@ -404,7 +409,7 @@ namespace acul
 
         bool empty() const noexcept { return size() == 0; }
 
-        basic_string substr(size_type pos, size_type len = SIZE_MAX) const noexcept
+        basic_string substr(size_type pos, size_type len = npos) const noexcept
         {
             if (pos >= size()) return basic_string();
             return basic_string(c_str() + pos, std::min(len, size() - pos));
@@ -412,18 +417,18 @@ namespace acul
 
         inline size_type find(value_type ch, size_type pos = 0) const noexcept
         {
-            if (pos >= size()) return SIZE_MAX;
+            if (pos >= size()) return npos;
             const_pointer start = c_str() + pos;
             const_pointer p = strchr(start, ch);
-            return p ? static_cast<size_type>(p - c_str()) : SIZE_MAX;
+            return p ? static_cast<size_type>(p - c_str()) : npos;
         }
 
         inline size_type find(const basic_string &str, size_type pos = 0) const noexcept
         {
-            if (pos >= size() || str.size() > size() - pos) return SIZE_MAX;
+            if (pos >= size() || str.size() > size() - pos) return npos;
             const_pointer start = c_str() + pos;
             const_pointer p = strstr(start, str.c_str());
-            return p ? static_cast<size_type>(p - c_str()) : SIZE_MAX;
+            return p ? static_cast<size_type>(p - c_str()) : npos;
         }
 
         basic_string &replace(size_type pos, size_type len, const basic_string &str) noexcept
@@ -496,6 +501,71 @@ namespace acul
         {
             for (auto it = first; it != last; ++it) *this += *it;
             return *this;
+        }
+
+        basic_string &erase(size_type pos = 0, size_type n = npos)
+        {
+            size_type sz = size();
+            if (pos > sz) throw out_of_range(sz, pos);
+            if (n == npos || pos + n > sz) n = sz - pos;
+            if (n == 0) return *this;
+            if (_salloc.size.alloc_flags == ALLOC_RDATA)
+            {
+                size_type old_size = sz;
+                const value_type *old_ptr = _lalloc.ptr;
+
+                if (old_size < _sso_size)
+                {
+                    memcpy(_salloc.data, old_ptr, (old_size + 1) * sizeof(value_type));
+                    _salloc.size.alloc_flags = ALLOC_STACK;
+                    _salloc.size.data = old_size;
+                }
+                else
+                {
+                    if (!grow(old_size + 1)) return *this;
+                    memcpy(_lalloc.ptr, old_ptr, (old_size + 1) * sizeof(value_type));
+                    _lalloc.size.data = old_size;
+                    _lalloc.size.alloc_flags = ALLOC_HEAP;
+                }
+            }
+            const u8 alloc = _salloc.size.alloc_flags;
+            if (alloc == ALLOC_STACK)
+            {
+                size_type old_size = _salloc.size.data;
+                size_type erase_count = (pos + n > old_size) ? old_size - pos : n;
+                memmove(_salloc.data + pos, _salloc.data + pos + erase_count,
+                        (old_size - (pos + erase_count) + 1) * sizeof(value_type));
+
+                size_type new_size = old_size - erase_count;
+                _salloc.size.data = static_cast<u8>(new_size);
+            }
+            else
+            {
+                size_type old_size = _lalloc.size.data;
+                size_type erase_count = (pos + n > old_size) ? old_size - pos : n;
+
+                memmove(_lalloc.ptr + pos, _lalloc.ptr + pos + erase_count,
+                        (old_size - (pos + erase_count) + 1) * sizeof(value_type));
+
+                size_type new_size = old_size - erase_count;
+                _lalloc.size.data = new_size;
+            }
+            return *this;
+        }
+
+        iterator erase(const_iterator pos)
+        {
+            iterator start = begin();
+            size_type diff = static_cast<size_type>(pos - start);
+            erase(diff, 1);
+            return begin() + diff;
+        }
+        iterator erase(const_iterator first, const_iterator last)
+        {
+            iterator start = begin();
+            size_type diff = static_cast<size_type>(first - start);
+            erase(diff, static_cast<size_type>(last - first));
+            return begin() + diff;
         }
 
         void push_back(value_type c) noexcept { *this += c; }

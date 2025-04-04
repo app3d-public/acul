@@ -136,9 +136,10 @@ namespace acul
             }
 
             template <typename T>
-            inline void dispatch(u64 id, const T &data)
+            inline void dispatch(u64 id, T &&data)
             {
-                auto event = data_event(id, data);
+                using data_type = std::decay_t<T>;
+                auto event = data_event<data_type>(id, std::forward<T>(data));
                 dispatch(event);
             }
 

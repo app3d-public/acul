@@ -210,7 +210,7 @@ namespace acul
             return std::all_of(validation_layers.begin(), validation_layers.end(), [&](const char *layerName) {
                 return std::any_of(available_layers.begin(), available_layers.end(),
                                    [&](const VkLayerProperties &layerProperties) {
-                                       return acul::string(layerName) == layerProperties.layerName;
+                                       return strncmp(layerName, layerProperties.layerName, 255) == 0;
                                    });
             });
         }

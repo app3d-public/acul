@@ -2,41 +2,44 @@
 
 #include <fstream>
 #include "api.hpp"
+#include "fwd/sstream.hpp"
 #include "fwd/string.hpp"
-#include "scalars.hpp"
 #include "string/refstring.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
-    // Windows first
-    #include <dbghelp.h>
 #endif
-
-#define EXCEPTION_MESSAGE_SIZE 256
 
 namespace acul
 {
 #ifdef _WIN32
-    struct except_addr_t
+    extern APPLIB_API struct exception_context
+    {
+        HANDLE hProcess;
+    } exception_context;
+
+    struct except_addr
     {
         DWORD64 addr;
         DWORD64 offset;
     };
 
-    struct except_info_t
+    struct except_info
     {
-        HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
         CONTEXT context;
-        except_addr_t *addresses = NULL;
+        except_addr *addresses = NULL;
         size_t addresses_count = 0;
     };
 
-    APPLIB_API void write_frame_registers(std::ofstream &stream, const CONTEXT &context);
+    APPLIB_API void init_exception_context();
+    APPLIB_API void destroy_exception_context();
+
+    APPLIB_API void write_frame_registers(acul::stringstream &stream, const CONTEXT &context);
 
     APPLIB_API void write_exception_info(_EXCEPTION_RECORD *, std::ofstream &);
 
-    APPLIB_API void write_stack_trace(std::ofstream &stream, const except_info_t &except_info);
+    APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info);
 
     APPLIB_API void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path);
 #endif
@@ -44,15 +47,18 @@ namespace acul
     class APPLIB_API exception : public std::exception
     {
     public:
-        APPLIB_API static string dump_folder;
-        except_info_t except_info;
-        u64 id;
+        except_info except_info;
 
-        exception() noexcept;
+        exception() noexcept : except_info(GetCurrentThread())
+        {
+            RtlCaptureContext(&except_info.context);
+            captureStack();
+        }
         exception(const exception &) noexcept = delete;
         exception &operator=(const exception &) noexcept = delete;
 
-        virtual ~exception() noexcept;
+        virtual ~exception() noexcept { release(except_info.addresses); }
+
         virtual const char *what() const noexcept = 0;
 
     private:

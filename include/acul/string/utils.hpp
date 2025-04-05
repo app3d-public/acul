@@ -79,8 +79,11 @@ namespace acul
         }
         if (numDigits > buffer_size - 1) return 0;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
         // Reverse order array for storing digits
         char reverseOrder[numDigits];
+#pragma clang diagnostic pop
 
         int i = 0;
         do {
@@ -105,7 +108,7 @@ namespace acul
      * @param precision Precision
      * @return The number of characters written
      **/
-    APPLIB_API int to_string(float value, char *buffer, size_t buffer_size, int precision);
+    APPLIB_API int to_string(f32 value, char *buffer, size_t buffer_size, int precision);
 
     template <typename T>
     inline auto to_string(T value) -> std::enable_if_t<std::is_integral_v<T>, acul::string>
@@ -113,6 +116,13 @@ namespace acul
         char buffer[num_to_strbuf_size<T>()];
         int len = to_string(value, buffer);
         return string(buffer, len);
+    }
+
+    template <typename T>
+    inline auto to_u16string(T value) -> std::enable_if_t<std::is_integral_v<T>, acul::u16string>
+    {
+        string str = to_string(value);
+        return utf8_to_utf16(str);
     }
 
     /**

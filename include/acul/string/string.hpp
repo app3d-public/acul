@@ -223,6 +223,69 @@ namespace acul
 
         bool operator!=(const basic_string &other) const noexcept { return !(*this == other); }
 
+        constexpr int compare(const basic_string &str) const noexcept
+        {
+            return compare_string(c_str(), size(), str.c_str(), str.size());
+        }
+
+        constexpr int compare(size_type pos, size_type len, const basic_string &str) const
+        {
+            return compare(pos, len, str.c_str(), str.size());
+        }
+
+        constexpr int compare(size_type pos, size_type len, const basic_string &str, size_type subpos,
+                              size_type sublen = npos) const
+        {
+            return compare(pos, len, str.c_str() + subpos, std::min(sublen, str.size() - subpos));
+        }
+
+        constexpr int compare(const_pointer s) const
+        {
+            return compare_string(c_str(), size(), s, null_terminated_length(s));
+        }
+
+        constexpr int compare(size_type pos, size_type len, const T *s) const
+        {
+            return compare(pos, len, s, null_terminated_length(s));
+        }
+
+        constexpr int compare(size_t pos, size_t len, const T *s, size_t n) const
+        {
+            size_type size = this->size();
+            if (pos > size) throw out_of_range(size, pos);
+            size_type compare_len = std::min(len, size - pos);
+            return compare_string(c_str() + pos, compare_len, s, n);
+        }
+
+        void swap(basic_string &other) noexcept
+        {
+            if (this == &other) return;
+            auto alloc = _salloc.size.alloc_flags;
+            auto other_alloc = other._salloc.size.alloc_flags;
+
+            if (alloc == ALLOC_STACK && other_alloc == ALLOC_STACK)
+                std::swap(_salloc, other._salloc);
+            else if (alloc != ALLOC_STACK && other_alloc != ALLOC_STACK)
+                std::swap(_lalloc, other._lalloc);
+            else
+            {
+                if (alloc == ALLOC_STACK)
+                {
+                    alloc_long_t temp = other._lalloc;
+                    other._lalloc = std::move(_lalloc);
+                    _lalloc = temp;
+                    std::swap(_salloc.size, other._salloc.size);
+                }
+                else
+                {
+                    alloc_short_t temp = other._salloc;
+                    other._salloc = std::move(_salloc);
+                    _salloc = temp;
+                    std::swap(_lalloc.size, other._lalloc.size);
+                }
+            }
+        }
+
         basic_string operator+(const basic_string &other) const noexcept
         {
             size_type new_size = size() + other.size();
@@ -566,6 +629,59 @@ namespace acul
             size_type diff = static_cast<size_type>(first - start);
             erase(diff, static_cast<size_type>(last - first));
             return begin() + diff;
+        }
+
+        basic_string &assign(const basic_string &str)
+        {
+            clear();
+            return append(str);
+        }
+
+        basic_string &assign(const basic_string &str, size_type subpos, size_type sublen = npos)
+        {
+            clear();
+            return append(str.substr(subpos, sublen));
+        }
+
+        basic_string &assign(const_pointer s)
+        {
+            clear();
+            return append(s);
+        }
+
+        basic_string &assign(const_pointer s, size_type n)
+        {
+            clear();
+            return append(s, n);
+        }
+
+        basic_string &assign(size_type n, value_type c)
+        {
+            clear();
+            return append(n, c);
+        }
+
+        template <class InputIterator>
+        basic_string &assign(InputIterator first, InputIterator last)
+        {
+            clear();
+            return append(first, last);
+        }
+
+        basic_string &assign(std::initializer_list<value_type> il)
+        {
+            clear();
+            return append(il.begin(), il.end());
+        }
+
+        basic_string &assign(basic_string &&str) noexcept
+        {
+            if (this != &str)
+            {
+                clear();
+                swap(str);
+            }
+            return *this;
         }
 
         void push_back(value_type c) noexcept { *this += c; }

@@ -93,6 +93,8 @@ namespace acul
         return utf16_to_utf8(u16string);
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
     string format(const char *format, ...) noexcept
     {
         string result;
@@ -206,7 +208,7 @@ namespace acul
             *ptr = '.';
             ptr++;
 
-            float fraction = value - (int)value;
+            f32 fraction = value - (int)value;
 
             int numFractionalDigits = 0;
             while (fraction > 0 && (numFractionalDigits < precision || precision == 0) && buffer_size > 2)
@@ -230,6 +232,7 @@ namespace acul
 
         return ptr - buffer;
     }
+#pragma clang diagnostic pop
 #ifdef ACUL_GLM_ENABLE
     int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
     {
@@ -294,7 +297,7 @@ namespace acul
         return (sign == 1) ? (result != 0) : true;
     }
 
-    bool stof(const char *&str, float &value)
+    bool stof(const char *&str, f32 &value)
     {
         const char *ptr = str;
         bool negative = false;
@@ -314,7 +317,7 @@ namespace acul
         // Parse integer part
         if (!isdigit(*ptr)) return false; // At least one digit is required
 
-        float integerPart = 0.0;
+        f32 integerPart = 0.0;
         while (isdigit(*ptr))
         {
             integerPart *= 10.0;
@@ -323,8 +326,8 @@ namespace acul
         }
 
         // Parse fractional part
-        float fractionalPart = 0.0;
-        float fractionalDiv = 1.0;
+        f32 fractionalPart = 0.0;
+        f32 fractionalDiv = 1.0;
         if (*ptr == '.')
         {
             ptr++;

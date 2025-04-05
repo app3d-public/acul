@@ -94,63 +94,78 @@ namespace acul
             string build_path() const;
         };
 
-        inline size_t find_last_of(const string &str, char ch) noexcept
+        inline size_t find_last_of(const char *str, size_t len, char ch) noexcept
         {
 #if defined(__linux__)
-            const char *pos = static_cast<const char *>(memrchr(str.c_str(), ch, str.size()));
+            const char *pos = static_cast<const char *>(memrchr(str, len, ch));
 #else
-            const char *pos = strrchr(str.c_str(), ch);
+            const char *pos = strrchr(str, ch);
 #endif
-            return pos ? static_cast<size_t>(pos - str.c_str()) : acul::string::npos;
+            return pos ? static_cast<size_t>(pos - str) : acul::string::npos;
         }
 
         inline string get_extension(const string &path)
         {
-            size_t dot_pos = find_last_of(path, '.');
-            size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            const char *p = path.c_str();
+            size_t len = path.size();
+            size_t dot_pos = find_last_of(p, len, '.');
+            size_t slash_pos = find_last_of(p, len, PATH_CHAR_SEP_UNIX);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(p, len, PATH_CHAR_SEP_WIN32);
             if (dot_pos == acul::string::npos || (slash_pos != acul::string::npos && dot_pos < slash_pos)) return {};
             return path.substr(dot_pos);
         }
 
         inline string get_filename(const string &path)
         {
-            size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            const char *p = path.c_str();
+            size_t len = path.size();
+            size_t slash_pos = find_last_of(p, len, PATH_CHAR_SEP_UNIX);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(p, len, PATH_CHAR_SEP_WIN32);
             return slash_pos == acul::string::npos ? path : path.substr(slash_pos + 1);
         }
 
         inline string replace_filename(const string &path, const string &new_filename)
         {
-            size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
+            const char *p = path.c_str();
+            size_t len = path.size();
+            size_t slash_pos = find_last_of(p, len, PATH_CHAR_SEP_UNIX);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(p, len, PATH_CHAR_SEP_WIN32);
             return slash_pos == acul::string::npos ? new_filename : path.substr(0, slash_pos + 1) + new_filename;
         }
 
         inline string replace_extension(const string &path, const string &new_extension)
         {
-            size_t slash_pos = find_last_of(path, PATH_CHAR_SEP_UNIX);
-            if (slash_pos == acul::string::npos) slash_pos = find_last_of(path, PATH_CHAR_SEP_WIN32);
-            size_t dot_pos = find_last_of(path, '.');
+            const char *p = path.c_str();
+            size_t len = path.size();
+            size_t slash_pos = find_last_of(p, len, PATH_CHAR_SEP_UNIX);
+            if (slash_pos == acul::string::npos) slash_pos = find_last_of(p, len, PATH_CHAR_SEP_WIN32);
+            size_t dot_pos = find_last_of(p, len, '.');
             if (dot_pos != acul::string::npos && (slash_pos == acul::string::npos || dot_pos > slash_pos))
                 return path.substr(0, dot_pos) + new_extension;
             return path + new_extension;
         }
 
+        inline bool get_current_path(char *buffer, size_t buffer_size) noexcept
+        {
+#ifdef _WIN32
+            if (!GetModuleFileNameA(NULL, buffer, static_cast<DWORD>(buffer_size))) return false;
+            size_t len = strnlen(buffer, buffer_size);
+            size_t pos = find_last_of(buffer, len, '\\');
+#else
+            ssize_t count = readlink("/proc/self/exe", buffer, buffer_size - 1);
+            if (count == -1 || count >= static_cast<ssize_t>(buffer_size - 1)) return false;
+            buffer[count] = '\0'; // Null-terminate
+            size_t pos = find_last_of(buffer, count, '/');
+#endif
+            if (pos != string::npos) buffer[pos] = '\0';
+            return true;
+        }
+
         inline path get_current_path() noexcept
         {
             char buffer[PATH_MAX];
-#ifdef _WIN32
-            GetModuleFileNameA(NULL, buffer, MAX_PATH);
-            acul::string path = buffer;
-            auto pos = find_last_of(path, '\\');
-#else
-            ssize_t count = readlink("/proc/self/exe", buffer, PATH_MAX);
-            if (count == -1) return {};
-            acul::string path(buffer, count);
-            auto pos = find_last_of(path, '/');
-#endif
-            return pos != acul::string::npos ? path.substr(0, pos) + PATH_CHAR_SEP : "";
+            if (!get_current_path(buffer, PATH_MAX)) return {};
+            return (const char *)buffer;
         }
 
     } // namespace io

@@ -6,7 +6,7 @@
 #pragma clang diagnostic pop
 #include <vulkan/vulkan.hpp>
 #include "../api.hpp"
-#include "../exception.hpp"
+#include "../exception/exception.hpp"
 #include "../hash/hashset.hpp"
 #include "../log.hpp"
 #include "../scalars.hpp"

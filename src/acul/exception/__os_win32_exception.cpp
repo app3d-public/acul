@@ -278,6 +278,8 @@ namespace acul
                 return inserted_it;
             }
         }
+        else
+            module_name = it->second.first;
         return it;
     }
 
@@ -359,8 +361,8 @@ namespace acul
         }
     }
 
-    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exceptionRecord, CONTEXT &context,
-                          acul::vector<char> &buffer)
+    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exceptionRecord,
+                                     CONTEXT &context, acul::vector<char> &buffer)
     {
         HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
                                    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);

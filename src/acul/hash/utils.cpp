@@ -81,10 +81,6 @@ namespace acul
     static const u64 k1 = 0xb492b66fbe98f273ULL;
     static const u64 k2 = 0x9ae16a3b2f90404fULL;
 
-    // Magic numbers for 32-bit hashing.  Copied from Murmur3.
-    static const u32 c1 = 0xcc9e2d51;
-    static const u32 c2 = 0x1b873593;
-
     static u64 UNALIGNED_LOAD64(const char *p)
     {
         u64 result;
@@ -101,15 +97,6 @@ namespace acul
 
     static u32 fetch32(const char *p) { return uint32_in_expected_order(UNALIGNED_LOAD32(p)); }
     static u64 fetch64(const char *p) { return uint64_in_expected_order(UNALIGNED_LOAD64(p)); }
-
-    static inline u64 rotl64(u64 x, int r)
-    {
-#if defined(_MSC_VER)
-        return _rotl64(x, r);
-#else
-        return (x << r) | (x >> (64 - r));
-#endif
-    }
 
     // Bitwise right rotate.  Normally this will compile to a single
     // instruction, especially if the shift is a manifest constant.

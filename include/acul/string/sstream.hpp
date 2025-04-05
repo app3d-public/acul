@@ -77,6 +77,14 @@ namespace acul
             return *this;
         }
 
+        basic_stringstream &write(const void *data, size_type size)
+        {
+            if (!data || size == 0) return *this;
+            const_pointer ptr = static_cast<const_pointer>(data);
+            _data.append(ptr, size);
+            return *this;
+        }
+
         basic_string<T, Allocator> str() const noexcept { return _data; }
 
         void clear() noexcept { _data.clear(); }

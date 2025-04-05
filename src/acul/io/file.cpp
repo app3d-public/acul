@@ -41,7 +41,6 @@ namespace acul
                 return file.good();
             }
 
-#ifndef ACUL_BUILD_MIN
             bool compress(const char *data, size_t size, acul::vector<char> &compressed, int quality)
             {
                 size_t const maxCompressedSize = ZSTD_compressBound(size);
@@ -84,7 +83,6 @@ namespace acul
 
                 return true;
             }
-#endif
         } // namespace file
     } // namespace io
 } // namespace acul

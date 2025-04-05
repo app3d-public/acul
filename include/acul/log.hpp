@@ -1,6 +1,7 @@
 #ifndef APP_ACUL_LOG_H
 #define APP_ACUL_LOG_H
 
+#include <fstream>
 #include <iostream>
 #include "io/path.hpp"
 #include "string/sstream.hpp"

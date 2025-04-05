@@ -1,4 +1,4 @@
-#include <acul/exception.hpp>
+#include <acul/exception/exception.hpp>
 #include <acul/hash/utils.hpp>
 #include <acul/io/path.hpp>
 #include <acul/string/utils.hpp>

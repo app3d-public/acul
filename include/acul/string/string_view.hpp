@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../exception.hpp"
+#include "../exception/exception.hpp"
 #include "../fwd/string_view.hpp"
 #include "base.hpp"
 

@@ -297,6 +297,55 @@ namespace acul
         return (sign == 1) ? (result != 0) : true;
     }
 
+    bool stoull(const char *&str, unsigned long long &value)
+    {
+        const char *ptr = str;
+
+        // Skip white spaces
+        while (isspace(*ptr)) ++ptr;
+
+        // Parse integer part
+        unsigned long long result = 0;
+        while (isdigit(*ptr)) result = (result * 10) + (*ptr++ - '0');
+
+        value = result;
+        str = ptr;
+        return true;
+    }
+
+    bool stoull(const char *&str, void *&value)
+    {
+        const char *ptr = str;
+        unsigned long long result = 0;
+
+        while (isspace(*ptr)) ++ptr;
+
+        if (!(ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X'))) return false;
+        ptr += 2;
+        if (!isxdigit(*ptr)) return false;
+
+        while (isxdigit(*ptr))
+        {
+            unsigned long long digit = 0;
+
+            if (*ptr >= '0' && *ptr <= '9')
+                digit = *ptr - '0';
+            else if (*ptr >= 'a' && *ptr <= 'f')
+                digit = 10 + (*ptr - 'a');
+            else if (*ptr >= 'A' && *ptr <= 'F')
+                digit = 10 + (*ptr - 'A');
+
+            if (result > (ULLONG_MAX - digit) / 16) return false;
+
+            result = result * 16 + digit;
+            ++ptr;
+        }
+
+        value = reinterpret_cast<void *>(result);
+        str = ptr;
+        return true;
+    }
+
     bool stof(const char *&str, f32 &value)
     {
         const char *ptr = str;

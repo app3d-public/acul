@@ -8,6 +8,7 @@ add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/hash")
+add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exception")
 
 if(NOT ACUL_BUILD_MIN)
     add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/gpu")
@@ -31,8 +32,8 @@ if(NOT ACUL_BUILD_MIN)
         GLM_FORCE_ALIGNED_GENTYPES
     )
 else()
-    add_compile_definitions(ACUL_BUILD_MIN)
     list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/math.cpp")
+    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc.cpp")
 endif()
 
 set(ACUL_LIB_NAME ${PROJECT_NAME}-${APP_SIMD_ARCH})
@@ -49,7 +50,7 @@ set_target_properties(${ACUL_LIB_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 # TBB
 find_package(TBB REQUIRED)
 
-target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc)
+target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd)
 
 if(NOT ACUL_BUILD_MIN)
     target_include_directories(${ACUL_LIB_NAME} PUBLIC
@@ -57,7 +58,7 @@ if(NOT ACUL_BUILD_MIN)
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
     )
     target_compile_definitions(${ACUL_LIB_NAME} PUBLIC ACUL_HALF_ENABLE ACUL_LOG_ENABLE ACUL_GLM_ENABLE)
-    target_link_libraries(${ACUL_LIB_NAME} PUBLIC glm vma zstd)
+    target_link_libraries(${ACUL_LIB_NAME} PUBLIC glm vma)
 endif()
 
 target_link_libraries(${ACUL_LIB_NAME} PUBLIC intl)

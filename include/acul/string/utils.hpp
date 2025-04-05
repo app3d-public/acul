@@ -134,12 +134,28 @@ namespace acul
     APPLIB_API bool stoi(const char *&str, int &value);
 
     /**
-     * @brief Deserialize the C-style string to the float
+     * @brief Deserialize the C-style string to the unsigned long long
      * @param str Source string
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stof(const char *&str, float &value);
+    APPLIB_API bool stoull(const char *&str, unsigned long long &value);
+
+    /**
+     * @brief Deserialize the C-style string to the pointer in hex format
+     * @param str Source string
+     * @param value Destination value
+     * @return True if successful. Otherwise false
+     **/
+    APPLIB_API bool stoull(const char *&str, void *&value);
+
+    /**
+     * @brief Deserialize the C-style string to the float32
+     * @param str Source string
+     * @param value Destination value
+     * @return True if successful. Otherwise false
+     **/
+    APPLIB_API bool stof(const char *&str, f32 &value);
 
 #ifdef ACUL_GLM_ENABLE
 

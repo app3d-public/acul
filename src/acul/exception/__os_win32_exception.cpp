@@ -1,50 +1,83 @@
-#include <acul/exception.hpp>
+#include <acul/exception/exception.hpp>
 #include <acul/hash/hashmap.hpp>
 #include <acul/map.hpp>
 #include <acul/string/sstream.hpp>
 #include <acul/string/utils.hpp>
 #include <acul/vector.hpp>
 #include <dbghelp.h>
+#include <fstream>
 #include <psapi.h>
+#include <winternl.h>
 
 #ifndef _MSC_VER
     #include <cstdlib>
     #include <cxxabi.h>
 #endif
 
+#define SYM_INIT_ATTEMP_COUNT 3
+#define SYM_INIT_NONE         0x0
+#define SYM_INIT_SUCCESS      0x1
+#define SYM_INIT_FAIL         0x2
+
 namespace acul
 {
-    struct exception_context exception_context(NULL);
+    HANDLE exception_hprocess = nullptr;
 
-    void init_exception_context()
+    bool init_stack_capture(HANDLE hProcess)
     {
-        HANDLE hProcess = GetCurrentProcess();
         SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME | SYMOPT_FAIL_CRITICAL_ERRORS);
-        if (SymInitialize(hProcess, nullptr, TRUE)) exception_context.hProcess = hProcess;
+        DWORD err = 0;
+        // A few attempts if DLL loader is busy by Windows app initialization
+        for (int i = 0; i < SYM_INIT_ATTEMP_COUNT; ++i)
+        {
+            if (SymInitialize(hProcess, nullptr, TRUE))
+            {
+                err = 0;
+                break;
+            }
+            err = GetLastError();
+            if (err != 0xC0000004) break;
+        }
+        return err == 0;
     }
 
-    void destroy_exception_context()
+    HANDLE get_exception_process()
     {
-        if (!exception_context.hProcess) return;
-        SymCleanup(exception_context.hProcess);
+        static int sym_state = SYM_INIT_NONE;
+        if (sym_state != SYM_INIT_NONE) return exception_hprocess;
+        HANDLE hProcess = GetCurrentProcess();
+        if (init_stack_capture(hProcess))
+        {
+            sym_state = SYM_INIT_SUCCESS;
+            exception_hprocess = hProcess;
+            return hProcess;
+        }
+        sym_state = SYM_INIT_FAIL;
+        return nullptr;
     }
 
-    void write_exception_info(_EXCEPTION_RECORD *pRecord, std::ofstream &stream)
+    void destroy_exception_context(HANDLE hProcess)
     {
-        stream << "Exception code: 0x" << std::hex << pRecord->ExceptionCode << std::endl;
-        stream << "Exception address: " << std::showbase << reinterpret_cast<uintptr_t>(pRecord->ExceptionAddress)
-               << std::endl;
+        HANDLE current_process = hProcess ? hProcess : exception_hprocess;
+        if (!current_process) return;
+        SymCleanup(current_process);
+    }
 
-        if (pRecord->NumberParameters > 0)
+    APPLIB_API void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)
+    {
+        stream << format("Excetion code: 0x%llx\n", record.ExceptionCode);
+        stream << format("Exception address: 0x%llx\n", record.ExceptionAddress);
+
+        if (record.NumberParameters > 0)
         {
             stream << "Exception parameters: ";
-            for (DWORD i = 0; i < pRecord->NumberParameters; ++i)
-                stream << "0x" << std::noshowbase << pRecord->ExceptionInformation[i] << " ";
-            stream << std::endl;
+            for (DWORD i = 0; i < record.NumberParameters; ++i)
+                stream << format("0x%llx ", record.ExceptionInformation[i]);
+            stream << '\n';
         }
     }
 
-    void write_frame_registers(acul::stringstream &stream, const CONTEXT &context)
+    APPLIB_API void write_frame_registers(acul::stringstream &stream, const CONTEXT &context)
     {
         stream << "Frame registers:\n";
         stream << format("\tRAX: 0x%llx\n", context.Rax);
@@ -219,15 +252,15 @@ namespace acul
 
     using hmodule_symbol_map = hashmap<DWORD64, std::pair<string, map<DWORD64, symbol_info>>>;
 
-    hmodule_symbol_map::iterator find_symbol_map(hmodule_symbol_map &hmodule_symbol_map, DWORD64 module_base,
-                                                 string &module_name)
+    hmodule_symbol_map::iterator find_symbol_map(hmodule_symbol_map &hmodule_symbol_map, HANDLE hProcess,
+                                                 DWORD64 module_base, string &module_name)
     {
         auto it = hmodule_symbol_map.find(module_base);
         if (it == hmodule_symbol_map.end())
         {
             {
                 char module_name_tmp[MAX_PATH];
-                if (!GetModuleFileNameA((HINSTANCE)module_base, module_name_tmp, MAX_PATH))
+                if (!GetModuleFileNameExA(hProcess, (HMODULE)module_base, module_name_tmp, MAX_PATH))
                     return hmodule_symbol_map.end();
                 module_name = (const char *)module_name_tmp;
             }
@@ -248,11 +281,41 @@ namespace acul
         return it;
     }
 
-    void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
+    typedef NTSTATUS(NTAPI *NtQueryInformationProcess_t)(HANDLE, PROCESS_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+
+    HMODULE GetMainModuleHandle(HANDLE hProcess)
+    {
+        if (hProcess == GetCurrentProcess()) return (HMODULE)GetModuleHandle(NULL);
+        HMODULE hModule = NULL;
+        HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+
+        if (!ntdll) return NULL;
+
+        NtQueryInformationProcess_t NtQueryInformationProcess =
+            (NtQueryInformationProcess_t)GetProcAddress(ntdll, "NtQueryInformationProcess");
+
+        if (!NtQueryInformationProcess) return NULL;
+
+        PROCESS_BASIC_INFORMATION pbi;
+        ULONG returnLength;
+
+        if (NT_SUCCESS(NtQueryInformationProcess(hProcess, static_cast<PROCESS_INFORMATION_CLASS>(0), &pbi, sizeof(pbi),
+                                                 &returnLength)))
+        {
+            PVOID imageBaseAddress = nullptr;
+            SIZE_T bytesRead;
+            if (ReadProcessMemory(hProcess, &(pbi.PebBaseAddress->Reserved3[1]), &imageBaseAddress, sizeof(PVOID),
+                                  &bytesRead))
+                hModule = (HMODULE)imageBaseAddress;
+        }
+        return hModule;
+    }
+
+    APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
 
-        HMODULE main_module = GetModuleHandleA(NULL);
+        HMODULE main_module = GetMainModuleHandle(except_info.hProcess);
         stream << "Stack trace:\n";
         int frameIndex = 0;
 
@@ -264,7 +327,7 @@ namespace acul
             if (addr)
             {
                 string name, module_name;
-                auto it = find_symbol_map(hmodule_symbol_map, addr, module_name);
+                auto it = find_symbol_map(hmodule_symbol_map, except_info.hProcess, addr, module_name);
                 if (it == hmodule_symbol_map.end())
                     name = "<unknown>";
                 else
@@ -277,7 +340,7 @@ namespace acul
                         PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
                         pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
                         pSymbol->MaxNameLen = MAX_SYM_NAME;
-                        if (SymFromAddr(exception_context.hProcess, offset, &displacementSym, pSymbol))
+                        if (SymFromAddr(except_info.hProcess, offset, &displacementSym, pSymbol))
                             name = pSymbol->Name;
                         else
                             name = "<unknown>";
@@ -296,25 +359,48 @@ namespace acul
         }
     }
 
-    void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path)
+    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exceptionRecord, CONTEXT &context,
+                          acul::vector<char> &buffer)
     {
-        HANDLE hFile = CreateFileA(path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hFile == INVALID_HANDLE_VALUE) return;
+        HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                                   FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+
+        if (hFile == INVALID_HANDLE_VALUE) return false;
+
+        EXCEPTION_POINTERS exceptionPointers;
+        exceptionPointers.ExceptionRecord = &exceptionRecord;
+        exceptionPointers.ContextRecord = &context;
 
         MINIDUMP_EXCEPTION_INFORMATION mdei;
-        mdei.ThreadId = GetCurrentThreadId();
-        mdei.ExceptionPointers = pep;
+        mdei.ThreadId = GetThreadId(hThread);
+        mdei.ExceptionPointers = &exceptionPointers;
         mdei.ClientPointers = FALSE;
 
-        MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile, MiniDumpNormal,
-                          (pep != nullptr) ? &mdei : NULL, NULL, NULL);
+        BOOL success =
+            MiniDumpWriteDump(hProcess, GetProcessId(hProcess), hFile, MiniDumpWithFullMemory, &mdei, nullptr, nullptr);
+
+        if (!success)
+        {
+            CloseHandle(hFile);
+            return false;
+        }
+
+        SetFilePointer(hFile, 0, nullptr, FILE_BEGIN);
+
+        char tempBuffer[4096];
+        DWORD bytesRead = 0;
+        buffer.clear();
+
+        while (ReadFile(hFile, tempBuffer, sizeof(tempBuffer), &bytesRead, nullptr) && bytesRead > 0)
+            buffer.insert(buffer.end(), tempBuffer, tempBuffer + bytesRead);
 
         CloseHandle(hFile);
+        return true;
     }
 
-    void exception::captureStack()
+    void capture_stack_trace(except_info &except_info)
     {
-        if (!exception_context.hProcess) return;
+        if (!except_info.hProcess) return;
         STACKFRAME64 stackFrame = {};
         CONTEXT context = except_info.context;
 
@@ -328,10 +414,10 @@ namespace acul
         stackFrame.AddrStack.Mode = AddrModeFlat;
 
         vector<except_addr> addresses;
-        while (StackWalk64(machineType, exception_context.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
+        while (StackWalk64(machineType, except_info.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
                            SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
         {
-            DWORD64 base = SymGetModuleBase64(exception_context.hProcess, stackFrame.AddrPC.Offset);
+            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.Offset);
             addresses.emplace_back(base, stackFrame.AddrPC.Offset);
         }
         except_info.addresses_count = addresses.size();

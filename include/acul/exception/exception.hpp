@@ -1,10 +1,8 @@
 #pragma once
 
-#include <fstream>
-#include "api.hpp"
-#include "fwd/sstream.hpp"
-#include "fwd/string.hpp"
-#include "string/refstring.hpp"
+#include "../api.hpp"
+#include "../fwd/string.hpp"
+#include "../string/refstring.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
@@ -13,11 +11,6 @@
 namespace acul
 {
 #ifdef _WIN32
-    extern APPLIB_API struct exception_context
-    {
-        HANDLE hProcess;
-    } exception_context;
-
     struct except_addr
     {
         DWORD64 addr;
@@ -26,22 +19,19 @@ namespace acul
 
     struct except_info
     {
+        HANDLE hProcess;
         HANDLE hThread = NULL;
         CONTEXT context;
         except_addr *addresses = NULL;
         size_t addresses_count = 0;
     };
 
-    APPLIB_API void init_exception_context();
-    APPLIB_API void destroy_exception_context();
+    extern HANDLE exception_hprocess;
+    APPLIB_API bool init_stack_capture(HANDLE hProcess);
+    APPLIB_API HANDLE get_exception_process();
+    APPLIB_API void capture_stack_trace(except_info &except_info);
+    APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
 
-    APPLIB_API void write_frame_registers(acul::stringstream &stream, const CONTEXT &context);
-
-    APPLIB_API void write_exception_info(_EXCEPTION_RECORD *, std::ofstream &);
-
-    APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info);
-
-    APPLIB_API void create_mini_dump(EXCEPTION_POINTERS *pep, const string &path);
 #endif
 
     class APPLIB_API exception : public std::exception
@@ -49,10 +39,10 @@ namespace acul
     public:
         except_info except_info;
 
-        exception() noexcept : except_info(GetCurrentThread())
+        exception() noexcept : except_info{get_exception_process(), GetCurrentThread()}
         {
             RtlCaptureContext(&except_info.context);
-            captureStack();
+            capture_stack_trace(except_info);
         }
         exception(const exception &) noexcept = delete;
         exception &operator=(const exception &) noexcept = delete;
@@ -60,9 +50,6 @@ namespace acul
         virtual ~exception() noexcept { release(except_info.addresses); }
 
         virtual const char *what() const noexcept = 0;
-
-    private:
-        void captureStack();
     };
 
     class APPLIB_API runtime_error final : public exception

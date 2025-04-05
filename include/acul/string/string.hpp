@@ -1,7 +1,7 @@
 #ifndef APP_ACUL_STD_STRING_H
 #define APP_ACUL_STD_STRING_H
 
-#include "../exception.hpp"
+#include "../exception/exception.hpp"
 #include "../fwd/string.hpp"
 #include "../hash/utils.hpp"
 #include "base.hpp"

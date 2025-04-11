@@ -69,7 +69,7 @@ namespace acul
              * @param config The device configuration specifying the MSAA settings.
              * @return Reference to the updated pipeline_config object.
              */
-            pipeline_config &enable_MSAA(const device_config config)
+            pipeline_config &enable_MSAA(const device::config config)
             {
                 multisample_info.setRasterizationSamples(config.msaa);
                 if (config.msaa > vk::SampleCountFlagBits::e1 && config.sample_shading)
@@ -103,7 +103,7 @@ namespace acul
              *
              * @param device The Vulkan device to load the shader module into.
              */
-            void load(device &device);
+            void load(device& device);
 
             /**
              * @brief Destroy the shader module.

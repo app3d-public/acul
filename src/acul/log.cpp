@@ -157,10 +157,10 @@ namespace acul
         {
             for (auto &logger : _loggers) acul::release(logger.second);
             _loggers.clear();
-            instance = nullptr;
+            g_log_service = nullptr;
             default_logger = nullptr;
         }
 
-        log_service *log_service::instance = nullptr;
+        log_service *g_log_service = nullptr;
     } // namespace log
 } // namespace acul

@@ -28,7 +28,7 @@ namespace acul
 
         explicit vector(size_type size) noexcept : _size(size), _capacity(size), _data(Allocator::allocate(size))
         {
-            if constexpr (!std::is_trivially_constructible_v<T>)
+            if constexpr (!std::is_trivially_constructible_v<value_type>)
                 for (size_type i = 0; i < _size; ++i) Allocator::construct(_data + i);
         }
 
@@ -56,7 +56,7 @@ namespace acul
             {
                 size_type i = 0;
                 for (ForwardIt it = first; it != last; ++it, ++i)
-                    if constexpr (std::is_trivially_constructible_v<T>)
+                    if constexpr (std::is_trivially_constructible_v<value_type>)
                         _data[i] = *it;
                     else
                         Allocator::construct(_data + i, *it);
@@ -65,7 +65,7 @@ namespace acul
 
         ~vector() noexcept
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
+            if constexpr (!std::is_trivially_destructible_v<value_type>)
                 for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
             Allocator::deallocate(_data, _capacity);
             _data = nullptr;
@@ -84,13 +84,13 @@ namespace acul
             other._capacity = 0;
         }
 
-        vector(std::initializer_list<T> ilist) : _size(ilist.size()), _capacity(ilist.size())
+        vector(std::initializer_list<value_type> ilist) : _size(ilist.size()), _capacity(ilist.size())
         {
             _data = Allocator::allocate(_size);
             std::uninitialized_copy(ilist.begin(), ilist.end(), _data);
         }
 
-        vector &operator=(std::initializer_list<T> ilist) noexcept
+        vector &operator=(std::initializer_list<value_type> ilist) noexcept
         {
             if (_capacity < ilist.size())
             {
@@ -110,7 +110,7 @@ namespace acul
         {
             if (this != &other)
             {
-                if constexpr (!std::is_trivially_destructible_v<T>)
+                if constexpr (!std::is_trivially_destructible_v<value_type>)
                     for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
                 const size_type oldCapacity = _capacity;
                 _capacity = other._capacity;
@@ -125,7 +125,7 @@ namespace acul
         {
             if (this != &other)
             {
-                if constexpr (!std::is_trivially_destructible_v<T>)
+                if constexpr (!std::is_trivially_destructible_v<value_type>)
                     for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
                 Allocator::deallocate(_data, _capacity);
                 _data = other._data;
@@ -217,8 +217,8 @@ namespace acul
                 _capacity = std::max(_capacity * 2, newSize);
                 pointer newData = Allocator::allocate(_capacity);
                 if (!newData) throw bad_alloc(_capacity);
-                if constexpr (std::is_trivially_copyable_v<T>)
-                    memcpy(newData, _data, _size * sizeof(T));
+                if constexpr (std::is_trivially_copyable_v<value_type>)
+                    memcpy(newData, _data, _size * sizeof(value_type));
                 else
                 {
                     for (size_type i = 0; i < _size; ++i)
@@ -231,7 +231,7 @@ namespace acul
                 _data = newData;
             }
 
-            if constexpr (!std::is_trivially_constructible_v<T>)
+            if constexpr (!std::is_trivially_constructible_v<value_type>)
             {
                 if (newSize > _size)
                     for (size_type i = _size; i < newSize; ++i) Allocator::construct(_data + i);
@@ -243,7 +243,7 @@ namespace acul
 
         void clear() noexcept
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
+            if constexpr (!std::is_trivially_destructible_v<value_type>)
                 for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
             _size = 0;
         }
@@ -265,7 +265,7 @@ namespace acul
         void push_back(const_reference value) noexcept
         {
             if (_size == _capacity) reallocate();
-            if constexpr (std::is_trivially_copyable_v<T>)
+            if constexpr (std::is_trivially_copyable_v<value_type>)
                 _data[_size] = value;
             else
                 Allocator::construct(_data + _size, value);
@@ -276,7 +276,7 @@ namespace acul
         void push_back(U &&value)
         {
             if (_size == _capacity) reallocate();
-            if constexpr (std::is_trivially_move_assignable_v<T>)
+            if constexpr (std::is_trivially_move_assignable_v<value_type>)
                 _data[_size] = std::forward<U>(value);
             else
                 Allocator::construct(_data + _size, std::forward<U>(value));
@@ -287,7 +287,7 @@ namespace acul
         void emplace_back(Args &&...args)
         {
             if (_size == _capacity) reallocate();
-            if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
+            if constexpr (!std::is_trivially_constructible_v<value_type> || has_args<Args...>())
                 Allocator::construct(_data + _size, std::forward<Args>(args)...);
             ++_size;
         }
@@ -303,7 +303,7 @@ namespace acul
 
         iterator erase(iterator first, iterator last);
 
-        iterator insert(iterator pos, const T &value);
+        iterator insert(iterator pos, const_reference value);
         iterator insert(iterator pos, T &&value);
 
         template <typename InputIt>
@@ -384,7 +384,7 @@ namespace acul
             if constexpr (std::is_trivially_copyable_v<T>)
             {
                 if constexpr (!std::is_rvalue_reference_v<decltype(*start)>)
-                    memcpy(dest, &(*start), (end - start) * sizeof(T));
+                    memcpy(dest, &(*start), (end - start) * sizeof(value_type));
                 else
                     for (; start != end; ++start, ++dest) *dest = *start;
             }
@@ -395,8 +395,8 @@ namespace acul
         template <typename Iter, typename Dest>
         void move_construct(Iter start, Iter end, Dest dest)
         {
-            if constexpr (std::is_trivially_move_constructible_v<T>)
-                memmove(dest, &(*start), (end - start) * sizeof(T));
+            if constexpr (std::is_trivially_move_constructible_v<value_type>)
+                memmove(dest, &(*start), (end - start) * sizeof(value_type));
             else
                 for (; start != end; ++start, ++dest) Allocator::construct(dest, std::move(*start));
         }
@@ -404,8 +404,8 @@ namespace acul
         template <typename Iter>
         void move_elements_backward(Iter start, Iter end, Iter destEnd)
         {
-            if constexpr (std::is_trivially_move_constructible_v<T>)
-                memmove(destEnd - (end - start), &(*start), (end - start) * sizeof(T));
+            if constexpr (std::is_trivially_move_constructible_v<value_type>)
+                memmove(destEnd - (end - start), &(*start), (end - start) * sizeof(value_type));
             else
                 while (end != start) Allocator::construct(--destEnd, std::move(*--end));
         }
@@ -504,7 +504,7 @@ namespace acul
             std::ptrdiff_t count = last - first;
             std::move(_data + index + count, _data + _size, _data + index);
             _size -= count;
-            if constexpr (!std::is_trivially_destructible_v<T>)
+            if constexpr (!std::is_trivially_destructible_v<value_type>)
                 for (std::ptrdiff_t i = 0; i < count; ++i) Allocator::destroy(_data + _size + i);
             return iterator(_data + index);
         }
@@ -512,13 +512,13 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    vector<T, Allocator>::iterator vector<T, Allocator>::insert(Iterator pos, const T &value)
+    vector<T, Allocator>::iterator vector<T, Allocator>::insert(Iterator pos, const_reference value)
     {
         if (pos < begin() || pos > end()) return end();
         std::ptrdiff_t index = pos - begin();
 
         if (_size == _capacity) reserve(_capacity == 0 ? 1 : _capacity * 2);
-        if constexpr (std::is_trivially_move_constructible_v<T>)
+        if constexpr (std::is_trivially_move_constructible_v<value_type>)
             std::move_backward(_data + index, _data + _size, _data + _size + 1);
         else
         {
@@ -545,7 +545,7 @@ namespace acul
 
         if (_size == _capacity) reserve(_capacity == 0 ? 1 : _capacity * 2);
 
-        if constexpr (std::is_trivially_move_constructible_v<T>)
+        if constexpr (std::is_trivially_move_constructible_v<value_type>)
             std::move_backward(_data + index, _data + _size, _data + _size + 1);
         else
         {
@@ -556,7 +556,7 @@ namespace acul
             }
         }
 
-        if constexpr (std::is_trivially_move_constructible_v<T>)
+        if constexpr (std::is_trivially_move_constructible_v<value_type>)
             _data[index] = std::move(value);
         else
             Allocator::construct(_data + index, std::move(value));

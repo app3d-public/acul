@@ -6,29 +6,20 @@ namespace acul
 {
     namespace gpu
     {
-        vk::CommandBuffer begin_single_time_commands(device &device, queue_family_info &queue)
-        {
-            vk::CommandBuffer command_buffer;
-            device.graphics_queue.pool.primary.request(&command_buffer, 1);
-            vk::CommandBufferBeginInfo begin_info;
-            begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-            command_buffer.begin(begin_info, device.loader);
-            return command_buffer;
-        }
 
-        vk::Result end_single_time_commands(vk::CommandBuffer command_buffer, queue_family_info &queue, device &device)
+        vk::Result single_time_exec::end()
         {
             vk::Fence fence;
-            device.fence_pool.request(&fence, 1);
-            device.vk_device.resetFences(fence, device.loader);
-            command_buffer.end(device.loader);
+            fence_pool.request(&fence, 1);
+            vk_device.resetFences(fence, loader);
+            command_buffer.end(loader);
             vk::SubmitInfo submitInfo;
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &command_buffer;
-            queue.vk_queue.submit(submitInfo, fence, device.loader);
-            auto res = device.vk_device.waitForFences(fence, true, UINT64_MAX, device.loader);
+            queue.vk_queue.submit(submitInfo, fence, loader);
+            auto res = vk_device.waitForFences(fence, true, UINT64_MAX, loader);
             queue.pool.primary.release(command_buffer);
-            device.fence_pool.release(fence);
+            fence_pool.release(fence);
             return res;
         }
 
@@ -51,10 +42,10 @@ namespace acul
             return false;
         }
 
-        void transition_image_layout(device &device, vk::Image image, vk::ImageLayout old_layout,
+        void transition_image_layout(single_time_exec &exec, vk::Image image, vk::ImageLayout old_layout,
                                      vk::ImageLayout new_layout, u32 mipLevels)
         {
-            vk::CommandBuffer command_buffer = begin_single_time_commands(device, device.graphics_queue);
+
             vk::ImageMemoryBarrier barrier{};
             barrier.setOldLayout(old_layout)
                 .setNewLayout(new_layout)
@@ -116,9 +107,8 @@ namespace acul
                     throw acul::runtime_error("Unsupported dst layout transition");
             }
 
-            command_buffer.pipelineBarrier(srcStage, dstStage, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1,
-                                           &barrier, device.loader);
-            end_single_time_commands(command_buffer, device.graphics_queue, device);
+            exec.command_buffer.pipelineBarrier(srcStage, dstStage, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1,
+                                                &barrier, exec.loader);
         }
 
         bool create_image(const vk::ImageCreateInfo &image_info, vk::Image &image, VmaAllocation &allocation,

@@ -1,5 +1,4 @@
 #include <acul/gpu/descriptors.hpp>
-#include <acul/log.hpp>
 #include <vulkan/vulkan_to_string.hpp>
 
 namespace acul
@@ -10,8 +9,8 @@ namespace acul
         // *************** Descriptor Set Layout *********************
 
         descriptor_set_layout::descriptor_set_layout(device &device,
-                                                     const hashmap<u32, vk::DescriptorSetLayoutBinding> &bindings)
-            : _device{device}, _bindings{bindings}
+                                                     const acul::hashmap<u32, vk::DescriptorSetLayoutBinding> &bindings)
+            : _device(device), _bindings{bindings}
         {
             vector<vk::DescriptorSetLayoutBinding> set_layout_bindings{};
             for (auto kv : bindings) set_layout_bindings.push_back(kv.second);

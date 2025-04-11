@@ -11,31 +11,55 @@ namespace acul
 {
     namespace gpu
     {
-        inline size_t align_up(size_t value, size_t alignment) { return (value + alignment - 1) & ~(alignment - 1); }
+        inline size_t get_alignment(size_t size, size_t min_offset)
+        {
+            return min_offset > 0 ? (size + min_offset - 1) & ~(min_offset - 1) : size;
+        }
 
-        /**
-         * Allocates a single-time command buffer and begins recording commands.
-         *
-         * @param device The device object.
-         * @param queue The queue family.
-         *
-         * @return The allocated and begun command buffer.
-         *
-         * @throws vk::Error if the command buffer allocation fails.
-         */
-        APPLIB_API vk::CommandBuffer begin_single_time_commands(device &device, queue_family_info &queue);
+        struct single_time_exec
+        {
+            vk::CommandBuffer command_buffer;
+            vk::Device &vk_device;
+            queue_family_info &queue;
+            resource_pool<vk::Fence, fence_pool_alloc> &fence_pool;
+            vk::DispatchLoaderDynamic &loader;
 
-        /**
-         * Ends a single-time command buffer and submits it to the queue.
-         *
-         * @param commandBuffer The command buffer to end and submit.
-         * @param queue The queue family to submit the command buffer to.
-         * @param device The device object.
-         * @return The result of the submit operation.
-         * @throws vk::Error if there is an error submitting or waiting for the command buffer.
-         */
-        APPLIB_API vk::Result end_single_time_commands(vk::CommandBuffer command_buffer, queue_family_info &queue,
-                                                       device &device);
+            single_time_exec(device &device)
+                : vk_device(device.vk_device),
+                  queue(device.details->queues.graphics),
+                  fence_pool(device.details->fence_pool),
+                  loader(device.loader)
+            {
+                queue.pool.primary.request(&command_buffer, 1);
+                vk::CommandBufferBeginInfo begin_info;
+                begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+                command_buffer.begin(begin_info, loader);
+            }
+
+            APPLIB_API vk::Result end();
+        };
+
+        inline void copy_buffer_to_image(single_time_exec &exec, vk::Buffer buffer, vk::Image image,
+                                         point2D<u32> dimensions, u32 layer_count, point2D<int> offset = {0, 0})
+        {
+            vk::BufferImageCopy region{};
+            region.setBufferOffset(0)
+                .setBufferRowLength(0)
+                .setBufferImageHeight(0)
+                .setImageSubresource({vk::ImageAspectFlagBits::eColor, 0, 0, layer_count})
+                .setImageOffset({offset.x, offset.y, 0})
+                .setImageExtent({dimensions.x, dimensions.y, 1});
+            exec.command_buffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1, &region,
+                                                  exec.loader);
+        }
+
+        inline vk::Result copy_buffer_to_image(device &device, vk::Buffer buffer, vk::Image image,
+                                               point2D<u32> dimensions, u32 layer_count, point2D<int> offset = {0, 0})
+        {
+            single_time_exec exec{device};
+            copy_buffer_to_image(exec, buffer, image, dimensions, layer_count, offset);
+            return exec.end();
+        }
 
         /// @brief Create a buffer with the given size, usage flags, and memory usage
         /// @param size Size of the buffer in bytes
@@ -58,10 +82,10 @@ namespace acul
         /// @param size Size of the buffer
         inline void copy_buffer(device &device, vk::Buffer src_buffer, vk::Buffer dst_buffer, vk::DeviceSize size)
         {
-            vk::CommandBuffer command_buffer = begin_single_time_commands(device, device.graphics_queue);
+            single_time_exec exec{device};
             vk::BufferCopy copy_region(0, 0, size);
-            command_buffer.copyBuffer(src_buffer, dst_buffer, 1, &copy_region, device.loader);
-            end_single_time_commands(command_buffer, device.graphics_queue, device);
+            exec.command_buffer.copyBuffer(src_buffer, dst_buffer, 1, &copy_region, exec.loader);
+            exec.end();
         }
 
         /// @brief Transit image layout from one layout to another one using pipeline memory barrier
@@ -70,8 +94,16 @@ namespace acul
         /// @param old_layout Current layout
         /// @param new_layout New layout
         /// @param mipLevels Image mip level
-        APPLIB_API void transition_image_layout(device &device, vk::Image image, vk::ImageLayout old_layout,
+        APPLIB_API void transition_image_layout(single_time_exec &exec, vk::Image image, vk::ImageLayout old_layout,
                                                 vk::ImageLayout new_layout, u32 mipLevels);
+
+        inline vk::Result transition_image_layout(device &device, vk::Image image, vk::ImageLayout old_layout,
+                                                  vk::ImageLayout new_layout, u32 mipLevels)
+        {
+            single_time_exec exec{device};
+            transition_image_layout(exec, image, old_layout, new_layout, mipLevels);
+            return exec.end();
+        }
 
         /// @brief Copy buffer to VK image
         /// @param device Device
@@ -80,21 +112,6 @@ namespace acul
         /// @param dimensions Image dimensions
         /// @param layer_count Layer count
         /// @param offset Offset
-        inline void copy_buffer_to_image(device &device, vk::Buffer buffer, vk::Image image, point2D<u32> dimensions,
-                                         u32 layer_count, point2D<int> offset = {0, 0})
-        {
-            vk::CommandBuffer command_buffer = begin_single_time_commands(device, device.graphics_queue);
-            vk::BufferImageCopy region{};
-            region.setBufferOffset(0)
-                .setBufferRowLength(0)
-                .setBufferImageHeight(0)
-                .setImageSubresource({vk::ImageAspectFlagBits::eColor, 0, 0, layer_count})
-                .setImageOffset({offset.x, offset.y, 0})
-                .setImageExtent({dimensions.x, dimensions.y, 1});
-            command_buffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1, &region,
-                                             device.loader);
-            end_single_time_commands(command_buffer, device.graphics_queue, device);
-        }
 
         /// @brief Copy image from VK Buffer
         /// @param device Device
@@ -106,7 +123,7 @@ namespace acul
         inline void copy_image_to_buffer(device &device, vk::Buffer buffer, vk::Image image, point2D<u32> dimensions,
                                          u32 layerCount, point2D<int> offset = {0, 0})
         {
-            vk::CommandBuffer commandBuffer = begin_single_time_commands(device, device.graphics_queue);
+            single_time_exec info{device};
             vk::BufferImageCopy region{};
             region.setBufferOffset(0)
                 .setBufferRowLength(0)
@@ -114,9 +131,9 @@ namespace acul
                 .setImageSubresource({vk::ImageAspectFlagBits::eColor, 0, 0, layerCount})
                 .setImageOffset({offset.x, offset.y, 0})
                 .setImageExtent({dimensions.x, dimensions.y, 1});
-            commandBuffer.copyImageToBuffer(image, vk::ImageLayout::eTransferSrcOptimal, buffer, 1, &region,
-                                            device.loader);
-            end_single_time_commands(commandBuffer, device.graphics_queue, device);
+            info.command_buffer.copyImageToBuffer(image, vk::ImageLayout::eTransferSrcOptimal, buffer, 1, &region,
+                                                  info.loader);
+            info.end();
         }
 
         /// @brief Create VK image by ImageCreeateInfo structure

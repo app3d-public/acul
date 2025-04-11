@@ -153,6 +153,9 @@ namespace acul
             virtual void write(const string &message) override { std::cout << message.c_str(); }
         };
 
+        class log_service;
+        extern APPLIB_API log_service *g_log_service;
+
         /**
          * @class The Log Service
          * @brief Manages loggers for the application.
@@ -163,11 +166,10 @@ namespace acul
         class APPLIB_API log_service final : public task::service_base
         {
         public:
-            APPLIB_API static log_service *instance;
             logger_base *default_logger;
             level level;
 
-            log_service() : default_logger(nullptr), level(level::error) { instance = this; }
+            log_service() : default_logger(nullptr), level(level::error) { g_log_service = this; }
             ~log_service();
 
             /**
@@ -229,25 +231,25 @@ namespace acul
             std::atomic<int> _count{0};
         };
 
-        inline logger_base *get_logger(const string &name) { return log_service::instance->get_logger(name); }
+        inline logger_base *get_logger(const string &name) { return g_log_service->get_logger(name); }
 
-        inline logger_base *get_default_logger() { return log_service::instance->default_logger; }
+        inline logger_base *get_default_logger() { return g_log_service->default_logger; }
     } // namespace log
 } // namespace acul
 
 #ifdef ACUL_LOG_ENABLE
     #define logInfo(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
     #define logDebug(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
     #define logTrace(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
     #define logWarn(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
     #define logError(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
     #define logFatal(...) \
-        acul::log::log_service::instance->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
 #else
     #define logInfo(...)  ((void)0)
     #define logDebug(...) ((void)0)

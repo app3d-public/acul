@@ -7,7 +7,6 @@
 #include <vulkan/vulkan.hpp>
 #include "../api.hpp"
 #include "../exception/exception.hpp"
-#include "../hash/hashset.hpp"
 #include "../log.hpp"
 #include "../scalars.hpp"
 #include "../vector.hpp"
@@ -24,7 +23,86 @@ namespace acul
 {
     namespace gpu
     {
-        class device_create_ctx
+        namespace internal
+        {
+            extern APPLIB_API struct device_library
+            {
+                vk::DynamicLoader vklib;
+                vk::DispatchLoaderDynamic dispatch_loader;
+            } libgpu;
+        } // namespace internal
+
+        /// @brief Swapchain details
+        struct swapchain_support_details
+        {
+            vk::SurfaceCapabilitiesKHR capabilities;
+            std::vector<vk::SurfaceFormatKHR> formats;
+            std::vector<vk::PresentModeKHR> present_modes;
+        };
+
+        struct device
+        {
+            struct details;
+
+            vk::Instance instance;
+            vk::Device vk_device;
+            vk::PhysicalDevice physical_device;
+            VmaAllocator allocator;
+            vk::SurfaceKHR surface;
+            details *details;
+            vk::DispatchLoaderDynamic &loader;
+
+            device() : details(nullptr), loader(internal::libgpu.dispatch_loader) {}
+
+            void destroy_window_surface(vk::DispatchLoaderDynamic &dispatch_loader)
+            {
+                if (!surface) return;
+                logInfo("Destroying vk:surface");
+                instance.destroySurfaceKHR(surface, nullptr, dispatch_loader);
+            }
+
+            /// @brief Check whether the specified format supports linear filtration
+            /// @param format VK format to check
+            bool supports_linear_filter(vk::Format format, vk::DispatchLoaderDynamic &dispatch_loader)
+            {
+                vk::FormatProperties props = physical_device.getFormatProperties(format, dispatch_loader);
+                if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear) return true;
+                return false;
+            }
+
+            /// @brief Find supported color format by current physical device
+            /// @param candidates Candidates to search
+            /// @param tiling Image tiling type
+            /// @param features VK format features
+            /// @return Filtered format on success
+            vk::Format find_supported_format(const acul::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+                                             vk::FormatFeatureFlags features)
+            {
+                for (vk::Format format : candidates)
+                {
+                    vk::FormatProperties props = physical_device.getFormatProperties(format, loader);
+                    if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features)
+                        return format;
+                    else if (tiling == vk::ImageTiling::eOptimal &&
+                             (props.optimalTilingFeatures & features) == features)
+                        return format;
+                }
+                throw acul::runtime_error("Failed to find supported format");
+            }
+
+            inline vk::PhysicalDeviceProperties &get_device_properties() const;
+            inline swapchain_support_details query_swapchain_support();
+
+            struct config;
+            struct queue;
+            class create_ctx;
+
+#ifndef NDEBUG
+            vk::DebugUtilsMessengerEXT debug_messenger;
+#endif
+        };
+
+        class device::create_ctx
         {
         public:
             acul::vector<const char *> validation_layers;
@@ -33,9 +111,9 @@ namespace acul
             bool present_enabled;
             size_t fence_pool_size;
 
-            device_create_ctx() : present_enabled(false), fence_pool_size(0) {}
+            create_ctx() : present_enabled(false), fence_pool_size(0) {}
 
-            virtual ~device_create_ctx() = default;
+            virtual ~create_ctx() = default;
 
             virtual vk::Result create_surface(vk::Instance &instance, vk::SurfaceKHR &surface,
                                               vk::DispatchLoaderDynamic &loader)
@@ -45,32 +123,32 @@ namespace acul
 
             virtual acul::vector<const char *> get_window_extensions() { return acul::vector<const char *>(); }
 
-            device_create_ctx &set_validation_layers(const acul::vector<const char *> &validation_layers)
+            create_ctx &set_validation_layers(const acul::vector<const char *> &validation_layers)
             {
                 this->validation_layers = validation_layers;
                 return *this;
             }
 
-            device_create_ctx &set_extensions(const acul::vector<const char *> &extensions)
+            create_ctx &set_extensions(const acul::vector<const char *> &extensions)
             {
                 this->extensions = extensions;
                 return *this;
             }
 
-            device_create_ctx &set_opt_extensions(const acul::vector<const char *> &extensions)
+            create_ctx &set_opt_extensions(const acul::vector<const char *> &extensions)
             {
                 this->extensions_opt = extensions;
                 return *this;
             }
 
-            device_create_ctx &set_fence_pool_size(size_t fence_pool_size)
+            create_ctx &set_fence_pool_size(size_t fence_pool_size)
             {
                 this->fence_pool_size = fence_pool_size;
                 return *this;
             }
 
         protected:
-            device_create_ctx(bool present_enabled) : present_enabled(present_enabled), fence_pool_size(0) {}
+            create_ctx(bool present_enabled) : present_enabled(present_enabled), fence_pool_size(0) {}
         };
 
         struct fence_pool_alloc
@@ -122,20 +200,34 @@ namespace acul
             command_pool pool;
         };
 
-        struct device_queue
+        struct device::queue
         {
-            queue_family_info graphics_queue;
-            queue_family_info compute_queue;
-            queue_family_info present_queue;
+            queue_family_info graphics;
+            queue_family_info compute;
+            queue_family_info present;
+
+            void destroy(vk::Device device, vk::DispatchLoaderDynamic &loader)
+            {
+                logInfo("Destroying command pools");
+                device.destroyCommandPool(graphics.pool.vk_pool, nullptr, loader);
+                device.destroyCommandPool(compute.pool.vk_pool, nullptr, loader);
+            }
         };
 
-        /// @brief Swapchain details
-        struct swapchain_support_details
+        inline swapchain_support_details query_swapchain_support(vk::PhysicalDevice device, vk::SurfaceKHR surface,
+                                                                 vk::DispatchLoaderDynamic &loader)
         {
-            vk::SurfaceCapabilitiesKHR capabilities;
-            std::vector<vk::SurfaceFormatKHR> formats;
-            std::vector<vk::PresentModeKHR> present_modes;
-        };
+            swapchain_support_details details;
+            details.capabilities = device.getSurfaceCapabilitiesKHR(surface, loader);
+            details.formats = device.getSurfaceFormatsKHR(surface, loader);
+            details.present_modes = device.getSurfacePresentModesKHR(surface, loader);
+            return details;
+        }
+
+        inline swapchain_support_details device::query_swapchain_support()
+        {
+            return gpu::query_swapchain_support(physical_device, surface, loader);
+        }
 
         namespace sign_block
         {
@@ -146,7 +238,7 @@ namespace acul
         }
 
         // Configuration settings for the Device instance.
-        struct device_config : acul::meta::block
+        struct device::config : acul::meta::block
         {
             vk::SampleCountFlagBits msaa = vk::SampleCountFlagBits::e1; // The number of samples to use for MSAA.
             i8 device = -1;                                             // The index of the GPU device to use.
@@ -157,99 +249,41 @@ namespace acul
             virtual u32 signature() const override { return sign_block::device; }
         };
 
-        class APPLIB_API device : public device_queue
+        struct device::details
         {
-        public:
-            device_config config;
-            vk::DispatchLoaderDynamic loader;
-            vk::Instance instance;
-            vk::Device vk_device;
-            vk::PhysicalDevice physical_device;
-            vk::PhysicalDeviceProperties2 properties;
+            device::config config;
+            device::queue queues;
+            vk::PhysicalDeviceProperties2 properties2;
             vk::PhysicalDeviceMemoryProperties memory_properties;
             vk::PhysicalDeviceDepthStencilResolveProperties depth_resolve_properties;
-            VmaAllocator allocator;
-            vk::SurfaceKHR surface;
             resource_pool<vk::Fence, fence_pool_alloc> fence_pool;
 
-            device() = default;
-            device(const device &) = delete;
-            device &operator=(const device &) = delete;
-            device(device &&) = delete;
-            device &operator=(device &&) = delete;
-
-            // Initializes the device with the application name and version.
-            void init(const acul::string &app_name, u32 version, device_create_ctx *create_ctx);
-
-            void destroy_window_surface()
+            void destroy(vk::Device &device, vk::DispatchLoaderDynamic &loader)
             {
-                if (!surface) return;
-                logInfo("Destroying vk:surface");
-                instance.destroySurfaceKHR(surface, nullptr, loader);
-            }
-
-            void destroy();
-
-            static vk::DynamicLoader &vklib();
-
-            // Waits for the device to be idle.
-            void wait_idle() const { vk_device.waitIdle(loader); }
-
-            /// @brief Find supported color format by current physical device
-            /// @param candidates Candidates to search
-            /// @param tiling Image tiling type
-            /// @param features VK format features
-            /// @return Filtered format on success
-            vk::Format find_supported_format(const acul::vector<vk::Format> &candidates, vk::ImageTiling tiling,
-                                             vk::FormatFeatureFlags features);
-
-            swapchain_support_details get_swapchain_support() { return query_swapchain_support(physical_device); }
-
-            /// @brief Check whether the specified format supports linear filtration
-            /// @param format VK format to check
-            bool supports_linear_filter(vk::Format format)
-            {
-                vk::FormatProperties props = physical_device.getFormatProperties(format, loader);
-                if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear) return true;
-                return false;
+                logInfo("Destroying device resources");
+                queues.destroy(device, loader);
+                fence_pool.destroy();
             }
 
             /// @brief Get aligned size for UBO buffer by current physical device
             /// @param originalSize Size of original buffer
             size_t get_aligned_UBO_size(size_t original_size) const
             {
-                size_t min_UBO_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
+                size_t min_UBO_alignment = properties2.properties.limits.minUniformBufferOffsetAlignment;
                 if (min_UBO_alignment > 0)
                     original_size = (original_size + min_UBO_alignment - 1) & ~(min_UBO_alignment - 1);
                 return original_size;
             }
-
-        private:
-            vk::DebugUtilsMessengerEXT _debug_messenger;
-            device_create_ctx *_create_ctx = nullptr;
-
-            void create_instance(const acul::string &app_name, u32 version);
-            void pick_physical_device();
-            bool is_device_suitable(vk::PhysicalDevice device, const acul::hashset<acul::string> &extensions,
-                                    std::optional<u32> *family_indices);
-            bool validate_physical_device(vk::PhysicalDevice device, acul::hashset<acul::string> &ext,
-                                          std::optional<u32> *indices);
-            void create_logical_device();
-            void create_allocator();
-            bool check_validation_layers_support(const acul::vector<const char *> &validation_layers);
-            void setup_debug_messenger();
-            acul::vector<const char *> get_required_extensions();
-            bool check_device_extension_support(const acul::hashset<acul::string> &extensions) const;
-
-            // extensions are optional
-            int get_device_rating(const acul::vector<const char *> &extensions);
-            void find_queue_families(std::optional<u32> *dst, vk::PhysicalDevice device);
-            void allocate_cmd_buf_pool(const vk::CommandPoolCreateInfo &createInfo, command_pool &dst, size_t primary,
-                                       size_t secondary);
-            void allocate_command_pools();
-            void has_window_required_instance_extensions();
-            swapchain_support_details query_swapchain_support(vk::PhysicalDevice device);
         };
+
+        inline vk::PhysicalDeviceProperties &device::get_device_properties() const
+        {
+            return details->properties2.properties;
+        }
+
+        APPLIB_API void init_device(const acul::string &app_name, u32 version, device &device, device::create_ctx *create_ctx);
+
+        APPLIB_API void destroy_device(device &device);
 
         /// @brief Get maximum MSAA sample count for a physical device
         /// @param properties Physical device properties
@@ -260,13 +294,13 @@ namespace acul
         {
             inline void write_device_config(acul::bin_stream &stream, acul::meta::block *block)
             {
-                device_config *conf = static_cast<device_config *>(block);
+                device::config *conf = static_cast<device::config *>(block);
                 stream.write(conf->msaa).write(conf->device).write(conf->sample_shading);
             }
 
             inline acul::meta::block *read_device_config(acul::bin_stream &stream)
             {
-                device_config *conf = acul::alloc<device_config>();
+                device::config *conf = acul::alloc<device::config>();
                 stream.read(conf->msaa).read(conf->device).read(conf->sample_shading);
                 return conf;
             }

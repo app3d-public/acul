@@ -71,6 +71,7 @@ namespace acul
                 if (_nodes.empty()) return {};
                 path result = *this;
                 result._nodes.pop_back();
+                result._path.clear();
                 return result;
             }
 

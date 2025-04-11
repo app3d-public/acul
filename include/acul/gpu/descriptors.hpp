@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include "../hash/hashmap.hpp"
 #include "device.hpp"
 
 namespace acul
@@ -23,7 +22,7 @@ namespace acul
             public:
                 /// @brief Initialize layout builder
                 /// @param device Current device
-                explicit builder(device &device) : _device{device} {}
+                explicit builder() {}
 
                 /// @brief Add binding for creating a descriptor set layout
                 /// @param binding  A binding number
@@ -42,13 +41,12 @@ namespace acul
 
                 /// @brief Create a descriptor set layout by added bindings
                 /// @return Shared pointer to the descriptor set layout wrapper
-                shared_ptr<descriptor_set_layout> build() const
+                shared_ptr<descriptor_set_layout> build(device &device) const
                 {
-                    return acul::make_shared<descriptor_set_layout>(_device, _bindings);
+                    return acul::make_shared<descriptor_set_layout>(device, _bindings);
                 }
 
             private:
-                device &_device;
                 hashmap<u32, vk::DescriptorSetLayoutBinding> _bindings{};
             };
 
@@ -87,7 +85,7 @@ namespace acul
             public:
                 /// @brief Initialize pool builder
                 /// @param device Current device
-                explicit builder(device &device) : _device{device} {}
+                builder() = default;
 
                 /// @brief Set max pool size for specified descriptor type
                 /// @param descriptor_type Descriptor type
@@ -119,13 +117,12 @@ namespace acul
 
                 /// @brief Build descriptor pool
                 /// @return Shared descriptor pool wrapper
-                acul::shared_ptr<descriptor_pool> build() const
+                acul::shared_ptr<descriptor_pool> build(device &device) const
                 {
-                    return acul::make_shared<descriptor_pool>(_device, _max_sets, _pool_flags, _pool_sizes);
+                    return acul::make_shared<descriptor_pool>(device, _max_sets, _pool_flags, _pool_sizes);
                 }
 
             private:
-                device &_device;
                 acul::vector<vk::DescriptorPoolSize> _pool_sizes;
                 u32 _max_sets = 1000;
                 vk::DescriptorPoolCreateFlags _pool_flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
@@ -137,8 +134,8 @@ namespace acul
             /// @param pool_flags Descriptor pool flags
             /// @param pool_sizes Descriptor pool sizes
             descriptor_pool(device &device, u32 max_sets, vk::DescriptorPoolCreateFlags pool_flags,
-                            const vector<vk::DescriptorPoolSize> &pool_sizes)
-                : _device{device}
+                            const acul::vector<vk::DescriptorPoolSize> &pool_sizes)
+                : _device(device)
             {
                 vk::DescriptorPoolCreateInfo pool_info(pool_flags, max_sets, pool_sizes.size(), pool_sizes.data());
                 if (_device.vk_device.createDescriptorPool(&pool_info, nullptr, &_descriptor_pool, _device.loader) !=
@@ -161,7 +158,7 @@ namespace acul
 
             /// @brief Free allocate descriptor sets by specified vector of descriptors
             /// @param descriptors Vector of descriptors
-            void free_descriptors(vector<vk::DescriptorSet> &descriptors) const
+            void free_descriptors(acul::vector<vk::DescriptorSet> &descriptors) const
             {
                 _device.vk_device.freeDescriptorSets(_descriptor_pool, static_cast<u32>(descriptors.size()),
                                                      descriptors.data(), _device.loader);
@@ -226,7 +223,7 @@ namespace acul
         private:
             descriptor_set_layout &_set_layout;
             descriptor_pool &_pool;
-            vector<vk::WriteDescriptorSet> _writes;
+            acul::vector<vk::WriteDescriptorSet> _writes;
         };
     } // namespace gpu
 } // namespace acul

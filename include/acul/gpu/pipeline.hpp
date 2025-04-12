@@ -93,7 +93,7 @@ namespace acul
         {
             string path;             ///< Path to the shader file.
             vk::ShaderModule module; ///< Vulkan shader module object.
-            vector<char> code;       ///< Raw shader code.
+            acul::vector<char> code;       ///< Raw shader code.
 
             /**
              * @brief Load the shader module from the specified device.

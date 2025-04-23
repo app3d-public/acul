@@ -20,7 +20,7 @@ namespace acul
             vk::MemoryPropertyFlags memory_property_flags = {};
             f32 priority = 0.5f;
 
-            class mem_cache;
+            struct mem_cache;
         };
 
         inline void construct_buffer(buffer &buffer, size_t instance_size, size_t min_offset_alignment = 1)
@@ -168,26 +168,16 @@ namespace acul
             return invalidate_buffer(buffer, device, buffer.alignment_size, index * buffer.alignment_size);
         }
 
-        class buffer::mem_cache : public acul::mem_cache
+        struct buffer::mem_cache : public acul::mem_cache
         {
-        public:
             explicit mem_cache(buffer &buffer, device &device)
-                : _device(device),
+                : acul::mem_cache{[this, &device]() { destroy_buffer(this->_buffer, device); }},
                   _buffer{.mapped = buffer.mapped, .vk_buffer = buffer.vk_buffer, .allocation = buffer.allocation}
             {
-                logDebug("Deallocating buffer %p vk: %p purpose: %s", &buffer, (void *)buffer.vk_buffer,
-                         vk::to_string(buffer.vk_usage_flags).c_str());
                 buffer = {};
             }
 
-            virtual void free() override
-            {
-                unmap_buffer(_buffer, _device);
-                vmaDestroyBuffer(_device.allocator, _buffer.vk_buffer, _buffer.allocation);
-            }
-
         private:
-            device &_device;
             buffer _buffer;
         };
     } // namespace gpu

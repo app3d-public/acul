@@ -93,7 +93,7 @@ namespace acul
         {
             string path;             ///< Path to the shader file.
             vk::ShaderModule module; ///< Vulkan shader module object.
-            acul::vector<char> code;       ///< Raw shader code.
+            acul::vector<char> code; ///< Raw shader code.
 
             /**
              * @brief Load the shader module from the specified device.
@@ -103,7 +103,7 @@ namespace acul
              *
              * @param device The Vulkan device to load the shader module into.
              */
-            void load(device& device);
+            void load(device &device);
 
             /**
              * @brief Destroy the shader module.
@@ -237,7 +237,6 @@ namespace acul
                                           typename pipeline_batch<B>::PFN_configure_artifact callback,
                                           vk::RenderPass render_pass = VK_NULL_HANDLE)
         {
-            logInfo("Adding %s pipeline to the batch", pass.name.c_str());
             batch.artifacts.emplace_back();
             if constexpr (std::is_same_v<B, vk::GraphicsPipelineCreateInfo>)
                 callback(batch.artifacts.back(), batch.shaders, render_pass, pass.layout, device);

@@ -5,15 +5,21 @@ namespace acul
 {
     void disposal_queue::flush()
     {
-        while (!_queue.empty())
+        for (size_t i = 0; i < _queue.unsafe_size(); ++i)
         {
             mem_data data;
-            _queue.try_pop(data);
+            if (!_queue.try_pop(data)) break;
+
+            if (data.allow && !data.allow())
+            {
+                _queue.push(std::move(data));
+                continue;
+            }
             if (data.on_wait) data.on_wait();
+
             for (auto &buffer : data.cache_list)
             {
-                assert(buffer);
-                buffer->free();
+                buffer->on_free();
                 acul::release(buffer);
             }
         }

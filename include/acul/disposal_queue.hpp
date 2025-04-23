@@ -6,46 +6,44 @@
 
 namespace acul
 {
-    class APPLIB_API mem_cache
+    struct mem_cache
     {
-    public:
+        std::function<void()> on_free = nullptr;
+        mem_cache(const std::function<void()> &on_free) : on_free(on_free) {}
         virtual ~mem_cache() = default;
-
-        virtual void free() = 0;
     };
 
     template <typename T>
-    class shared_mem_cache : public mem_cache
+    struct shared_mem_cache : mem_cache
     {
-    public:
-        shared_mem_cache(const acul::shared_ptr<T> &ptr) : _ptr(ptr) {}
+        acul::shared_ptr<T> ptr;
 
-        virtual void free() override {}
-
-    private:
-        acul::shared_ptr<T> _ptr;
+        shared_mem_cache(const acul::shared_ptr<T> &ptr) : mem_cache([]() {}), ptr(ptr) {}
     };
 
     class APPLIB_API disposal_queue
     {
     public:
-        void push(const acul::list<mem_cache *> &cache, const std::function<void()> &onWait = nullptr)
+        struct mem_data
         {
-            _queue.push({cache, onWait});
-        }
+            acul::list<mem_cache *> cache_list;
+            std::function<void()> on_wait = nullptr;
+            std::function<bool()> allow = nullptr;
+        };
 
-        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr) { _queue.push({{cache}, onWait}); }
+        void push(const mem_data &data) { _queue.push(data); }
+
+        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr,
+                  const std::function<bool()> &allow = nullptr)
+        {
+            _queue.push({{cache}, onWait, allow});
+        }
 
         void flush();
 
         bool empty() const { return _queue.empty(); }
 
     private:
-        struct mem_data
-        {
-            acul::list<mem_cache *> cache_list;
-            std::function<void()> on_wait = nullptr;
-        };
         oneapi::tbb::concurrent_queue<mem_data> _queue;
     };
 } // namespace acul

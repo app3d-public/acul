@@ -68,6 +68,16 @@ namespace acul::gpu
         vector(const vector &) = delete;
         vector &operator=(const vector &) = delete;
 
+        vector(vector &&other) : _device(other._device), _data(other._data), _size(other._size)
+        {
+            if (this != &other)
+            {
+                other._device = nullptr;
+                other._size = 0;
+                other._data = {};
+            }
+        }
+
         ~vector() { destroy(); }
 
         bool reserve(size_type new_capacity)
@@ -79,9 +89,11 @@ namespace acul::gpu
 
         bool resize(size_type new_size)
         {
-            if (new_size > capacity()) return true;
-            _data.instance_count = new_size;
-            if (!reallocate(false)) return false;
+            if (new_size > capacity())
+            {
+                _data.instance_count = new_size;
+                if (!reallocate(false)) return false;
+            }
             _size = new_size;
             return true;
         }
@@ -90,8 +102,6 @@ namespace acul::gpu
         {
             if (_size >= capacity() && !reallocate(_size + 1)) return false;
             write_to_buffer(_data, (void *)&value, sizeof(value_type), _size * _data.alignment_size);
-            if (!(_data.memory_property_flags & vk::MemoryPropertyFlagBits::eHostCoherent))
-                flush_buffer_index(_data, _size, *_device);
             ++_size;
             return true;
         }

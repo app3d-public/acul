@@ -576,10 +576,6 @@ namespace acul
 
         friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr; }
         friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr; }
-        friend bool operator<(const Iterator &a, const Iterator &b) { return a._ptr < b._ptr; }
-        friend bool operator>(const Iterator &a, const Iterator &b) { return a._ptr > b._ptr; }
-        friend bool operator<=(const Iterator &a, const Iterator &b) { return a._ptr <= b._ptr; }
-        friend bool operator>=(const Iterator &a, const Iterator &b) { return a._ptr >= b._ptr; }
         friend class list;
 
     private:

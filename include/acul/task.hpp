@@ -12,7 +12,6 @@
     #include <processthreadsapi.h>
 #endif
 #include "api.hpp"
-#include "disposal_queue.hpp"
 #include "event.hpp"
 
 #define TASK_EVENT_UPDATE_SIGN 0x3E916882EBB697C3
@@ -116,17 +115,6 @@ namespace acul
                 return ptr;
             }
         }
-
-        class mem_cache : public acul::mem_cache
-        {
-        public:
-            explicit mem_cache(const shared_ptr<task_base> &task) : _task(task) {}
-
-            virtual void free() override { _task->run(); }
-
-        private:
-            shared_ptr<task_base> _task;
-        };
 
         /**
          * @brief Class for managing and running tasks.

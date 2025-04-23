@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <oneapi/tbb/concurrent_queue.h>
 #include "io/path.hpp"
 #include "string/sstream.hpp"
 #include "task.hpp"

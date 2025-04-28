@@ -29,7 +29,7 @@ namespace acul
             virtual void handle(level level, const char *message, stringstream &ss) const = 0;
         };
 
-        using token_handler_list = acul::vector<acul::shared_ptr<token_handler_base>>;
+        using token_handler_list = vector<shared_ptr<token_handler_base>>;
 
         class text_handler final : public token_handler_base
         {
@@ -96,7 +96,7 @@ namespace acul
         class APPLIB_API logger_base
         {
         public:
-            logger_base(const string &name) : _name(name), _tokens(acul::make_shared<token_handler_list>()) {}
+            logger_base(const string &name) : _name(name), _tokens(make_shared<token_handler_list>()) {}
 
             virtual ~logger_base() = default;
 
@@ -115,7 +115,7 @@ namespace acul
 
         private:
             string _name;
-            acul::shared_ptr<token_handler_list> _tokens;
+            shared_ptr<token_handler_list> _tokens;
         };
 
         class APPLIB_API file_logger final : public logger_base

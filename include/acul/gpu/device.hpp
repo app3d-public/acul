@@ -75,7 +75,7 @@ namespace acul
             /// @param tiling Image tiling type
             /// @param features VK format features
             /// @return Filtered format on success
-            vk::Format find_supported_format(const acul::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+            vk::Format find_supported_format(const vector<vk::Format> &candidates, vk::ImageTiling tiling,
                                              vk::FormatFeatureFlags features)
             {
                 for (vk::Format format : candidates)
@@ -105,9 +105,9 @@ namespace acul
         class device::create_ctx
         {
         public:
-            acul::vector<const char *> validation_layers;
-            acul::vector<const char *> extensions;
-            acul::vector<const char *> extensions_opt;
+            vector<const char *> validation_layers;
+            vector<const char *> extensions;
+            vector<const char *> extensions_opt;
             bool present_enabled;
             size_t fence_pool_size;
 
@@ -121,21 +121,21 @@ namespace acul
                 return vk::Result::eSuccess;
             };
 
-            virtual acul::vector<const char *> get_window_extensions() { return acul::vector<const char *>(); }
+            virtual vector<const char *> get_window_extensions() { return vector<const char *>(); }
 
-            create_ctx &set_validation_layers(const acul::vector<const char *> &validation_layers)
+            create_ctx &set_validation_layers(const vector<const char *> &validation_layers)
             {
                 this->validation_layers = validation_layers;
                 return *this;
             }
 
-            create_ctx &set_extensions(const acul::vector<const char *> &extensions)
+            create_ctx &set_extensions(const vector<const char *> &extensions)
             {
                 this->extensions = extensions;
                 return *this;
             }
 
-            create_ctx &set_opt_extensions(const acul::vector<const char *> &extensions)
+            create_ctx &set_opt_extensions(const vector<const char *> &extensions)
             {
                 this->extensions_opt = extensions;
                 return *this;
@@ -281,7 +281,8 @@ namespace acul
             return details->properties2.properties;
         }
 
-        APPLIB_API void init_device(const acul::string &app_name, u32 version, device &device, device::create_ctx *create_ctx);
+        APPLIB_API void init_device(const acul::string &app_name, u32 version, device &device,
+                                    device::create_ctx *create_ctx);
 
         APPLIB_API void destroy_device(device &device);
 

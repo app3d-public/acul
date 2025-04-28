@@ -10,7 +10,7 @@ namespace acul
         // Сonfiguration settings for a Vulkan graphics pipeline.
         struct pipeline_config_base
         {
-            acul::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
+            vector<vk::PipelineShaderStageCreateInfo> shader_stages;
             vk::PipelineLayout pipeline_layout = nullptr;
         };
 
@@ -31,13 +31,13 @@ namespace acul
             vk::PipelineColorBlendStateCreateInfo color_blend_info;
             vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
             vk::PipelineRasterizationConservativeStateCreateInfoEXT conservative_state_info;
-            acul::vector<vk::DynamicState> dynamic_state_enables;
+            vector<vk::DynamicState> dynamic_state_enables;
             vk::PipelineDynamicStateCreateInfo dynamic_state_info;
-            acul::vector<vk::VertexInputBindingDescription> binding_descriptions;
-            acul::vector<vk::VertexInputAttributeDescription> attribute_descriptions;
+            vector<vk::VertexInputBindingDescription> binding_descriptions;
+            vector<vk::VertexInputAttributeDescription> attribute_descriptions;
             vk::PipelineVertexInputStateCreateInfo vertex_input_info;
             vk::SpecializationInfo specialization_info;
-            acul::vector<vk::SpecializationMapEntry> specialization_map;
+            vector<vk::SpecializationMapEntry> specialization_map;
             vk::RenderPass render_pass = nullptr;
             u32 subpass = 0;
 
@@ -93,7 +93,7 @@ namespace acul
         {
             string path;             ///< Path to the shader file.
             vk::ShaderModule module; ///< Vulkan shader module object.
-            acul::vector<char> code; ///< Raw shader code.
+            vector<char> code;  ///< Raw shader code.
 
             /**
              * @brief Load the shader module from the specified device.
@@ -128,10 +128,10 @@ namespace acul
                 template <typename V>
                 using custom_data_t = acul::destructible_value<V, artifact &>;
 
-                vk::Pipeline *pipeline;
                 pipeline_config<T> config;
                 T create_info;
-                destructible_data<artifact &> *tmp;
+                destructible_data<artifact &> *tmp = nullptr;
+                std::function<void(vk::Pipeline)> commit = nullptr;
             };
 
             template <typename T>
@@ -169,9 +169,9 @@ namespace acul
             using create_info = T;
             using artifact = details::artifact<T>;
             using PFN_configure_artifact = typename details::pipeline_artifact_configure<create_info>::callback_type;
-            vector<artifact> artifacts; ///< Stores configurations for each pipeline.
-            shader_list shaders;        ///< Shader modules associated with the pipelines.
-            vk::PipelineCache cache;    ///< Pipeline cache used for pipeline creation.
+            list<artifact> artifacts; ///< Stores configurations for each pipeline.
+            shader_list shaders;      ///< Shader modules associated with the pipelines.
+            vk::PipelineCache cache;  ///< Pipeline cache used for pipeline creation.
 
             /**
              * @brief Creates Vulkan pipelines in a batch operation.
@@ -183,31 +183,34 @@ namespace acul
              * @param device The Vulkan device to use for pipeline creation.
              * @return True if all pipelines were successfully created, otherwise false.
              */
-            bool allocate_pipelines(device &device)
+            bool allocate_pipelines(device &device, size_t size)
             {
-                vk::Pipeline pipelines[artifacts.size()];
-                create_info create_info[artifacts.size()];
-                for (int i = 0; i < artifacts.size(); i++) create_info[i] = artifacts[i].create_info;
+                vk::Pipeline pipelines[size];
+                create_info create_info[size];
+                auto it = artifacts.begin();
+                for (int i = 0; i < size; i++, ++it) create_info[i] = it->create_info;
 
                 vk::Result res;
                 if constexpr (std::is_same<T, vk::GraphicsPipelineCreateInfo>::value)
-                    res = device.vk_device.createGraphicsPipelines(cache, artifacts.size(), create_info, nullptr,
-                                                                   pipelines, device.loader);
+                    res = device.vk_device.createGraphicsPipelines(cache, size, create_info, nullptr, pipelines,
+                                                                   device.loader);
                 else
-                    res = device.vk_device.createComputePipelines(cache, artifacts.size(), create_info, nullptr,
-                                                                  pipelines, device.loader);
+                    res = device.vk_device.createComputePipelines(cache, size, create_info, nullptr, pipelines,
+                                                                  device.loader);
                 if (res != vk::Result::eSuccess)
                 {
                     logError("Failed to create pipelines: %s", vk::to_string(res).c_str());
                     return false;
                 }
-                for (int i = 0; i < artifacts.size(); i++)
-                    if (artifacts[i].pipeline)
-                        *(artifacts[i].pipeline) = std::move(pipelines[i]);
+                for (auto &shader : shaders) shader.destroy(device);
+
+                it = artifacts.begin();
+                for (int i = 0; i < size; i++, ++it)
+                    if (it->commit)
+                        it->commit(pipelines[i]);
                     else
                         device.vk_device.destroyPipeline(pipelines[i], nullptr, device.loader);
-                for (auto &shader : shaders) shader.destroy(device);
-                logInfo("Created %zu pipelines", artifacts.size());
+                logInfo("Created %zu pipelines", size);
                 return true;
             }
 
@@ -219,31 +222,6 @@ namespace acul
 
         using graphics_pipeline_batch = pipeline_batch<vk::GraphicsPipelineCreateInfo>;
         using compute_pipeline_batch = pipeline_batch<vk::ComputePipelineCreateInfo>;
-
-        /**
-         * @brief Adds a pipeline configuration to the batch for later creation.
-         *
-         * This function prepares a pipeline configuration and adds it to the batch. It sets up the necessary
-         * configurations and tracks the pipeline object that will be created.
-         *
-         * @tparam T The type of the instance for which the pipeline is being configured.
-         * @param batch The batch to which the pipeline configuration will be added.
-         * @param render_pass The render pass to be used by the pipeline.
-         * @param instance A pointer to the instance containing the pipeline layout and other settings.
-         * @param device The Vulkan device to be used for the pipeline creation.
-         */
-        template <typename B, typename T>
-        inline void add_pipeline_to_batch(pipeline_batch<B> &batch, T &pass, device &device,
-                                          typename pipeline_batch<B>::PFN_configure_artifact callback,
-                                          vk::RenderPass render_pass = VK_NULL_HANDLE)
-        {
-            batch.artifacts.emplace_back();
-            if constexpr (std::is_same_v<B, vk::GraphicsPipelineCreateInfo>)
-                callback(batch.artifacts.back(), batch.shaders, render_pass, pass.layout, device);
-            else
-                callback(batch.artifacts.back(), batch.shaders, pass.layout, device);
-            batch.artifacts.back().pipeline = &pass.pipeline;
-        }
 
         /**
          * @brief Prepares a basic graphics pipeline.

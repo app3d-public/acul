@@ -76,7 +76,7 @@ namespace acul
             size_t _size = 0;
             size_t _pos = 0;
             vector<T> _data;
-            queue<size_t> _released;
+            std::queue<size_t> _released;
         };
     } // namespace gpu
 } // namespace acul

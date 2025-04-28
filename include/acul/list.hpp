@@ -260,6 +260,43 @@ namespace acul
             _last = node;
         }
 
+        void resize(size_type count, const_reference value = T())
+        {
+            size_type current = 0;
+            pointer node = _head;
+
+            while (node && current < count)
+            {
+                node = node->next;
+                ++current;
+            }
+
+            if (current == count)
+            {
+                while (node)
+                {
+                    pointer next = node->next;
+                    node_allocator::destroy(node);
+                    node_allocator::deallocate(node, 1);
+                    node = next;
+                }
+
+                if (current == 0)
+                {
+                    _head = nullptr;
+                    _last = nullptr;
+                }
+                else
+                {
+                    _last = _head;
+                    for (size_type i = 1; i < current; ++i) _last = _last->next;
+                    _last->next = nullptr;
+                }
+            }
+            else
+                for (; current < count; ++current) push_back(value);
+        }
+
         iterator begin() { return iterator(_head); }
         const_iterator begin() const { return const_iterator(_head); }
         const_iterator cbegin() const { return const_iterator(_head); }
@@ -572,7 +609,7 @@ namespace acul
 
         reference operator*() { return _ptr->data; }
         reference operator*() const { return _ptr->data; }
-        pointer operator->() const { return _ptr; }
+        value_type* operator->() const { return &_ptr->data; }
 
         friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr; }
         friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr; }

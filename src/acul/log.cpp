@@ -101,16 +101,16 @@ namespace acul
                 if (pos != last_pos)
                 {
                     string text = pattern.substr(last_pos, pos - last_pos);
-                    _tokens->push_back(acul::make_shared<text_handler>(text));
+                    _tokens->push_back(make_shared<text_handler>(text));
                 }
 
-                acul::hashmap<string, acul::shared_ptr<token_handler_base>> tokenHandlers = {
-                    {"ascii_time", acul::make_shared<time_handler>()},
-                    {"level_name", acul::make_shared<level_name_handler>()},
-                    {"thread", acul::make_shared<thread_id_handler>()},
-                    {"message", acul::make_shared<message_handler>()},
-                    {"color_auto", acul::make_shared<color_handler>()},
-                    {"color_off", acul::make_shared<decolor_handler>()}};
+                acul::hashmap<string, shared_ptr<token_handler_base>> tokenHandlers = {
+                    {"ascii_time", make_shared<time_handler>()},
+                    {"level_name", make_shared<level_name_handler>()},
+                    {"thread", make_shared<thread_id_handler>()},
+                    {"message", make_shared<message_handler>()},
+                    {"color_auto", make_shared<color_handler>()},
+                    {"color_off", make_shared<decolor_handler>()}};
 
                 string token = it->str(1).c_str();
                 auto handlerIter = tokenHandlers.find(token);
@@ -121,7 +121,7 @@ namespace acul
             if (last_pos != pattern.size())
             {
                 string text = pattern.substr(last_pos);
-                _tokens->push_back(acul::make_shared<text_handler>(text));
+                _tokens->push_back(make_shared<text_handler>(text));
             }
         }
 

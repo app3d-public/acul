@@ -17,7 +17,6 @@ namespace acul
     {
         class APPLIB_API path
         {
-
             enum
             {
                 FLAG_NONE = 0x0,

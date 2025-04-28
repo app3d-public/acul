@@ -51,7 +51,7 @@ namespace acul
             }
         };
 
-        extern APPLIB_API resolver* resolver;
+        extern APPLIB_API resolver *resolver;
 
         /*********************************
          **

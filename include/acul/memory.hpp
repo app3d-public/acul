@@ -2,6 +2,7 @@
 #define APP_ACUL_MEM_ALLOCATOR_H
 
 #include <cstddef>
+#include <cstdlib>
 #include <limits>
 #include <oneapi/tbb/scalable_allocator.h>
 #include <type_traits>
@@ -125,34 +126,43 @@ namespace acul
         return std::max(csize * 2, std::max((size_t)8UL, msize));
     }
 
-    struct mem_control_block
+    namespace detail
     {
-        size_t ref_counts;
+        struct mem_control_block
+        {
+            size_t ref_counts;
 
-        static constexpr size_t strong_count_mask = 0x7FFFFFFF00000000;
-        static constexpr size_t weak_count_mask = 0x00000000FFFFFFFF;
-        static constexpr size_t external_flag_mask = 0x8000000000000000;
+            static constexpr size_t strong_count_mask = 0x7FFFFFFF00000000;
+            static constexpr size_t weak_count_mask = 0x00000000FFFFFFFF;
+            static constexpr size_t external_flag_mask = 0x8000000000000000;
 
-        bool is_external() const { return ref_counts & external_flag_mask; }
+            bool is_external() const { return ref_counts & external_flag_mask; }
 
-        void set_external() { ref_counts |= external_flag_mask; }
+            void set_external() { ref_counts |= external_flag_mask; }
 
-        size_t strong_count() const { return (ref_counts & strong_count_mask) >> 32; }
+            size_t strong_count() const { return (ref_counts & strong_count_mask) >> 32; }
 
-        size_t weak_count() const { return ref_counts & weak_count_mask; }
+            size_t weak_count() const { return ref_counts & weak_count_mask; }
 
-        void increment_strong() { ref_counts += 1ULL << 32; }
+            void increment_strong() { ref_counts += 1ULL << 32; }
 
-        void increment_weak() { ++ref_counts; }
+            void increment_weak() { ++ref_counts; }
 
-        size_t decrement_strong() { return (ref_counts -= 1ULL << 32) >> 32; }
+            size_t decrement_strong() { return (ref_counts -= 1ULL << 32) >> 32; }
 
-        size_t decrement_weak() { return --ref_counts & weak_count_mask; }
+            size_t decrement_weak() { return --ref_counts & weak_count_mask; }
 
-        bool no_strong() const { return strong_count() == 0; }
+            bool no_strong() const { return strong_count() == 0; }
 
-        bool no_weak() const { return weak_count() == 0; }
-    };
+            bool no_weak() const { return weak_count() == 0; }
+        };
+
+        template <class T, class SP>
+        inline void accept_owner(T *p, const SP &sp)
+        {
+            if constexpr (requires { p->_internal_accept_owner(sp); }) p->_internal_accept_owner(sp);
+        }
+    } // namespace detail
 
     template <typename T, typename Allocator>
     class weak_ptr;
@@ -168,7 +178,7 @@ namespace acul
         using block_allocator = typename Allocator::template rebind<std::byte>::other;
 
     private:
-        mem_control_block *_ctrl;
+        detail::mem_control_block *_ctrl;
         value_type *_data;
 
         void release() noexcept
@@ -208,19 +218,20 @@ namespace acul
         {
             static_assert(std::is_trivially_constructible_v<value_type>,
                           "Only trivially constructible arrays supported");
-            const size_t blockSize = sizeof(mem_control_block) + sizeof(value_type) * size;
-            _ctrl = (mem_control_block *)block_allocator::allocate(blockSize);
+            const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(value_type) * size;
+            _ctrl = (detail::mem_control_block *)block_allocator::allocate(blockSize);
             _ctrl->ref_counts = 1ULL << 32;
-            _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(mem_control_block));
+            _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(detail::mem_control_block));
         }
 
         explicit shared_ptr(pointer ptr) : _ctrl(nullptr), _data(ptr)
         {
             if (ptr)
             {
-                _ctrl = (mem_control_block *)block_allocator::allocate(sizeof(mem_control_block));
+                _ctrl = (detail::mem_control_block *)block_allocator::allocate(sizeof(detail::mem_control_block));
                 _ctrl->ref_counts = 1ULL << 32;
                 _ctrl->set_external();
+                detail::accept_owner(ptr, *this);
             }
         }
 
@@ -327,12 +338,13 @@ namespace acul
     shared_ptr<T> make_shared(Args &&...args)
     {
         shared_ptr<T> result;
-        const size_t blockSize = sizeof(mem_control_block) + sizeof(T);
-        result._ctrl = (mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
+        const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(T);
+        result._ctrl = (detail::mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
         result._ctrl->ref_counts = 1ULL << 32;
-        result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(mem_control_block));
+        result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(detail::mem_control_block));
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
+        detail::accept_owner(result._data, result);
         return result;
     }
 
@@ -363,7 +375,7 @@ namespace acul
     template <typename T, typename Allocator = mem_allocator<std::byte>>
     class weak_ptr
     {
-        mem_control_block *_ctrl;
+        detail::mem_control_block *_ctrl;
         T *_data;
 
         template <typename U, typename Au>
@@ -432,11 +444,14 @@ namespace acul
         template <typename U>
         void _internal_accept_owner(const shared_ptr<U> &shared_ptr) const noexcept
         {
-            if (_weak_this.expired()) _weak_this = shared_ptr;
+            if (_weak_this.expired()) _weak_this = static_pointer_cast<T>(shared_ptr);
         }
 
         template <typename U, typename Au>
         friend class shared_ptr;
+
+        template <class P, class Sp>
+        friend void detail::accept_owner(P *, const Sp &);
     };
 
     template <typename T, typename Allocator = mem_allocator<T>>

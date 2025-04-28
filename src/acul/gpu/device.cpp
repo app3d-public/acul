@@ -88,11 +88,11 @@ namespace acul
             device.instance.destroy(nullptr, device.loader);
         }
 
-        acul::vector<const char *> using_extensitions;
+        vector<const char *> using_extensitions;
 
-        acul::vector<const char *> get_required_extensions(device::create_ctx *create_ctx)
+        vector<const char *> get_required_extensions(device::create_ctx *create_ctx)
         {
-            acul::vector<const char *> extensions = create_ctx->get_window_extensions();
+            vector<const char *> extensions = create_ctx->get_window_extensions();
 #ifndef NDEBUG
             extensions.push_back(vk::EXTDebugUtilsExtensionName);
 #endif
@@ -133,10 +133,10 @@ namespace acul
             fence_pool.allocate(create_ctx->fence_pool_size);
         }
 
-        bool check_validation_layers_support(const acul::vector<const char *> &validation_layers,
+        bool check_validation_layers_support(const vector<const char *> &validation_layers,
                                              vk::DispatchLoaderDynamic &loader)
         {
-            std::vector<vk::LayerProperties> available_layers = vk::enumerateInstanceLayerProperties(loader);
+            auto available_layers = vk::enumerateInstanceLayerProperties(loader);
             return std::all_of(validation_layers.begin(), validation_layers.end(), [&](const char *layerName) {
                 return std::any_of(available_layers.begin(), available_layers.end(),
                                    [&](const VkLayerProperties &layerProperties) {
@@ -156,7 +156,7 @@ namespace acul
             return true;
         }
 
-        int get_device_rating(const acul::vector<const char *> &optExtensions, vk::PhysicalDeviceProperties &properties)
+        int get_device_rating(const vector<const char *> &optExtensions, vk::PhysicalDeviceProperties &properties)
         {
             int rating(0);
             // Properties
@@ -209,11 +209,11 @@ namespace acul
             return rating;
         }
 
-        acul::vector<const char *> get_supported_opt_ext(vk::PhysicalDevice device,
-                                                         const acul::hashset<acul::string> &allExtensions,
-                                                         const acul::vector<const char *> &optExtensions)
+        vector<const char *> get_supported_opt_ext(vk::PhysicalDevice device,
+                                                   const acul::hashset<acul::string> &allExtensions,
+                                                   const vector<const char *> &optExtensions)
         {
-            acul::vector<const char *> supportedExtensions;
+            vector<const char *> supportedExtensions;
             for (const auto &reqExt : optExtensions)
                 if (allExtensions.find(reqExt) != allExtensions.end()) supportedExtensions.push_back(reqExt);
             return supportedExtensions;
@@ -240,7 +240,7 @@ namespace acul
         {
             logInfo("Searching physical device");
             auto devices = instance.enumeratePhysicalDevices(loader);
-            acul::vector<const char *> optExtensions;
+            vector<const char *> optExtensions;
             acul::hashset<acul::string> extensions;
             i8 device_id = details.config.device;
             auto &queues = details.queues;
@@ -367,7 +367,7 @@ namespace acul
         void device_initializer::create_logical_device()
         {
             logInfo("Creating logical device");
-            acul::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
+            vector<vk::DeviceQueueCreateInfo> queue_create_infos;
             auto &queues = details.queues;
             assert(queues.graphics.family_id.has_value() && queues.compute.family_id.has_value());
             acul::set<u32> uniqueQueueFamilies = {queues.graphics.family_id.value(), queues.compute.family_id.value()};

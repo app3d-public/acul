@@ -36,7 +36,7 @@ namespace acul
             entry_lock() : wr_lock(0) {}
         } __attribute__((aligned(L1_CACHE_LINESIZE)));
 
-        acul::vector<entry_lock> _el;
+        vector<entry_lock> _el;
 
     public:
         shared_mutex() : _el(std::thread::hardware_concurrency()) {}

@@ -16,9 +16,9 @@ namespace acul
     template <typename T>
     struct shared_mem_cache : mem_cache
     {
-        acul::shared_ptr<T> ptr;
+        shared_ptr<T> ptr;
 
-        shared_mem_cache(const acul::shared_ptr<T> &ptr) : mem_cache([]() {}), ptr(ptr) {}
+        shared_mem_cache(const shared_ptr<T> &ptr) : mem_cache([]() {}), ptr(ptr) {}
     };
 
     class APPLIB_API disposal_queue
@@ -28,15 +28,13 @@ namespace acul
         {
             acul::list<mem_cache *> cache_list;
             std::function<void()> on_wait = nullptr;
-            std::function<bool()> allow = nullptr;
         };
 
         void push(const mem_data &data) { _queue.push(data); }
 
-        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr,
-                  const std::function<bool()> &allow = nullptr)
+        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr)
         {
-            _queue.push({{cache}, onWait, allow});
+            _queue.push({{cache}, onWait});
         }
 
         void flush();

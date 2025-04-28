@@ -62,7 +62,7 @@ namespace acul
              * @param buffer A reference to a variable to store the data.
              * @return Success if the file was successfully read, error otherwise.
              **/
-            APPLIB_API op_state read_binary(const string &filename, acul::vector<char> &buffer);
+            APPLIB_API op_state read_binary(const string &filename, vector<char> &buffer);
 
             /**
              * @brief Writes a binary buffer to a file
@@ -225,7 +225,7 @@ namespace acul
 
             APPLIB_API op_state remove_file(const char *path);
 
-            APPLIB_API op_state list_files(const acul::string &base_path, acul::vector<acul::string> &dst,
+            APPLIB_API op_state list_files(const acul::string &base_path, vector<acul::string> &dst,
                                            bool recursive = false);
 
             /**
@@ -244,7 +244,7 @@ namespace acul
              * provides maximum compression (at the cost of speed).
              * @return Returns true if the compression was successful, false otherwise.
              */
-            APPLIB_API bool compress(const char *data, size_t size, acul::vector<char> &compressed, int quality);
+            APPLIB_API bool compress(const char *data, size_t size, vector<char> &compressed, int quality);
 
             /**
              * @brief Decompresses the given data using zstd.
@@ -258,7 +258,7 @@ namespace acul
              * vector.
              * @return Returns true if the decompression was successful, false otherwise.
              */
-            APPLIB_API bool decompress(const char *data, size_t size, acul::vector<char> &decompressed);
+            APPLIB_API bool decompress(const char *data, size_t size, vector<char> &decompressed);
 
         } // namespace file
     } // namespace io

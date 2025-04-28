@@ -39,7 +39,7 @@ namespace acul
          * @tparam T The return type of the task.
          */
         template <typename T>
-        class task final : public task_base, public acul::enable_shared_from_this<task<T>>
+        class task final : public task_base, public enable_shared_from_this<task<T>>
         {
         public:
             /**
@@ -106,7 +106,7 @@ namespace acul
             if constexpr (std::is_invocable<F>::value)
             {
                 using R = std::invoke_result_t<F>;
-                auto ptr = acul::make_shared<acul::task::task<R>>(std::forward<F>(task));
+                auto ptr = make_shared<acul::task::task<R>>(std::forward<F>(task));
                 return ptr;
             }
             else

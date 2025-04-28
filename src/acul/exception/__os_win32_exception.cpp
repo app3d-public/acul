@@ -270,7 +270,7 @@ namespace acul
             else
             {
                 auto fileData =
-                    acul::vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
+                    vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
                 fd.close();
                 auto [inserted_it, inserted] =
                     hmodule_symbol_map.emplace(module_base, std::make_pair(module_name, map<DWORD64, symbol_info>()));
@@ -362,7 +362,7 @@ namespace acul
     }
 
     APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exceptionRecord,
-                                     CONTEXT &context, acul::vector<char> &buffer)
+                                     CONTEXT &context, vector<char> &buffer)
     {
         HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
                                    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);

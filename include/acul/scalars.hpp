@@ -9,7 +9,6 @@
     #include <half.hpp>
     #pragma GCC diagnostic pop
 #endif
-#include <oneapi/tbb/scalable_allocator.h>
 
 using i8 = int8_t;
 using i16 = int16_t;

@@ -78,7 +78,7 @@ namespace acul
         {
         public:
             using iterator = acul::multimap<int, listener_base *>::iterator;
-            acul::hashmap<void *, acul::vector<listener_info>> pointers;
+            acul::hashmap<void *, vector<listener_info>> pointers;
 
             // Adds a listener for a specific type of event and returns an iterator to it.
             template <typename E>
@@ -153,9 +153,9 @@ namespace acul
             // Retrieves a list of all listeners registered for a specific event.
             // Returns a dynamic array of pointers to listeners for the event.
             template <typename E>
-            acul::vector<listener<E> *> get_listeners(u64 event)
+            vector<listener<E> *> get_listeners(u64 event)
             {
-                acul::vector<listener<E> *> result;
+                vector<listener<E> *> result;
                 auto it = _listeners.find(event);
                 if (it != _listeners.end())
                 {

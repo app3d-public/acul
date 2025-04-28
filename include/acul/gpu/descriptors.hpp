@@ -117,13 +117,13 @@ namespace acul
 
                 /// @brief Build descriptor pool
                 /// @return Shared descriptor pool wrapper
-                acul::shared_ptr<descriptor_pool> build(device &device) const
+                shared_ptr<descriptor_pool> build(device &device) const
                 {
-                    return acul::make_shared<descriptor_pool>(device, _max_sets, _pool_flags, _pool_sizes);
+                    return make_shared<descriptor_pool>(device, _max_sets, _pool_flags, _pool_sizes);
                 }
 
             private:
-                acul::vector<vk::DescriptorPoolSize> _pool_sizes;
+                vector<vk::DescriptorPoolSize> _pool_sizes;
                 u32 _max_sets = 1000;
                 vk::DescriptorPoolCreateFlags _pool_flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
             };
@@ -134,7 +134,7 @@ namespace acul
             /// @param pool_flags Descriptor pool flags
             /// @param pool_sizes Descriptor pool sizes
             descriptor_pool(device &device, u32 max_sets, vk::DescriptorPoolCreateFlags pool_flags,
-                            const acul::vector<vk::DescriptorPoolSize> &pool_sizes)
+                            const vector<vk::DescriptorPoolSize> &pool_sizes)
                 : _device(device)
             {
                 vk::DescriptorPoolCreateInfo pool_info(pool_flags, max_sets, pool_sizes.size(), pool_sizes.data());
@@ -158,7 +158,7 @@ namespace acul
 
             /// @brief Free allocate descriptor sets by specified vector of descriptors
             /// @param descriptors Vector of descriptors
-            void free_descriptors(acul::vector<vk::DescriptorSet> &descriptors) const
+            void free_descriptors(vector<vk::DescriptorSet> &descriptors) const
             {
                 _device.vk_device.freeDescriptorSets(_descriptor_pool, static_cast<u32>(descriptors.size()),
                                                      descriptors.data(), _device.loader);
@@ -223,7 +223,7 @@ namespace acul
         private:
             descriptor_set_layout &_set_layout;
             descriptor_pool &_pool;
-            acul::vector<vk::WriteDescriptorSet> _writes;
+            vector<vk::WriteDescriptorSet> _writes;
         };
     } // namespace gpu
 } // namespace acul

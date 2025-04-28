@@ -1,7 +1,6 @@
 #ifndef APP_ACUL_CRC32_H
 #define APP_ACUL_CRC32_H
 
-#include <oneapi/tbb/scalable_allocator.h>
 #include <random>
 #include "../api.hpp"
 #include "../scalars.hpp"

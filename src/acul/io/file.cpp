@@ -8,7 +8,7 @@ namespace acul
     {
         namespace file
         {
-            op_state read_binary(const acul::string &filename, acul::vector<char> &buffer)
+            op_state read_binary(const acul::string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
                 if (!file)
@@ -41,7 +41,7 @@ namespace acul
                 return file.good();
             }
 
-            bool compress(const char *data, size_t size, acul::vector<char> &compressed, int quality)
+            bool compress(const char *data, size_t size, vector<char> &compressed, int quality)
             {
                 size_t const maxCompressedSize = ZSTD_compressBound(size);
                 compressed.resize(maxCompressedSize);
@@ -59,7 +59,7 @@ namespace acul
                 return true;
             }
 
-            bool decompress(const char *data, size_t size, acul::vector<char> &decompressed)
+            bool decompress(const char *data, size_t size, vector<char> &decompressed)
             {
                 size_t decompressedSize = ZSTD_getFrameContentSize(data, size);
                 if (decompressedSize == 0 || decompressedSize == ZSTD_CONTENTSIZE_ERROR ||

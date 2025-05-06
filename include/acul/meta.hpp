@@ -44,7 +44,7 @@ namespace acul
                 auto it = streams.find(signature);
                 if (it == streams.end())
                 {
-                    logError("Failed to recognize meta stream signature: 0x%08x", signature);
+                    LOG_ERROR("Failed to recognize meta stream signature: 0x%08x", signature);
                     return nullptr;
                 }
                 return it->second;
@@ -63,7 +63,7 @@ namespace acul
         {
             enum : u32
             {
-                raw_block = 0xF82E95C8
+                Raw = 0xF82E95C8
             };
         }
 
@@ -75,7 +75,7 @@ namespace acul
 
             raw_block(char *data = nullptr, u64 data_size = 0) : data(data), data_size(data_size) {}
 
-            virtual u32 signature() const { return sign_block::raw_block; }
+            virtual u32 signature() const { return sign_block::Raw; }
 
             ~raw_block() { acul::release(data); }
         };

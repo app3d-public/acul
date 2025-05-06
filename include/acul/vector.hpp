@@ -94,10 +94,10 @@ namespace acul
         {
             if (_capacity < ilist.size())
             {
-                pointer newData = Allocator::allocate(ilist.size());
-                std::uninitialized_copy(ilist.begin(), ilist.end(), newData);
+                pointer new_data = Allocator::allocate(ilist.size());
+                std::uninitialized_copy(ilist.begin(), ilist.end(), new_data);
                 clear();
-                _data = newData;
+                _data = new_data;
                 _capacity = ilist.size();
             }
             else
@@ -203,42 +203,42 @@ namespace acul
         const_pointer data() const { return _data; }
         pointer data() { return _data; }
 
-        void reserve(size_type newCapacity)
+        void reserve(size_type new_capacity)
         {
-            if (newCapacity <= _capacity) return;
-            _capacity = newCapacity;
+            if (new_capacity <= _capacity) return;
+            _capacity = new_capacity;
             reallocate(false);
         }
 
-        void resize(size_type newSize)
+        void resize(size_type new_size)
         {
-            if (newSize > _capacity)
+            if (new_size > _capacity)
             {
-                _capacity = std::max(_capacity * 2, newSize);
-                pointer newData = Allocator::allocate(_capacity);
-                if (!newData) throw bad_alloc(_capacity);
+                _capacity = std::max(_capacity * 2, new_size);
+                pointer new_data = Allocator::allocate(_capacity);
+                if (!new_data) throw bad_alloc(_capacity);
                 if constexpr (std::is_trivially_copyable_v<value_type>)
-                    memcpy(newData, _data, _size * sizeof(value_type));
+                    memcpy(new_data, _data, _size * sizeof(value_type));
                 else
                 {
                     for (size_type i = 0; i < _size; ++i)
                     {
-                        Allocator::construct(newData + i, std::move(_data[i]));
+                        Allocator::construct(new_data + i, std::move(_data[i]));
                         Allocator::destroy(_data + i);
                     }
                 }
                 Allocator::deallocate(_data, _capacity);
-                _data = newData;
+                _data = new_data;
             }
 
             if constexpr (!std::is_trivially_constructible_v<value_type>)
             {
-                if (newSize > _size)
-                    for (size_type i = _size; i < newSize; ++i) Allocator::construct(_data + i);
+                if (new_size > _size)
+                    for (size_type i = _size; i < new_size; ++i) Allocator::construct(_data + i);
                 else
-                    for (size_type i = newSize; i < _size; ++i) Allocator::destroy(_data + i);
+                    for (size_type i = new_size; i < _size; ++i) Allocator::destroy(_data + i);
             }
-            _size = newSize;
+            _size = new_size;
         }
 
         void clear() noexcept
@@ -309,27 +309,27 @@ namespace acul
         template <typename InputIt>
         void insert(iterator pos, InputIt first, InputIt last);
 
-        template <typename InputIt>
+        template <typename InputIt, std::enable_if_t<is_input_iterator_based<InputIt>::value, int> = 0>
         void assign(InputIt first, InputIt last)
         {
-            size_type newSize = std::distance(first, last);
-            if (newSize > _capacity)
+            size_type new_size = std::distance(first, last);
+            if (new_size > _capacity)
             {
-                pointer newData = Allocator::allocate(newSize);
-                std::uninitialized_copy(first, last, newData);
+                pointer new_data = Allocator::allocate(new_size);
+                std::uninitialized_copy(first, last, new_data);
                 clear();
                 Allocator::deallocate(_data, _capacity);
-                _data = newData;
-                _capacity = newSize;
+                _data = new_data;
+                _capacity = new_size;
             }
             else
             {
                 if constexpr (!std::is_trivially_destructible<T>::value)
-                    for (size_t i = newSize; i < _size; ++i) Allocator::destroy(_data + i);
+                    for (size_t i = new_size; i < _size; ++i) Allocator::destroy(_data + i);
                 std::copy(first, last, _data);
             }
 
-            _size = newSize;
+            _size = new_size;
         }
 
         void assign(std::initializer_list<T> ilist) { *this = ilist; }
@@ -338,11 +338,11 @@ namespace acul
         {
             if (count > _capacity)
             {
-                pointer newData = Allocator::allocate(count);
-                std::uninitialized_fill_n(newData, count, value);
+                pointer new_data = Allocator::allocate(count);
+                std::uninitialized_fill_n(new_data, count, value);
                 clear();
                 Allocator::deallocate(_data, _capacity);
-                _data = newData;
+                _data = new_data;
                 _capacity = count;
             }
             else
@@ -358,24 +358,24 @@ namespace acul
         void reallocate(bool adjustCapacity = true)
         {
             if (adjustCapacity) _capacity = get_growth_size(_capacity, _capacity + 1);
-            pointer newData;
+            pointer new_data;
             if constexpr (std::is_trivially_copyable_v<T>)
             {
-                newData = Allocator::reallocate(_data, _capacity);
-                if (!newData) throw bad_alloc(_capacity);
+                new_data = Allocator::reallocate(_data, _capacity);
+                if (!new_data) throw bad_alloc(_capacity);
             }
             else
             {
-                newData = Allocator::allocate(_capacity);
-                if (!newData) throw bad_alloc(_capacity);
+                new_data = Allocator::allocate(_capacity);
+                if (!new_data) throw bad_alloc(_capacity);
                 for (size_type i = 0; i < _size; ++i)
                 {
-                    Allocator::construct(newData + i, std::move(_data[i]));
+                    Allocator::construct(new_data + i, std::move(_data[i]));
                     Allocator::destroy(_data + i);
                 }
                 Allocator::deallocate(_data, _capacity);
             }
-            _data = newData;
+            _data = new_data;
         }
 
         template <typename Iter, typename Dest>
@@ -568,30 +568,30 @@ namespace acul
     template <typename InputIt>
     void vector<T, Allocator>::insert(iterator pos, InputIt first, InputIt last)
     {
-        size_type posIndex = pos - _data;
-        size_type insertCount = std::distance(first, last);
+        size_type pos_index = pos - _data;
+        size_type insert_count = std::distance(first, last);
 
-        if (_size + insertCount > _capacity)
+        if (_size + insert_count > _capacity)
         {
-            size_type newCapacity = std::max(_capacity * 2, _size + insertCount);
-            pointer newData = Allocator::allocate(newCapacity);
-            if (!newData) throw bad_alloc(newCapacity);
+            size_type new_capacity = std::max(_capacity * 2, _size + insert_count);
+            pointer new_data = Allocator::allocate(new_capacity);
+            if (!new_data) throw bad_alloc(new_capacity);
 
-            move_construct(_data, _data + posIndex, newData);
-            copy_construct(first, last, newData + posIndex);
-            move_construct(_data + posIndex, _data + _size, newData + posIndex + insertCount);
+            move_construct(_data, _data + pos_index, new_data);
+            copy_construct(first, last, new_data + pos_index);
+            move_construct(_data + pos_index, _data + _size, new_data + pos_index + insert_count);
 
             Allocator::deallocate(_data, _capacity);
 
-            _data = newData;
-            _capacity = newCapacity;
+            _data = new_data;
+            _capacity = new_capacity;
         }
         else
         {
-            move_elements_backward(_data + posIndex, _data + _size, _data + _size + insertCount);
-            copy_construct(first, last, _data + posIndex);
+            move_elements_backward(_data + pos_index, _data + _size, _data + _size + insert_count);
+            copy_construct(first, last, _data + pos_index);
         }
-        _size += insertCount;
+        _size += insert_count;
     }
 } // namespace acul
 

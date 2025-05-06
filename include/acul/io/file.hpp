@@ -1,12 +1,10 @@
 #ifndef APP_ACUL_FILE_H
 #define APP_ACUL_FILE_H
 
-#include <acul/log.hpp>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "../api.hpp"
 #include "../string/string_pool.hpp"
-#include "../string/utils.hpp"
 #include "../vector.hpp"
 
 #ifdef _WIN32
@@ -28,11 +26,11 @@ namespace acul
         {
             enum op_state
             {
-                undefined,
-                success,
-                error,
-                checksum_mismatch,
-                skipped_existing
+                Undefined,
+                Success,
+                Error,
+                ChecksumMismatch,
+                SkippedExisting
             };
 
             /**
@@ -83,114 +81,15 @@ namespace acul
             APPLIB_API void fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst);
 
             /**
-             * Reads a file in blocks using in mutithread context, splits it into lines, and processes each line using a
-             * callback function.
-             *
+             * Reads a file in blocks and processes it using a callback function.
              * @param filename The name of the file to read.
-             * @param error A reference to a string to store any error messages.
-             * @param dst A reference to a variable to store the processed data.
-             * @param callback A function pointer to the callback function that will be
-             * called for each line.
-             * @return True if the file was successfully read and processed, false
-             * otherwise.
+             * @param callback The callback function that will be called with the processed file data.
+             * @return op_state::Success if the file was successfully read and processed,
+             * op_state::Error otherwise.
              */
-            template <typename T>
-            op_state read_by_block(const string &filename, T &dst, void (*callback)(T &, const char *, int))
-            {
-#ifdef _WIN32
-                u16string lFilename = utf8_to_utf16(filename);
-                HANDLE fileHandle = CreateFileW((LPCWSTR)lFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                if (fileHandle == INVALID_HANDLE_VALUE)
-                {
-                    logError("Failed to open file: %s", filename.c_str());
-                    return op_state::error;
-                }
 
-                LARGE_INTEGER fileSize;
-                if (!GetFileSizeEx(fileHandle, &fileSize))
-                {
-                    CloseHandle(fileHandle);
-                    return op_state::error;
-                }
-
-                HANDLE mappingHandle = CreateFileMapping(fileHandle, NULL, PAGE_READONLY, 0, 0, NULL);
-                if (mappingHandle == NULL)
-                {
-                    CloseHandle(fileHandle);
-                    return op_state::error;
-                }
-
-                char *fileData =
-                    static_cast<char *>(MapViewOfFile(mappingHandle, FILE_MAP_READ, 0, 0, fileSize.QuadPart));
-                if (fileData == NULL)
-                {
-                    CloseHandle(mappingHandle);
-                    CloseHandle(fileHandle);
-                    return op_state::error;
-                }
-
-                // Parse the file in parallel
-                op_state res = op_state::success;
-                try
-                {
-                    acul::string_pool<char> stringPool(fileSize.QuadPart);
-                    fill_line_buffer(fileData, fileSize.QuadPart, stringPool);
-                    oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
-                                              [&](const oneapi::tbb::blocked_range<size_t> &range) {
-                                                  for (size_t i = range.begin(); i != range.end(); ++i)
-                                                      callback(dst, stringPool[i], i);
-                                              });
-                }
-                catch (...)
-                {
-                    res = op_state::error;
-                }
-
-                // Unmap the file from memory
-                UnmapViewOfFile(fileData);
-                CloseHandle(mappingHandle);
-                CloseHandle(fileHandle);
-#else
-                int fd = open(filename.c_str(), O_RDONLY);
-                if (fd == -1) return ReadState::Error;
-
-                struct stat fileInfo;
-                if (fstat(fd, &fileInfo) != 0)
-                {
-                    close(fd);
-                    return ReadState::Error;
-                }
-                size_t fileSize = fileInfo.st_size;
-
-                char *fileData = static_cast<char *>(mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fd, 0));
-                if (fileData == MAP_FAILED)
-                {
-                    close(fd);
-                    return ReadState::MapError;
-                }
-                // Parse the file in parallel
-                ReadState res = ReadState::Success;
-                try
-                {
-                    acul::string_pool<char> stringPool(fileSize);
-                    fill_line_buffer(fileData, fileSize, stringPool);
-                    oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, stringPool.size(), 512),
-                                              [&](const oneapi::tbb::blocked_range<size_t> &range) {
-                                                  for (size_t i = range.begin(); i != range.end(); ++i)
-                                                      callback(dstBuffer, stringPool[i], i);
-                                              });
-                }
-                catch (const std::exception &e)
-                {
-                    res = ReadState::Error;
-                }
-
-                munmap(fileData, fileSize);
-                close(fd);
-#endif
-                return res;
-            }
+            APPLIB_API op_state read_by_block(const string &filename,
+                                              const std::function<void(char *, size_t)> &callback);
 
             /**
              * Writes data to a file in blocks.

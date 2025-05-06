@@ -33,22 +33,22 @@ namespace acul
         {
             switch (level)
             {
-                case level::info:
+                case level::Info:
                     ss << "INFO";
                     break;
-                case level::debug:
+                case level::Debug:
                     ss << "DEBUG";
                     break;
-                case level::trace:
+                case level::Trace:
                     ss << "TRACE";
                     break;
-                case level::warn:
+                case level::Warn:
                     ss << "WARN";
                     break;
-                case level::error:
+                case level::Error:
                     ss << "ERROR";
                     break;
-                case level::fatal:
+                case level::Fatal:
                     ss << "FATAL";
                     break;
                 default:
@@ -61,22 +61,22 @@ namespace acul
         {
             switch (level)
             {
-                case level::fatal:
+                case level::Fatal:
                     ss << colors::magenta;
                     break;
-                case level::error:
+                case level::Error:
                     ss << colors::red;
                     break;
-                case level::warn:
+                case level::Warn:
                     ss << colors::yellow;
                     break;
-                case level::info:
+                case level::Info:
                     ss << colors::green;
                     break;
-                case level::debug:
+                case level::Debug:
                     ss << colors::blue;
                     break;
-                case level::trace:
+                case level::Trace:
                     ss << colors::cyan;
                     break;
                 default:
@@ -105,12 +105,9 @@ namespace acul
                 }
 
                 acul::hashmap<string, shared_ptr<token_handler_base>> tokenHandlers = {
-                    {"ascii_time", make_shared<time_handler>()},
-                    {"level_name", make_shared<level_name_handler>()},
-                    {"thread", make_shared<thread_id_handler>()},
-                    {"message", make_shared<message_handler>()},
-                    {"color_auto", make_shared<color_handler>()},
-                    {"color_off", make_shared<decolor_handler>()}};
+                    {"ascii_time", make_shared<time_handler>()},  {"level_name", make_shared<level_name_handler>()},
+                    {"thread", make_shared<thread_id_handler>()}, {"message", make_shared<message_handler>()},
+                    {"color_auto", make_shared<color_handler>()}, {"color_off", make_shared<decolor_handler>()}};
 
                 string token = it->str(1).c_str();
                 auto handlerIter = tokenHandlers.find(token);

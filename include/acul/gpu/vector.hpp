@@ -25,9 +25,10 @@ namespace acul::gpu
 
         vector(device &dev, const buffer &buf) : _device(&dev), _data(buf), _size(buf.instance_count) { construct(); }
 
-        vector(device &dev, const buffer &buf, const_reference value)
-            : _device(&dev), _data(buf), _size(buf.instance_count)
+        vector(device &dev, const buffer &buf, const_reference value) : _device(&dev), _data(buf)
         {
+            _size = std::max(buf.instance_count, 1U);
+            _data.instance_count = _size;
             construct();
             fill(value);
         }
@@ -297,7 +298,7 @@ namespace acul::gpu
             _size += count;
         }
 
-        template <typename InputIt>
+        template <typename InputIt, std::enable_if_t<is_input_iterator<InputIt>::value, int> = 0>
         void assign(InputIt first, InputIt last)
         {
             size_type new_size = std::distance(first, last);

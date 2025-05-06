@@ -36,7 +36,7 @@ namespace acul
             vk::Result result = _device.vk_device.allocateDescriptorSets(&allocInfo, &descriptor, _device.loader);
             if (result != vk::Result::eSuccess)
             {
-                logError("Failed to allocate descriptor sets. Result: %s", vk::to_string(result).c_str());
+                LOG_ERROR("Failed to allocate descriptor sets. Result: %s", vk::to_string(result).c_str());
                 return false;
             }
             return true;

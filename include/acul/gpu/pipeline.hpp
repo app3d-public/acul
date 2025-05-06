@@ -93,7 +93,7 @@ namespace acul
         {
             string path;             ///< Path to the shader file.
             vk::ShaderModule module; ///< Vulkan shader module object.
-            vector<char> code;  ///< Raw shader code.
+            vector<char> code;       ///< Raw shader code.
 
             /**
              * @brief Load the shader module from the specified device.
@@ -197,12 +197,12 @@ namespace acul
                 else
                     res = device.vk_device.createComputePipelines(cache, size, create_info, nullptr, pipelines,
                                                                   device.loader);
+                for (auto &shader : shaders) shader.destroy(device);
                 if (res != vk::Result::eSuccess)
                 {
-                    logError("Failed to create pipelines: %s", vk::to_string(res).c_str());
+                    LOG_ERROR("Failed to create pipelines: %s", vk::to_string(res).c_str());
                     return false;
                 }
-                for (auto &shader : shaders) shader.destroy(device);
 
                 it = artifacts.begin();
                 for (int i = 0; i < size; i++, ++it)
@@ -210,7 +210,7 @@ namespace acul
                         it->commit(pipelines[i]);
                     else
                         device.vk_device.destroyPipeline(pipelines[i], nullptr, device.loader);
-                logInfo("Created %zu pipelines", size);
+                LOG_INFO("Created %zu pipelines", size);
                 return true;
             }
 

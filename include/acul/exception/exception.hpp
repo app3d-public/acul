@@ -27,7 +27,6 @@ namespace acul
     };
 
     extern HANDLE exception_hprocess;
-    APPLIB_API bool init_stack_capture(HANDLE hProcess);
     APPLIB_API HANDLE get_exception_process();
     APPLIB_API void capture_stack_trace(except_info &except_info);
     APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
@@ -41,8 +40,10 @@ namespace acul
 
         exception() noexcept : except_info{get_exception_process(), GetCurrentThread()}
         {
+#ifndef PROCESS_UNITTEST
             RtlCaptureContext(&except_info.context);
             capture_stack_trace(except_info);
+#endif
         }
         exception(const exception &) noexcept = delete;
         exception &operator=(const exception &) noexcept = delete;

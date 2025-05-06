@@ -63,9 +63,12 @@ namespace acul
             void allocate_command_pools();
         };
 
-        void init_device(const acul::string &app_name, u32 version, device &device, device::create_ctx *create_ctx)
+        void init_device(const acul::string &app_name, u32 version, device &device, device::create_ctx *create_ctx,
+                         device::config *config)
         {
             if (!create_ctx) throw acul::runtime_error("Failed to get create context");
+            device.details = alloc<struct device::details>();
+            if (config) device.details->config = *config;
             device_initializer init{device, create_ctx};
             init.init(app_name, version);
         }
@@ -79,12 +82,12 @@ namespace acul
             device.details = nullptr;
 
             if (device.allocator) vmaDestroyAllocator(device.allocator);
-            logInfo("Destroying vk:device");
+            LOG_INFO("Destroying vk:device");
             device.vk_device.destroy(nullptr, device.loader);
 #ifndef NDEBUG
             device.instance.destroyDebugUtilsMessengerEXT(device.debug_messenger, nullptr, device.loader);
 #endif
-            logInfo("Destroying vk:instance");
+            LOG_INFO("Destroying vk:instance");
             device.instance.destroy(nullptr, device.loader);
         }
 
@@ -104,7 +107,7 @@ namespace acul
             acul::set<acul::string> available{};
             for (const auto &extension : vk::enumerateInstanceExtensionProperties(nullptr, loader))
                 available.insert(extension.extensionName.data());
-            logInfo("Checking for required extensions");
+            LOG_INFO("Checking for required extensions");
             const auto requiredExtensions = get_required_extensions(create_ctx);
             for (const auto &required : requiredExtensions)
                 if (available.find(required) == available.end())
@@ -238,7 +241,7 @@ namespace acul
 
         void device_initializer::pick_physical_device()
         {
-            logInfo("Searching physical device");
+            LOG_INFO("Searching physical device");
             auto devices = instance.enumeratePhysicalDevices(loader);
             vector<const char *> optExtensions;
             acul::hashset<acul::string> extensions;
@@ -259,10 +262,10 @@ namespace acul
                     details.properties2.properties = physical_device.getProperties(loader);
                 }
                 else
-                    logWarn("User-selected device is not suitable. Searching for another one.");
+                    LOG_WARN("User-selected device is not suitable. Searching for another one.");
             }
             else if (device_id != -1)
-                logWarn("Invalid device index provided. Searching for a suitable device.");
+                LOG_WARN("Invalid device index provided. Searching for a suitable device.");
 
             if (!physical_device)
             {
@@ -290,11 +293,11 @@ namespace acul
 
                 if (!physical_device) throw acul::runtime_error("Failed to find a suitable GPU");
             }
-            logInfo("Using: %s", static_cast<char *>(details.properties2.properties.deviceName));
+            LOG_INFO("Using: %s", static_cast<char *>(details.properties2.properties.deviceName));
             vk::SampleCountFlags msaa = details.properties2.properties.limits.framebufferColorSampleCounts;
             if (details.config.msaa > msaa)
             {
-                logWarn("MSAAx%d is not supported in current device. Using MSAAx%d",
+                LOG_WARN("MSAAx%d is not supported in current device. Using MSAAx%d",
                         static_cast<VkSampleCountFlags>(details.config.msaa), static_cast<VkSampleCountFlags>(msaa));
                 details.config.msaa = get_max_MSAA(details.properties2);
             }
@@ -366,7 +369,7 @@ namespace acul
 
         void device_initializer::create_logical_device()
         {
-            logInfo("Creating logical device");
+            LOG_INFO("Creating logical device");
             vector<vk::DeviceQueueCreateInfo> queue_create_infos;
             auto &queues = details.queues;
             assert(queues.graphics.family_id.has_value() && queues.compute.family_id.has_value());
@@ -387,7 +390,7 @@ namespace acul
             vk::PhysicalDeviceShaderDrawParametersFeatures draw_features;
             draw_features.setShaderDrawParameters(true);
 
-            for (const auto &extension : using_extensitions) logInfo("Enabling Vulkan extension: %s", extension);
+            for (const auto &extension : using_extensitions) LOG_INFO("Enabling Vulkan extension: %s", extension);
 
             vk::DeviceCreateInfo create_info;
             create_info.setQueueCreateInfoCount(static_cast<u32>(queue_create_infos.size()))
@@ -431,16 +434,16 @@ namespace acul
             switch (severity)
             {
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
-                    logDebug("%s", callback_data->pMessage);
+                    LOG_DEBUG("%s", callback_data->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-                    logInfo("%s", callback_data->pMessage);
+                    LOG_INFO("%s", callback_data->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-                    logWarn("%s", callback_data->pMessage);
+                    LOG_WARN("%s", callback_data->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-                    logError("%s", callback_data->pMessage);
+                    LOG_ERROR("%s", callback_data->pMessage);
                 default:
                     break;
             }
@@ -460,7 +463,7 @@ namespace acul
 
         void device_initializer::setup_debug_messenger()
         {
-            logDebug("Setting up debug messenger");
+            LOG_DEBUG("Setting up debug messenger");
             vk::DebugUtilsMessengerCreateInfoEXT create_info;
             populate_debug_messenger_create_info(create_info);
             debug_messenger = instance.createDebugUtilsMessengerEXT(create_info, nullptr, loader);
@@ -469,7 +472,7 @@ namespace acul
 
         void device_initializer::create_instance(const acul::string &appName, u32 version)
         {
-            logInfo("Creating Vulkan instance");
+            LOG_INFO("Creating Vulkan instance");
             if (!internal::libgpu.vklib.success()) throw acul::runtime_error("Failed to load Vulkan library");
             loader.init(internal::libgpu.vklib.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
 #ifndef NDEBUG

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <oneapi/tbb/concurrent_queue.h>
+#include "hash/hashmap.hpp"
 #include "io/path.hpp"
 #include "string/sstream.hpp"
 #include "task.hpp"
@@ -14,12 +15,12 @@ namespace acul
     {
         enum class level
         {
-            fatal,
-            error,
-            warn,
-            info,
-            debug,
-            trace
+            Fatal,
+            Error,
+            Warn,
+            Info,
+            Debug,
+            Trace
         };
 
         class token_handler_base
@@ -170,7 +171,7 @@ namespace acul
             logger_base *default_logger;
             level level;
 
-            log_service() : default_logger(nullptr), level(level::error) { g_log_service = this; }
+            log_service() : default_logger(nullptr), level(level::Error) { g_log_service = this; }
             ~log_service();
 
             /**
@@ -227,7 +228,7 @@ namespace acul
             }
 
         private:
-            acul::hashmap<string, logger_base *> _loggers;
+            hashmap<string, logger_base *> _loggers;
             oneapi::tbb::concurrent_queue<std::pair<logger_base *, string>> _queue;
             std::atomic<int> _count{0};
         };
@@ -239,24 +240,24 @@ namespace acul
 } // namespace acul
 
 #ifdef ACUL_LOG_ENABLE
-    #define logInfo(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
-    #define logDebug(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
-    #define logTrace(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
-    #define logWarn(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
-    #define logError(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
-    #define logFatal(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
+    #define LOG_INFO(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Info, __VA_ARGS__)
+    #define LOG_DEBUG(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Debug, __VA_ARGS__)
+    #define LOG_TRACE(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Trace, __VA_ARGS__)
+    #define LOG_WARN(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Warn, __VA_ARGS__)
+    #define LOG_ERROR(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Error, __VA_ARGS__)
+    #define LOG_FATAL(...) \
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Fatal, __VA_ARGS__)
 #else
-    #define logInfo(...)  ((void)0)
-    #define logDebug(...) ((void)0)
-    #define logTrace(...) ((void)0)
-    #define logWarn(...)  ((void)0)
-    #define logError(...) ((void)0)
-    #define logFatal(...) ((void)0)
+    #define LOG_INFO(...)  ((void)0)
+    #define LOG_DEBUG(...) ((void)0)
+    #define LOG_TRACE(...) ((void)0)
+    #define LOG_WARN(...)  ((void)0)
+    #define LOG_ERROR(...) ((void)0)
+    #define LOG_FATAL(...) ((void)0)
 #endif
 #endif

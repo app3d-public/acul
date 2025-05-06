@@ -38,7 +38,7 @@ namespace acul
             auto res = vmaCreateBuffer(device.allocator, reinterpret_cast<const VkBufferCreateInfo *>(&buffer_info),
                                        &allocInfo, reinterpret_cast<VkBuffer *>(&buffer), &allocation, nullptr);
             if (res == VK_SUCCESS) return true;
-            logError("Failed to create buffer: %s", vk::to_string((vk::Result)res).c_str());
+            LOG_ERROR("Failed to create buffer: %s", vk::to_string((vk::Result)res).c_str());
             return false;
         }
 
@@ -124,7 +124,7 @@ namespace acul
             VkResult result = vmaCreateImage(allocator, reinterpret_cast<const VkImageCreateInfo *>(&image_info),
                                              &alloc_info, reinterpret_cast<VkImage *>(&image), &allocation, nullptr);
             if (result == VK_SUCCESS) return true;
-            logError("Failed to create image #%d", (int)result);
+            LOG_ERROR("Failed to create image #%d", (int)result);
             return false;
         }
     } // namespace gpu

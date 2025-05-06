@@ -436,7 +436,7 @@ namespace acul
     {
         if (!str) return "";
         const char *end = str + null_terminated_length(str);
-        while (end != str && (*(end - 1) == '\n' || *(end - 1) == '\r')) --end;
+        while (end != str && isspace(*(end - 1))) --end;
         return string(str, end);
     }
 } // namespace acul

@@ -39,31 +39,31 @@ namespace acul
         using reverse_iterator = std::reverse_iterator<Iterator>;
         using const_reverse_iterator = std::reverse_iterator<Iterator>;
 
-        explicit string_pool(size_type poolSize) : _poolSize(poolSize), _data(Allocator::allocate(poolSize)), _pos(0) {}
+        explicit string_pool(size_type pool_size) : _pool_size(pool_size), _data(Allocator::allocate(pool_size)), _pos(0) {}
 
-        ~string_pool() noexcept { Allocator::deallocate(_data, _poolSize); }
+        ~string_pool() noexcept { Allocator::deallocate(_data, _pool_size); }
 
         string_pool(const string_pool &other) noexcept
-            : _poolSize(other._poolSize), _data(Allocator::allocate(_poolSize)), _pos(other._pos)
+            : _pool_size(other._pool_size), _data(Allocator::allocate(_pool_size)), _pos(other._pos)
         {
             memcpy(_data, other._data, _pos * sizeof(T));
             _lines = other._lines;
         }
 
         string_pool(string_pool &&other) noexcept
-            : _poolSize(other._poolSize), _data(other._data), _pos(other._pos), _lines(std::move(other._lines))
+            : _pool_size(other._pool_size), _data(other._data), _pos(other._pos), _lines(std::move(other._lines))
         {
             other._data = nullptr;
             other._pos = 0;
-            other._poolSize = 0;
+            other._pool_size = 0;
         }
 
         string_pool &operator=(const string_pool &other) noexcept
         {
             if (this != &other)
             {
-                _poolSize = other._poolSize;
-                _data = Allocator::allocate(_poolSize);
+                _pool_size = other._pool_size;
+                _data = Allocator::allocate(_pool_size);
                 _pos = other._pos;
                 memcpy(_data, other._data, _pos * sizeof(T));
                 _lines = other._lines;
@@ -75,14 +75,14 @@ namespace acul
         {
             if (this != &other)
             {
-                Allocator::deallocate(_data, _poolSize);
-                _poolSize = other._poolSize;
+                Allocator::deallocate(_data, _pool_size);
+                _pool_size = other._pool_size;
                 _data = other._data;
                 _pos = other._pos;
                 _lines = std::move(other._lines);
                 other._data = nullptr;
                 other._pos = 0;
-                other._poolSize = 0;
+                other._pool_size = 0;
             }
             return *this;
         }
@@ -139,7 +139,7 @@ namespace acul
 
         size_type size() const noexcept { return _lines.size(); }
 
-        size_type poolSize() const noexcept { return _poolSize; }
+        size_type pool_size() const noexcept { return _pool_size; }
 
         size_type max_size() const noexcept { return Allocator::max_size(); }
 
@@ -148,9 +148,9 @@ namespace acul
 
         void resize(size_type newSize) noexcept
         {
-            if (_poolSize > newSize) return;
-            _poolSize = newSize;
-            _data = Allocator::reallocate(_data, _poolSize);
+            if (_pool_size > newSize) return;
+            _pool_size = newSize;
+            _data = Allocator::reallocate(_data, _pool_size);
         }
 
         void clear()
@@ -161,7 +161,7 @@ namespace acul
 
         void push(const_pointer str, size_type length) noexcept
         {
-            if (_pos + length + 1 > _poolSize) resize(_pos + length + 1);
+            if (_pos + length + 1 > _pool_size) resize(_pos + length + 1);
             memcpy(_data + _pos, str, length);
             _data[_pos + length] = '\0';
             _lines.push_back(_pos);
@@ -175,7 +175,7 @@ namespace acul
         }
 
     private:
-        size_type _poolSize;
+        size_type _pool_size;
         pointer _data;
         vector<size_type> _lines;
         size_type _pos;

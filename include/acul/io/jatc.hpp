@@ -5,8 +5,10 @@
 #include <oneapi/tbb/flow_graph.h>
 #include "../shared_mutex.hpp"
 #include "../stream.hpp"
+#include "../string/utils.hpp"
 #include "../task.hpp"
 #include "file.hpp"
+#include "path.hpp"
 
 // Journalable Asynchronous Temporary Cache
 
@@ -86,7 +88,7 @@ namespace acul
 
                     index_entry &entry()
                     {
-                        if (state == op_state::undefined) ready_promise.get_future().wait();
+                        if (state == op_state::Undefined) ready_promise.get_future().wait();
                         return _entry;
                     }
 
@@ -129,7 +131,7 @@ namespace acul
 
                     void add_request(const request &request, response *response)
                     {
-                        response->state = io::file::op_state::undefined;
+                        response->state = io::file::op_state::Undefined;
                         response->group = request.group;
                         response->entrypoint = request.entrypoint;
                         ++request.entrypoint->op_count;

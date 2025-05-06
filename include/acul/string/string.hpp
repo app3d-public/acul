@@ -118,14 +118,16 @@ namespace acul
             size_type new_size = static_cast<size_type>(std::distance(first, last));
             if (new_size < _sso_size)
             {
-                memcpy(_salloc.data, &(*first), (new_size + 1) * sizeof(value_type));
+                memcpy(_salloc.data, &(*first), new_size * sizeof(value_type));
+                _salloc.data[new_size] = 0;
                 _salloc.size.alloc_flags = ALLOC_STACK;
                 _salloc.size.data = new_size;
             }
             else
             {
                 _lalloc.ptr = Allocator::allocate(new_size + 1);
-                memcpy(_lalloc.ptr, &(*first), (new_size + 1) * sizeof(value_type));
+                memcpy(_lalloc.ptr, &(*first), new_size * sizeof(value_type));
+                _lalloc.ptr[new_size] = 0;
                 _salloc.size.alloc_flags = ALLOC_HEAP;
                 _lalloc.size.data = new_size;
                 _lalloc.cap = new_size + 1;

@@ -35,13 +35,13 @@ namespace acul
 
                     if (!entrypoint->fd.is_open())
                     {
-                        logError("Failed to init entrypoint file");
+                        LOG_ERROR("Failed to init entrypoint file");
                         return;
                     }
 
                     if (!write_header(entrypoint))
                     {
-                        logError("Failed to write header to entrypoint file");
+                        LOG_ERROR("Failed to write header to entrypoint file");
                         return;
                     }
 
@@ -54,7 +54,7 @@ namespace acul
                         if (!entrypoint->fd.good())
                         {
                             entrypoint->fd.clear();
-                            logError("Failed to write data to entrypoint file");
+                            LOG_ERROR("Failed to write data to entrypoint file");
                             return;
                         }
                         entrypoint->pos += data.size();
@@ -66,18 +66,18 @@ namespace acul
                     auto entrypoint = alloc<jatc::entrypoint>();
                     entrypoint->id = id_gen()();
                     entrypoint->op_count = 0;
-                    logInfo("Registering entrypoint: %" PRIx64, entrypoint->id);
+                    LOG_INFO("Registering entrypoint: %" PRIx64, entrypoint->id);
                     group->entrypoints.push_back(entrypoint);
                     return entrypoint;
                 }
 
                 void cache::deregister_entrypoint(entrypoint *entrypoint, entrygroup *group)
                 {
-                    logInfo("Deregistering entrypoint: %" PRIx64, entrypoint->id);
+                    LOG_INFO("Deregistering entrypoint: %" PRIx64, entrypoint->id);
                     auto it = std::find(group->entrypoints.begin(), group->entrypoints.end(), entrypoint);
                     if (it == group->entrypoints.end())
                     {
-                        logWarn("Entrypoint %" PRIx64 " not found", entrypoint->id);
+                        LOG_WARN("Entrypoint %" PRIx64 " not found", entrypoint->id);
                         return;
                     }
                     group->entrypoints.erase(it);
@@ -92,7 +92,7 @@ namespace acul
                         acul::release(entrypoint);
                         if (io::file::exists(path.c_str()))
                         {
-                            logInfo("Deleting cache file: %s", path.c_str());
+                            LOG_INFO("Deleting cache file: %s", path.c_str());
                             io::file::remove_file(path.c_str());
                         }
                         {
@@ -106,24 +106,24 @@ namespace acul
                 op_state cache::read(entrypoint *entrypoint, entrygroup *group, const index_entry &entry,
                                      bin_stream &dst)
                 {
-                    logInfo("Reading index entry");
+                    LOG_INFO("Reading index entry");
                     if (entry.size == 0)
                     {
-                        logError("Entry size is zero.");
-                        return op_state::error;
+                        LOG_ERROR("Entry size is zero.");
+                        return op_state::Error;
                     }
 
                     if (!entrypoint || !group)
                     {
-                        logError("Invalid entrypoint or group pointer.");
-                        return op_state::error;
+                        LOG_ERROR("Invalid entrypoint or group pointer.");
+                        return op_state::Error;
                     }
 
                     vector<char> buffer(entry.size);
                     if (!buffer.data())
                     {
-                        logError("Failed to allocate buffer of size: %" PRIu64, entry.size);
-                        return op_state::error;
+                        LOG_ERROR("Failed to allocate buffer of size: %" PRIu64, entry.size);
+                        return op_state::Error;
                     }
 
                     {
@@ -133,23 +133,23 @@ namespace acul
                         auto fd = get_file_stream(entrypoint, group);
                         if (!fd)
                         {
-                            logError("Failed to open file stream.");
-                            return op_state::error;
+                            LOG_ERROR("Failed to open file stream.");
+                            return op_state::Error;
                         }
 
                         fd->seekg(entry.offset);
                         if (!fd->good())
                         {
-                            logError("Failed to seek file to offset: %" PRIu64, entry.offset);
-                            return op_state::error;
+                            LOG_ERROR("Failed to seek file to offset: %" PRIu64, entry.offset);
+                            return op_state::Error;
                         }
 
                         fd->read(buffer.data(), entry.size);
                         if (!fd->good())
                         {
-                            logError("Failed to read data at offset: %" PRIu64, entry.offset);
+                            LOG_ERROR("Failed to read data at offset: %" PRIu64, entry.offset);
                             fd->clear();
-                            return op_state::error;
+                            return op_state::Error;
                         }
                     }
 
@@ -158,29 +158,29 @@ namespace acul
                     if (entry.compressed > 0)
                     {
                         vector<char> decompressed;
-                        logInfo("Decompressing data.");
+                        LOG_INFO("Decompressing data.");
                         if (!io::file::decompress(dst.data() + dst.pos(), dst.size() - dst.pos(), decompressed))
                         {
-                            logError("Failed to decompress data at offset: %" PRIu64, entry.offset);
-                            return op_state::error;
+                            LOG_ERROR("Failed to decompress data at offset: %" PRIu64, entry.offset);
+                            return op_state::Error;
                         }
                         dst = bin_stream(std::move(decompressed));
                     }
 
-                    logInfo("Verifying checksum.");
+                    LOG_INFO("Verifying checksum.");
                     if (acul::crc32(0, dst.data(), dst.size()) != entry.checksum)
                     {
-                        logError("Invalid entrypoint index checksum.");
-                        return op_state::checksum_mismatch;
+                        LOG_ERROR("Invalid entrypoint index checksum.");
+                        return op_state::ChecksumMismatch;
                     }
 
-                    return op_state::success;
+                    return op_state::Success;
                 }
 
                 void cache::filter_index_entries(entrypoint *entrypoint, entrygroup *group,
                                                  vector<index_entry *> &index_entries)
                 {
-                    logInfo("Reading index entries for entrypoint: %" PRIx64, entrypoint->id);
+                    LOG_INFO("Reading index entries for entrypoint: %" PRIx64, entrypoint->id);
                     {
                         shared_lock read_lock(entrypoint->lock);
                         entrypoint->cv.wait(read_lock, [&]() { return entrypoint->op_count.load() == 0; });
@@ -188,7 +188,7 @@ namespace acul
                     auto fd = get_file_stream(entrypoint, group);
                     if (!fd)
                     {
-                        logError("Failed to open file stream for entrypoint: %" PRIx64, entrypoint->id);
+                        LOG_ERROR("Failed to open file stream for entrypoint: %" PRIx64, entrypoint->id);
                         return;
                     }
                     vector<vector<char>> data_buffers;
@@ -201,7 +201,7 @@ namespace acul
                         if (!fd->good())
                         {
                             fd->clear();
-                            logError("Failed to read data from entrypoint file.");
+                            LOG_ERROR("Failed to read data from entrypoint file.");
                             return;
                         }
                         data_buffers.push_back(std::move(buffer));
@@ -209,7 +209,7 @@ namespace acul
                     fd->close();
                     ++entrypoint->op_count;
 
-                    logInfo("Overwriting index entries for entrypoint: %" PRIx64, entrypoint->id);
+                    LOG_INFO("Overwriting index entries for entrypoint: %" PRIx64, entrypoint->id);
                     acul::exclusive_lock write_lock(entrypoint->lock);
                     rewrite_file(entrypoint, index_entries, data_buffers, path(entrypoint, group));
                     --entrypoint->op_count;
@@ -237,7 +237,7 @@ namespace acul
                         {
                             request.entrypoint->pos += data_offset + index_entry.size;
                             index_entry.offset = data_offset;
-                            response.state = io::file::op_state::success;
+                            response.state = io::file::op_state::Success;
                             response.entry(index_entry);
                         }
                     }
@@ -287,8 +287,8 @@ namespace acul
                 on_error:
                     if (err)
                     {
-                        logError("%s", err);
-                        response.state = op_state::error;
+                        LOG_ERROR("%s", err);
+                        response.state = op_state::Error;
                     }
                     --request.entrypoint->op_count;
                     response.ready_promise.set_value();
@@ -301,17 +301,17 @@ namespace acul
                     if (!entrypoint->fd.is_open())
                     {
                         auto path = this->path(entrypoint, group);
-                        logInfo("Loading cache file: %s", path.c_str());
+                        LOG_INFO("Loading cache file: %s", path.c_str());
                         auto openFlags = std::ios::binary | std::ios::in | std::ios::out | std::ios::app;
                         entrypoint->fd = std::fstream(path.c_str(), openFlags);
                         if (!entrypoint->fd.is_open())
                         {
-                            logError("%s: %s", strerror(errno), path.c_str());
+                            LOG_ERROR("%s: %s", strerror(errno), path.c_str());
                             return nullptr;
                         }
                         if (entrypoint->pos == 0 && !write_header(entrypoint))
                         {
-                            logError("Failed to write header.");
+                            LOG_ERROR("Failed to write header.");
                             return nullptr;
                         }
                     }

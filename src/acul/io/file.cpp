@@ -14,10 +14,10 @@ namespace acul
                 if (!file)
                 {
                     if (!exists(filename.c_str()))
-                        logError("File does not exist: %s", filename.c_str());
+                        LOG_ERROR("File does not exist: %s", filename.c_str());
                     else
-                        logError("Failed to open file: %s", filename.c_str());
-                    return op_state::error;
+                        LOG_ERROR("Failed to open file: %s", filename.c_str());
+                    return op_state::Error;
                 }
 
                 fseek(file, 0, SEEK_END);
@@ -28,7 +28,7 @@ namespace acul
                 fread(buffer.data(), 1, fileSize, file);
                 fclose(file);
 
-                return op_state::success;
+                return op_state::Success;
             }
 
             bool write_binary(const string &filename, const char *buffer, size_t size)
@@ -51,7 +51,7 @@ namespace acul
                 if (ZSTD_isError(compressedSize))
                 {
                     compressed.clear();
-                    logError("Failed to compress: %s", ZSTD_getErrorName(compressedSize));
+                    LOG_ERROR("Failed to compress: %s", ZSTD_getErrorName(compressedSize));
                     return false;
                 }
 
@@ -65,7 +65,7 @@ namespace acul
                 if (decompressedSize == 0 || decompressedSize == ZSTD_CONTENTSIZE_ERROR ||
                     decompressedSize == ZSTD_CONTENTSIZE_UNKNOWN)
                 {
-                    logError("Cannot determine decompressed size.");
+                    LOG_ERROR("Cannot determine decompressed size.");
                     return false;
                 }
 
@@ -77,7 +77,7 @@ namespace acul
                 if (ZSTD_isError(actualDecompressedSize))
                 {
                     decompressed.clear();
-                    logError("Failed to decompress: %s", ZSTD_getErrorName(actualDecompressedSize));
+                    LOG_ERROR("Failed to decompress: %s", ZSTD_getErrorName(actualDecompressedSize));
                     return false;
                 }
 

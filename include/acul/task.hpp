@@ -6,16 +6,12 @@
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
-#include "string/string.hpp"
+#include "vector.hpp"
 
 #ifdef _WIN32
     #include <processthreadsapi.h>
 #endif
 #include "api.hpp"
-#include "event.hpp"
-
-#define TASK_EVENT_UPDATE_SIGN 0x3E916882EBB697C3
-#define TASK_EVENT_DONE_SIGN   0x2B56484DF4085AA6
 
 namespace acul
 {
@@ -39,7 +35,7 @@ namespace acul
          * @tparam T The return type of the task.
          */
         template <typename T>
-        class task final : public task_base, public enable_shared_from_this<task<T>>
+        class task final : public task_base
         {
         public:
             /**
@@ -154,20 +150,6 @@ namespace acul
             oneapi::tbb::task_group _group;
         };
 
-        struct update_event final : public events::event
-        {
-            void *ctx;
-            string header;
-            string message;
-            f32 progress;
-
-            update_event(void *ctx = nullptr, const string &header = {}, const string &message = {},
-                         f32 progress = 0.0f)
-                : event(TASK_EVENT_UPDATE_SIGN), ctx(ctx), header(header), message(message), progress(progress)
-            {
-            }
-        };
-
         class service_dispatch;
 
         class service_base
@@ -209,7 +191,7 @@ namespace acul
                 service->_sd = this;
             }
 
-        private:
+        public:
             bool _running{true};
             std::thread _thread;
             std::mutex _mutex;
@@ -221,7 +203,7 @@ namespace acul
             friend class service_base;
         };
 
-        extern APPLIB_API service_dispatch *g_Service_dispatch;
+        extern APPLIB_API service_dispatch *g_service_dispatch;
 
         inline void service_base::notify() { _sd->_cv.notify_one(); }
 
@@ -230,10 +212,10 @@ namespace acul
         public:
             virtual std::chrono::steady_clock::time_point dispatch() override;
 
-            template <typename F>
-            void addTask(F &&task, std::chrono::steady_clock::time_point time)
+            template<typename F>
+            void add_task(F&& task, std::chrono::steady_clock::time_point time)
             {
-                _tasks.emplace(addTask(std::forward<F>(task)), time);
+                _tasks.emplace(acul::task::add_task(std::forward<F>(task)), time);
                 notify();
             }
 

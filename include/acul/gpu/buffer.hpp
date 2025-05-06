@@ -27,14 +27,14 @@ namespace acul
         {
             buffer.alignment_size = get_alignment(instance_size, min_offset_alignment);
             buffer.buffer_size = buffer.alignment_size * buffer.instance_count;
-            logDebug("Created new buffer %p, purpose: %s", &buffer, vk::to_string(buffer.vk_usage_flags).c_str());
+            LOG_DEBUG("Created new buffer %p, purpose: %s", &buffer, vk::to_string(buffer.vk_usage_flags).c_str());
         }
 
         inline void construct_ubo_buffer(buffer &buffer, size_t instance_size, device &device)
         {
             buffer.alignment_size = device.details->get_aligned_UBO_size(instance_size);
             buffer.buffer_size = buffer.alignment_size * buffer.instance_count;
-            logDebug("Created new buffer %p, purpose: %s", &buffer, vk::to_string(buffer.vk_usage_flags).c_str());
+            LOG_DEBUG("Created new buffer %p, purpose: %s", &buffer, vk::to_string(buffer.vk_usage_flags).c_str());
         }
 
         inline bool map_buffer(buffer &buffer, device &device)
@@ -51,7 +51,7 @@ namespace acul
 
         inline void destroy_buffer(buffer &buffer, device &device)
         {
-            logDebug("Deallocating buffer %p vk: %p purpose: %s", &buffer, (void *)buffer.vk_buffer,
+            LOG_DEBUG("Deallocating buffer %p vk: %p purpose: %s", &buffer, (void *)buffer.vk_buffer,
                      vk::to_string(buffer.vk_usage_flags).c_str());
             unmap_buffer(buffer, device);
             vmaDestroyBuffer(device.allocator, buffer.vk_buffer, buffer.allocation);

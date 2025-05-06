@@ -65,7 +65,7 @@ namespace acul
 
     APPLIB_API void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)
     {
-        stream << format("Excetion code: 0x%llx\n", record.ExceptionCode);
+        stream << format("Exception code: 0x%llx\n", record.ExceptionCode);
         stream << format("Exception address: 0x%llx\n", record.ExceptionAddress);
 
         if (record.NumberParameters > 0)
@@ -158,10 +158,10 @@ namespace acul
             return string(symbol.ShortName, strnlen(symbol.ShortName, 8));
     }
 
-    string find_symbol_from_table(DWORD64 address, const map<DWORD64, symbol_info> &symbolMap)
+    string find_symbol_from_table(DWORD64 address, const map<DWORD64, symbol_info> &symbol_map)
     {
-        auto it = symbolMap.upper_bound(address);
-        if (it != symbolMap.begin())
+        auto it = symbol_map.upper_bound(address);
+        if (it != symbol_map.begin())
         {
             --it;
             if (address >= it->first && address < it->second.end_address) return it->second.name;
@@ -177,7 +177,7 @@ namespace acul
     };
 
     void analyze_COFF_symbols(const vector<char> &fileData, DWORD64 loadedBaseAddr,
-                              map<DWORD64, symbol_info> &symbolMap)
+                              map<DWORD64, symbol_info> &symbol_map)
     {
         PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.data();
         if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return;
@@ -246,7 +246,7 @@ namespace acul
                         section->VirtualAddress + section->Misc.VirtualSize + baseAddressOffset;
             }
 
-            symbolMap[tempSymbolList[i].startAddress] = {tempSymbolList[i].name, tempSymbolList[i].endAddress};
+            symbol_map[tempSymbolList[i].startAddress] = {tempSymbolList[i].name, tempSymbolList[i].endAddress};
         }
     }
 
@@ -316,15 +316,15 @@ namespace acul
     APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
-
+        
         HMODULE main_module = GetMainModuleHandle(except_info.hProcess);
         stream << "Stack trace:\n";
-        int frameIndex = 0;
+        int frame_index = 0;
 
         for (int i = 0; i < except_info.addresses_count; ++i)
         {
             auto &[addr, offset] = except_info.addresses[i];
-            string line = format("\t#%d 0x%llx", frameIndex, offset);
+            string line = format("\t#%d 0x%llx", frame_index, offset);
             stream << line.c_str();
             if (addr)
             {
@@ -334,21 +334,21 @@ namespace acul
                     name = "<unknown>";
                 else
                 {
-                    const map<DWORD64, symbol_info> &symbolMap = it->second.second;
-                    if (symbolMap.empty()) // Try get symbol info from .edata
+                    const map<DWORD64, symbol_info> &symbol_map = it->second.second;
+                    if (symbol_map.empty()) // Try get symbol info from .edata
                     {
-                        DWORD64 displacementSym = 0;
+                        DWORD64 displacement_sym = 0;
                         char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
                         PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
                         pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
                         pSymbol->MaxNameLen = MAX_SYM_NAME;
-                        if (SymFromAddr(except_info.hProcess, offset, &displacementSym, pSymbol))
-                            name = pSymbol->Name;
+                        if (SymFromAddr(except_info.hProcess, offset, &displacement_sym, pSymbol))
+                            name = (const char*) pSymbol->Name;
                         else
                             name = "<unknown>";
                     }
                     else
-                        name = find_symbol_from_table(offset, symbolMap);
+                        name = find_symbol_from_table(offset, symbol_map);
                 }
                 stream << " in " << demangle(name.c_str()).c_str();
                 if (addr != (DWORD64)main_module && !module_name.empty()) stream << " at " << module_name.c_str();
@@ -357,7 +357,7 @@ namespace acul
                 stream << " in <unknown>";
 
             stream << '\n';
-            frameIndex++;
+            frame_index++;
         }
     }
 

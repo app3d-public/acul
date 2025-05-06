@@ -94,3 +94,8 @@ set_target_properties(${ACUL_LIB_NAME}
 )
 
 set(ACUL_LIB_NAME ${ACUL_LIB_NAME} PARENT_SCOPE)
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

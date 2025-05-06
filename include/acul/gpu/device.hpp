@@ -57,7 +57,7 @@ namespace acul
             void destroy_window_surface(vk::DispatchLoaderDynamic &dispatch_loader)
             {
                 if (!surface) return;
-                logInfo("Destroying vk:surface");
+                LOG_INFO("Destroying vk:surface");
                 instance.destroySurfaceKHR(surface, nullptr, dispatch_loader);
             }
 
@@ -208,7 +208,7 @@ namespace acul
 
             void destroy(vk::Device device, vk::DispatchLoaderDynamic &loader)
             {
-                logInfo("Destroying command pools");
+                LOG_INFO("Destroying command pools");
                 device.destroyCommandPool(graphics.pool.vk_pool, nullptr, loader);
                 device.destroyCommandPool(compute.pool.vk_pool, nullptr, loader);
             }
@@ -233,7 +233,7 @@ namespace acul
         {
             enum : u32
             {
-                device = 0x2AF818FE
+                Device = 0x2AF818FE
             };
         }
 
@@ -246,7 +246,7 @@ namespace acul
             // A value of 1.0 ensures per-sample shading.
             f32 sample_shading = 0.0f;
 
-            virtual u32 signature() const override { return sign_block::device; }
+            virtual u32 signature() const override { return sign_block::Device; }
         };
 
         struct device::details
@@ -260,7 +260,7 @@ namespace acul
 
             void destroy(vk::Device &device, vk::DispatchLoaderDynamic &loader)
             {
-                logInfo("Destroying device resources");
+                LOG_INFO("Destroying device resources");
                 queues.destroy(device, loader);
                 fence_pool.destroy();
             }
@@ -282,7 +282,7 @@ namespace acul
         }
 
         APPLIB_API void init_device(const acul::string &app_name, u32 version, device &device,
-                                    device::create_ctx *create_ctx);
+                                    device::create_ctx *create_ctx, device::config *config = nullptr);
 
         APPLIB_API void destroy_device(device &device);
 

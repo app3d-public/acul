@@ -226,13 +226,11 @@ namespace acul
 
         explicit shared_ptr(pointer ptr) : _ctrl(nullptr), _data(ptr)
         {
-            if (ptr)
-            {
-                _ctrl = (detail::mem_control_block *)block_allocator::allocate(sizeof(detail::mem_control_block));
-                _ctrl->ref_counts = 1ULL << 32;
-                _ctrl->set_external();
-                detail::accept_owner(ptr, *this);
-            }
+            if (!ptr) return;
+            _ctrl = (detail::mem_control_block *)block_allocator::allocate(sizeof(detail::mem_control_block));
+            _ctrl->ref_counts = 1ULL << 32;
+            _ctrl->set_external();
+            detail::accept_owner(ptr, *this);
         }
 
         shared_ptr(const shared_ptr &other) noexcept : _ctrl(other._ctrl), _data(other._data)
@@ -377,6 +375,7 @@ namespace acul
     {
         detail::mem_control_block *_ctrl;
         T *_data;
+        using block_allocator = typename Allocator::template rebind<std::byte>::other;
 
         template <typename U, typename Au>
         friend class shared_ptr;
@@ -408,7 +407,12 @@ namespace acul
 
         ~weak_ptr()
         {
-            if (_ctrl) _ctrl->decrement_weak();
+            if (_ctrl)
+            {
+                _ctrl->decrement_weak();
+                if (_ctrl->strong_count() == 0 && _ctrl->weak_count() == 0)
+                    block_allocator::deallocate((std::byte *)_ctrl, 1);
+            }
         }
 
         shared_ptr<T> lock() const

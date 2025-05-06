@@ -109,6 +109,8 @@ namespace acul
                         else
                             ++iter;
                     }
+
+                    if (listeners.empty()) _listeners.erase(it);
                 }
             }
 

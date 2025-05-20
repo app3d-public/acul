@@ -309,6 +309,8 @@ namespace acul
         template <typename InputIt>
         void insert(iterator pos, InputIt first, InputIt last);
 
+        iterator insert(iterator pos, size_type count, const_reference value);
+
         template <typename InputIt, std::enable_if_t<is_input_iterator_based<InputIt>::value, int> = 0>
         void assign(InputIt first, InputIt last)
         {
@@ -390,6 +392,15 @@ namespace acul
             }
             else
                 for (; start != end; ++start, ++dest) Allocator::construct(dest, *start);
+        }
+
+        template <typename Dest>
+        void copy_construct(Dest dest, size_type count, const_reference value)
+        {
+            if constexpr (std::is_trivially_copyable_v<T>)
+                for (size_type i = 0; i < count; ++i) dest[i] = value;
+            else
+                for (size_type i = 0; i < count; ++i) Allocator::construct(dest + i, value);
         }
 
         template <typename Iter, typename Dest>
@@ -593,6 +604,38 @@ namespace acul
         }
         _size += insert_count;
     }
+
+    template <typename T, typename Allocator>
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::insert(iterator pos, size_type count,
+                                                                         const_reference value)
+    {
+        if (pos < begin() || pos > end()) return end();
+        const size_type index = pos - begin();
+
+        if (_size + count > _capacity)
+        {
+            size_type new_capacity = std::max(_capacity * 2, _size + count);
+            pointer new_data = Allocator::allocate(new_capacity);
+            if (!new_data) throw bad_alloc(new_capacity);
+
+            move_construct(_data, _data + index, new_data);
+            copy_construct(new_data + index, count, value);
+            move_construct(_data + index, _data + _size, new_data + index + count);
+
+            Allocator::deallocate(_data, _capacity);
+            _data = new_data;
+            _capacity = new_capacity;
+        }
+        else
+        {
+            move_elements_backward(_data + index, _data + _size, _data + _size + count);
+            copy_construct(_data + index, count, value);
+        }
+
+        _size += count;
+        return iterator(_data + index);
+    }
+
 } // namespace acul
 
 #endif

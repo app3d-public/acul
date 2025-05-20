@@ -17,7 +17,7 @@ namespace acul
             const auto localeId = LocaleNameToLCID(wlocale.c_str(), LOCALE_ALLOW_NEUTRAL_NAMES);
             SetThreadLocale(localeId);
 #else
-            setlocale(LC_MESSAGES, locale.data());
+            setlocale(LC_MESSAGES, locale.c_str());
 #endif
         }
 

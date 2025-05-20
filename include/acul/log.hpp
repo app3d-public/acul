@@ -169,7 +169,7 @@ namespace acul
         {
         public:
             logger_base *default_logger;
-            level level;
+            enum level level;
 
             log_service() : default_logger(nullptr), level(level::Error) { g_log_service = this; }
             ~log_service();

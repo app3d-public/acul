@@ -458,7 +458,7 @@ namespace acul
             createInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
                                      vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
                                      vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-            createInfo.pfnUserCallback = reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(debug_callback);
+            createInfo.pfnUserCallback = debug_callback;
         }
 
         void device_initializer::setup_debug_messenger()

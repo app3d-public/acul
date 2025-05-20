@@ -5,6 +5,7 @@
 #include <acul/api.hpp>
 #include <array>
 #include <cstdint>
+#include <stddef.h>
 
 constexpr std::array<uint32_t, 256> generate_crc32_table()
 {

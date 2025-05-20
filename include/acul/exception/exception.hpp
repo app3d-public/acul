@@ -6,6 +6,10 @@
 
 #ifdef _WIN32
     #include <windows.h>
+#else
+    #include <dlfcn.h>
+    #include <execinfo.h>
+    #include <ucontext.h>
 #endif
 
 namespace acul
@@ -28,23 +32,45 @@ namespace acul
 
     extern HANDLE exception_hprocess;
     APPLIB_API HANDLE get_exception_process();
-    APPLIB_API void capture_stack_trace(except_info &except_info);
     APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
+#else
+    struct except_addr
+    {
+        void *addr = NULL;
+        void *offset = NULL;
+    };
 
+    struct except_info
+    {
+        ucontext_t context;
+        except_addr *addresses = NULL;
+        size_t addresses_count = 0;
+    };
 #endif
+
+    APPLIB_API void capture_stack_trace(except_info &except_info);
 
     class APPLIB_API exception : public std::exception
     {
     public:
-        except_info except_info;
+        struct except_info except_info;
 
+#ifdef _WIN32
         exception() noexcept : except_info{get_exception_process(), GetCurrentThread()}
         {
-#ifndef PROCESS_UNITTEST
+    #ifndef PROCESS_UNITTEST
             RtlCaptureContext(&except_info.context);
             capture_stack_trace(except_info);
-#endif
+    #endif
         }
+#else
+        exception() noexcept
+        {
+    #ifndef PROCESS_UNITTEST
+            if (getcontext(&except_info.context) == 0) capture_stack_trace(except_info);
+    #endif
+        }
+#endif
         exception(const exception &) noexcept = delete;
         exception &operator=(const exception &) noexcept = delete;
 

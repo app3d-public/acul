@@ -106,18 +106,18 @@ namespace acul
     {
         union
         {
-            char ShortName[8];
+            char short_name[8];
             struct
             {
-                DWORD Zeroes;
-                DWORD Offset;
+                DWORD zeroes;
+                DWORD offset;
             } Name;
         };
-        DWORD Value;
-        SHORT SectionNumber;
-        WORD Type;
-        BYTE StorageClass;
-        BYTE NumberOfAuxSymbols;
+        DWORD value;
+        SHORT section_number;
+        WORD type;
+        BYTE storage_class;
+        BYTE number_of_aux_symbols;
     };
 #pragma pack(pop)
 
@@ -149,13 +149,13 @@ namespace acul
 
     string get_symbol_name(const COFFSymbol &symbol, const char *string_table)
     {
-        if (symbol.Name.Zeroes == 0)
+        if (symbol.Name.zeroes == 0)
         {
-            DWORD offset = symbol.Name.Offset;
+            DWORD offset = symbol.Name.offset;
             return string_table + offset;
         }
         else
-            return string(symbol.ShortName, strnlen(symbol.ShortName, 8));
+            return string(symbol.short_name, strnlen(symbol.short_name, 8));
     }
 
     string find_symbol_from_table(DWORD64 address, const map<DWORD64, symbol_info> &symbol_map)
@@ -171,82 +171,82 @@ namespace acul
 
     struct __symbol_temp_info
     {
-        DWORD64 startAddress;
-        DWORD64 endAddress;
+        DWORD64 start_address;
+        DWORD64 end_address;
         string name;
     };
 
-    void analyze_COFF_symbols(const vector<char> &fileData, DWORD64 loadedBaseAddr,
+    void analyze_COFF_symbols(const vector<char> &file_data, DWORD64 loaded_base_addr,
                               map<DWORD64, symbol_info> &symbol_map)
     {
-        PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.data();
-        if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return;
+        PIMAGE_DOS_HEADER dos_header = (PIMAGE_DOS_HEADER)file_data.data();
+        if (dos_header->e_magic != IMAGE_DOS_SIGNATURE) return;
 
-        PIMAGE_NT_HEADERS64 ntHeaders = (PIMAGE_NT_HEADERS64)(fileData.data() + dosHeader->e_lfanew);
-        if (ntHeaders->Signature != IMAGE_NT_SIGNATURE) return;
+        PIMAGE_NT_HEADERS64 nt_headers = (PIMAGE_NT_HEADERS64)(file_data.data() + dos_header->e_lfanew);
+        if (nt_headers->Signature != IMAGE_NT_SIGNATURE) return;
 
-        DWORD symbolTableOffset = ntHeaders->FileHeader.PointerToSymbolTable;
-        DWORD numberOfSymbols = ntHeaders->FileHeader.NumberOfSymbols;
+        DWORD symbol_table_offset = nt_headers->FileHeader.PointerTosymbol_table;
+        DWORD symbols_num = nt_headers->FileHeader.symbols_num;
 
-        if (symbolTableOffset == 0 || numberOfSymbols == 0) return;
+        if (symbol_table_offset == 0 || symbols_num == 0) return;
 
-        DWORD64 imageBase = ntHeaders->OptionalHeader.ImageBase;
-        if (imageBase == 0) return;
+        DWORD64 image_base = nt_headers->OptionalHeader.image_base;
+        if (image_base == 0) return;
 
-        DWORD64 baseAddressOffset = loadedBaseAddr - imageBase;
+        DWORD64 base_address_offset = loaded_base_addr - image_base;
 
-        const char *symbolTable = fileData.data() + symbolTableOffset;
-        const char *stringTable = symbolTable + numberOfSymbols * sizeof(COFFSymbol);
+        const char *symbol_table = file_data.data() + symbol_table_offset;
+        const char *string_table = symbol_table + symbols_num * sizeof(COFFSymbol);
 
-        PIMAGE_SECTION_HEADER sectionHeaders =
-            (PIMAGE_SECTION_HEADER)(fileData.data() + dosHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS64));
+        PIMAGE_SECTION_HEADER section_headers =
+            (PIMAGE_SECTION_HEADER)(file_data.data() + dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS64));
 
-        vector<__symbol_temp_info> tempSymbolList;
-        vector<IMAGE_SECTION_HEADER> sortedSections(sectionHeaders,
-                                                    sectionHeaders + ntHeaders->FileHeader.NumberOfSections);
+        vector<__symbol_temp_info> symbol_list_tmp;
+        vector<IMAGE_SECTION_HEADER> sorted_sections(section_headers,
+                                                     section_headers + nt_headers->FileHeader.NumberOfSections);
 
-        std::sort(sortedSections.begin(), sortedSections.end(),
+        std::sort(sorted_sections.begin(), sorted_sections.end(),
                   [](const IMAGE_SECTION_HEADER &a, const IMAGE_SECTION_HEADER &b) {
                       return a.VirtualAddress < b.VirtualAddress;
                   });
 
-        for (DWORD i = 0; i < numberOfSymbols; ++i)
+        for (DWORD i = 0; i < symbols_num; ++i)
         {
-            COFFSymbol *symbol = (COFFSymbol *)(symbolTable + i * sizeof(COFFSymbol));
+            COFFSymbol *symbol = (COFFSymbol *)(symbol_table + i * sizeof(COFFSymbol));
 
-            DWORD sectionNumber = symbol->SectionNumber;
-            if (sectionNumber > 0 && sectionNumber <= ntHeaders->FileHeader.NumberOfSections)
+            DWORD section_number = symbol->section_number;
+            if (section_number > 0 && section_number <= nt_headers->FileHeader.NumberOfSections)
             {
-                PIMAGE_SECTION_HEADER symbolSection = &sectionHeaders[sectionNumber - 1];
-                DWORD64 sectionBase = symbolSection->VirtualAddress + imageBase;
-                DWORD64 startAddress = symbol->Value + sectionBase + baseAddressOffset;
-                tempSymbolList.push_back({startAddress, 0, get_symbol_name(*symbol, stringTable)});
+                PIMAGE_SECTION_HEADER symbol_section = &section_headers[section_number - 1];
+                DWORD64 section_base = symbol_section->VirtualAddress + image_base;
+                DWORD64 start_address = symbol->value + section_base + base_address_offset;
+                symbol_list_tmp.push_back({start_address, 0, get_symbol_name(*symbol, string_table)});
             }
             i += symbol->NumberOfAuxSymbols;
         }
 
         std::sort(
-            tempSymbolList.begin(), tempSymbolList.end(),
-            [](const __symbol_temp_info &a, const __symbol_temp_info &b) { return a.startAddress < b.startAddress; });
+            symbol_list_tmp.begin(), symbol_list_tmp.end(),
+            [](const __symbol_temp_info &a, const __symbol_temp_info &b) { return a.start_address < b.start_address; });
 
-        for (size_t i = 0; i < tempSymbolList.size(); ++i)
+        for (size_t i = 0; i < symbol_list_tmp.size(); ++i)
         {
-            if (i + 1 < tempSymbolList.size())
-                tempSymbolList[i].endAddress = tempSymbolList[i + 1].startAddress;
+            if (i + 1 < symbol_list_tmp.size())
+                symbol_list_tmp[i].end_address = symbol_list_tmp[i + 1].start_address;
             else
             {
                 auto section =
-                    std::lower_bound(sortedSections.begin(), sortedSections.end(), tempSymbolList[i].startAddress,
+                    std::lower_bound(sorted_sections.begin(), sorted_sections.end(), symbol_list_tmp[i].start_address,
                                      [](const IMAGE_SECTION_HEADER &section, DWORD64 addr) {
                                          return section.VirtualAddress + section.Misc.VirtualSize < addr;
                                      });
 
-                if (section != sortedSections.end())
-                    tempSymbolList[i].endAddress =
-                        section->VirtualAddress + section->Misc.VirtualSize + baseAddressOffset;
+                if (section != sorted_sections.end())
+                    symbol_list_tmp[i].end_address =
+                        section->VirtualAddress + section->Misc.VirtualSize + base_address_offset;
             }
 
-            symbol_map[tempSymbolList[i].startAddress] = {tempSymbolList[i].name, tempSymbolList[i].endAddress};
+            symbol_map[symbol_list_tmp[i].start_address] = {symbol_list_tmp[i].name, symbol_list_tmp[i].end_address};
         }
     }
 
@@ -269,12 +269,11 @@ namespace acul
                 return hmodule_symbol_map.end();
             else
             {
-                auto fileData =
-                    vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
+                auto file_data = vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
                 fd.close();
                 auto [inserted_it, inserted] =
                     hmodule_symbol_map.emplace(module_base, std::make_pair(module_name, map<DWORD64, symbol_info>()));
-                analyze_COFF_symbols(fileData, module_base, inserted_it->second.second);
+                analyze_COFF_symbols(file_data, module_base, inserted_it->second.second);
                 return inserted_it;
             }
         }
@@ -304,11 +303,11 @@ namespace acul
         if (NT_SUCCESS(NtQueryInformationProcess(hProcess, static_cast<PROCESS_INFORMATION_CLASS>(0), &pbi, sizeof(pbi),
                                                  &returnLength)))
         {
-            PVOID imageBaseAddress = nullptr;
-            SIZE_T bytesRead;
-            if (ReadProcessMemory(hProcess, &(pbi.PebBaseAddress->Reserved3[1]), &imageBaseAddress, sizeof(PVOID),
-                                  &bytesRead))
-                hModule = (HMODULE)imageBaseAddress;
+            PVOID image_baseAddress = nullptr;
+            SIZE_T bytes_read;
+            if (ReadProcessMemory(hProcess, &(pbi.PebBaseAddress->Reserved3[1]), &image_baseAddress, sizeof(PVOID),
+                                  &bytes_read))
+                hModule = (HMODULE)image_baseAddress;
         }
         return hModule;
     }
@@ -316,7 +315,7 @@ namespace acul
     APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
-        
+
         HMODULE main_module = GetMainModuleHandle(except_info.hProcess);
         stream << "Stack trace:\n";
         int frame_index = 0;
@@ -343,7 +342,7 @@ namespace acul
                         pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
                         pSymbol->MaxNameLen = MAX_SYM_NAME;
                         if (SymFromAddr(except_info.hProcess, offset, &displacement_sym, pSymbol))
-                            name = (const char*) pSymbol->Name;
+                            name = (const char *)pSymbol->Name;
                         else
                             name = "<unknown>";
                     }
@@ -361,7 +360,7 @@ namespace acul
         }
     }
 
-    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exceptionRecord,
+    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exception_record,
                                      CONTEXT &context, vector<char> &buffer)
     {
         HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
@@ -369,13 +368,13 @@ namespace acul
 
         if (hFile == INVALID_HANDLE_VALUE) return false;
 
-        EXCEPTION_POINTERS exceptionPointers;
-        exceptionPointers.ExceptionRecord = &exceptionRecord;
-        exceptionPointers.ContextRecord = &context;
+        EXCEPTION_POINTERS exception_pointers;
+        exception_pointers.ExceptionRecord = &exception_record;
+        exception_pointers.ContextRecord = &context;
 
         MINIDUMP_EXCEPTION_INFORMATION mdei;
         mdei.ThreadId = GetThreadId(hThread);
-        mdei.ExceptionPointers = &exceptionPointers;
+        mdei.ExceptionPointers = &exception_pointers;
         mdei.ClientPointers = FALSE;
 
         BOOL success =
@@ -389,12 +388,12 @@ namespace acul
 
         SetFilePointer(hFile, 0, nullptr, FILE_BEGIN);
 
-        char tempBuffer[4096];
-        DWORD bytesRead = 0;
+        char temp_buffer[4096];
+        DWORD bytes_read = 0;
         buffer.clear();
 
-        while (ReadFile(hFile, tempBuffer, sizeof(tempBuffer), &bytesRead, nullptr) && bytesRead > 0)
-            buffer.insert(buffer.end(), tempBuffer, tempBuffer + bytesRead);
+        while (ReadFile(hFile, temp_buffer, sizeof(temp_buffer), &bytes_read, nullptr) && bytes_read > 0)
+            buffer.insert(buffer.end(), temp_buffer, temp_buffer + bytes_read);
 
         CloseHandle(hFile);
         return true;
@@ -406,21 +405,21 @@ namespace acul
         STACKFRAME64 stackFrame = {};
         CONTEXT context = except_info.context;
 
-        DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
+        DWORD machine_type = IMAGE_FILE_MACHINE_AMD64;
 
-        stackFrame.AddrPC.Offset = context.Rip;
-        stackFrame.AddrFrame.Offset = context.Rbp;
-        stackFrame.AddrStack.Offset = context.Rsp;
+        stackFrame.AddrPC.offset = context.Rip;
+        stackFrame.AddrFrame.offset = context.Rbp;
+        stackFrame.AddrStack.offset = context.Rsp;
         stackFrame.AddrPC.Mode = AddrModeFlat;
         stackFrame.AddrFrame.Mode = AddrModeFlat;
         stackFrame.AddrStack.Mode = AddrModeFlat;
 
         vector<except_addr> addresses;
-        while (StackWalk64(machineType, except_info.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
+        while (StackWalk64(machine_type, except_info.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
                            SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
         {
-            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.Offset);
-            addresses.emplace_back(base, stackFrame.AddrPC.Offset);
+            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.offset);
+            addresses.emplace_back(base, stackFrame.AddrPC.offset);
         }
         except_info.addresses_count = addresses.size();
         except_info.addresses = addresses.release();

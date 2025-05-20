@@ -61,8 +61,6 @@ if(NOT ACUL_BUILD_MIN)
     target_link_libraries(${ACUL_LIB_NAME} PUBLIC glm vma)
 endif()
 
-target_link_libraries(${ACUL_LIB_NAME} PUBLIC intl)
-
 if(WIN32)
     target_link_libraries(${ACUL_LIB_NAME} PRIVATE Dbghelp Synchronization)
 endif()

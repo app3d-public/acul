@@ -6,6 +6,7 @@
 #include <limits>
 #include <oneapi/tbb/scalable_allocator.h>
 #include <type_traits>
+#include "scalars.hpp"
 #include "type_traits.hpp"
 
 namespace acul
@@ -103,7 +104,7 @@ namespace acul
     template <typename T>
     inline void release(T *ptr)
     {
-        acul::mem_allocator<T>::destroy(ptr);
+        if constexpr (!std::is_trivially_destructible_v<T>) acul::mem_allocator<T>::destroy(ptr);
         acul::mem_allocator<T>::deallocate(ptr, 1);
     }
 
@@ -125,6 +126,8 @@ namespace acul
     {
         return std::max(csize * 2, std::max((size_t)8UL, msize));
     }
+
+    inline size_t round_up(size_t v, size_t a) { return v ? ((v + a - 1) / a) * a : 0; }
 
     namespace detail
     {
@@ -175,7 +178,7 @@ namespace acul
         using pointer = value_type *;
         using size_type = size_t;
         using allocator = typename Allocator::template rebind<value_type>::other;
-        using block_allocator = typename Allocator::template rebind<std::byte>::other;
+        using block_allocator = typename Allocator::template rebind<byte>::other;
 
     private:
         detail::mem_control_block *_ctrl;
@@ -192,7 +195,7 @@ namespace acul
                     if (_ctrl->is_external()) allocator::deallocate(_data, 1);
                     if (_ctrl->weak_count() == 0)
                     {
-                        block_allocator::deallocate((std::byte *)_ctrl, 1);
+                        block_allocator::deallocate((byte *)_ctrl, 1);
                         _ctrl = nullptr;
                     }
                 }
@@ -221,7 +224,7 @@ namespace acul
             const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(value_type) * size;
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(blockSize);
             _ctrl->ref_counts = 1ULL << 32;
-            _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(detail::mem_control_block));
+            _data = reinterpret_cast<value_type *>((byte *)_ctrl + sizeof(detail::mem_control_block));
         }
 
         explicit shared_ptr(pointer ptr) : _ctrl(nullptr), _data(ptr)
@@ -337,9 +340,9 @@ namespace acul
     {
         shared_ptr<T> result;
         const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(T);
-        result._ctrl = (detail::mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
+        result._ctrl = (detail::mem_control_block *)mem_allocator<byte>::allocate(blockSize);
         result._ctrl->ref_counts = 1ULL << 32;
-        result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(detail::mem_control_block));
+        result._data = reinterpret_cast<T *>((byte *)result._ctrl + sizeof(detail::mem_control_block));
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
         detail::accept_owner(result._data, result);
@@ -370,12 +373,12 @@ namespace acul
         return shared_ptr<To>(from, reinterpret_cast<pointer>(from.get()));
     }
 
-    template <typename T, typename Allocator = mem_allocator<std::byte>>
+    template <typename T, typename Allocator = mem_allocator<byte>>
     class weak_ptr
     {
         detail::mem_control_block *_ctrl;
         T *_data;
-        using block_allocator = typename Allocator::template rebind<std::byte>::other;
+        using block_allocator = typename Allocator::template rebind<byte>::other;
 
         template <typename U, typename Au>
         friend class shared_ptr;
@@ -411,7 +414,7 @@ namespace acul
             {
                 _ctrl->decrement_weak();
                 if (_ctrl->strong_count() == 0 && _ctrl->weak_count() == 0)
-                    block_allocator::deallocate((std::byte *)_ctrl, 1);
+                    block_allocator::deallocate((byte *)_ctrl, 1);
             }
         }
 
@@ -458,7 +461,13 @@ namespace acul
         friend void detail::accept_owner(P *, const Sp &);
     };
 
-    template <typename T, typename Allocator = mem_allocator<T>>
+    template <typename T>
+    struct default_delete
+    {
+        void operator()(T *p) const { release(p); }
+    };
+
+    template <typename T, typename D = default_delete<T>>
     class unique_ptr
     {
         template <typename U, typename Au, typename... Args>
@@ -471,18 +480,10 @@ namespace acul
         using value_type = std::conditional_t<std::is_array_v<T>, std::remove_extent_t<T>, T>;
         using pointer = value_type *;
         using size_type = size_t;
-        using allocator = typename Allocator::template rebind<value_type>::other;
 
         unique_ptr(pointer ptr = nullptr) : _data(ptr) {}
 
         unique_ptr(std::nullptr_t) : _data(nullptr) {}
-
-        template <typename U = T, std::enable_if_t<std::is_array_v<U>, int> = 0>
-        explicit unique_ptr(size_t size) : _data(allocator::allocate(size))
-        {
-            static_assert(std::is_trivially_constructible_v<value_type>,
-                          "Only trivially constructible arrays supported");
-        }
 
         unique_ptr(const unique_ptr &) = delete;
         unique_ptr &operator=(const unique_ptr &) = delete;
@@ -505,8 +506,7 @@ namespace acul
         {
             if (this != &other)
             {
-                allocator::destroy(_data);
-                allocator::deallocate(_data, 1);
+                _deleter(_data);
                 _data = other._data;
                 other._data = nullptr;
             }
@@ -515,11 +515,13 @@ namespace acul
 
         ~unique_ptr() { reset(); }
 
-        void reset()
+        void reset(pointer ptr = nullptr) noexcept
         {
-            allocator::destroy(_data);
-            allocator::deallocate(_data, 1);
-            _data = nullptr;
+            if (_data != ptr)
+            {
+                _deleter(_data);
+                _data = ptr;
+            }
         }
 
         template <typename U = T>
@@ -542,6 +544,7 @@ namespace acul
 
     private:
         pointer _data;
+        D _deleter;
     };
 
     template <typename T, typename Allocator = mem_allocator<T>, typename... Args>

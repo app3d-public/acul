@@ -2,13 +2,15 @@
 #include <acul/log.hpp>
 #include <zstd.h>
 
+#define FILE_READ_STREAM_CHUNK_SIZE 4096
+
 namespace acul
 {
     namespace io
     {
         namespace file
         {
-            op_state read_binary(const acul::string &filename, vector<char> &buffer)
+            op_state read_binary(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
                 if (!file)
@@ -21,13 +23,47 @@ namespace acul
                 }
 
                 fseek(file, 0, SEEK_END);
-                size_t fileSize = ftell(file);
+                size_t file_size = ftell(file);
                 fseek(file, 0, SEEK_SET);
 
-                buffer.resize(fileSize);
-                fread(buffer.data(), 1, fileSize, file);
+                buffer.resize(file_size);
+                fread(buffer.data(), 1, file_size, file);
                 fclose(file);
 
+                return op_state::Success;
+            }
+
+            op_state read_virtual(const string &filename, vector<char> &buffer)
+            {
+                FILE *file = fopen(filename.c_str(), "rb");
+                if (!file)
+                {
+                    if (!exists(filename.c_str()))
+                        LOG_ERROR("File does not exist: %s\n", filename.c_str());
+                    else
+                        LOG_ERROR("Failed to open file: %s\n", filename.c_str());
+                    return op_state::Error;
+                }
+
+                char chunk[FILE_READ_STREAM_CHUNK_SIZE];
+
+                while (true)
+                {
+                    size_t n = fread(chunk, 1, FILE_READ_STREAM_CHUNK_SIZE, file);
+                    if (n > 0) buffer.insert(buffer.end(), chunk, chunk + n);
+
+                    if (n < FILE_READ_STREAM_CHUNK_SIZE)
+                    {
+                        if (feof(file)) break;
+                        if (ferror(file))
+                        {
+                            fclose(file);
+                            return op_state::Error;
+                        }
+                    }
+                }
+
+                fclose(file);
                 return op_state::Success;
             }
 

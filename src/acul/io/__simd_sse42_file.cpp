@@ -9,16 +9,16 @@ namespace acul
         {
             APPLIB_API void fill_line_buffer(const char *data, size_t size, string_pool<char> &pool)
             {
-                const char *dataEnd = data + size;
+                const char *data_end = data + size;
 
                 __m128i newline = _mm_set1_epi8('\n');
                 __m128i return_carriage = _mm_set1_epi8('\r');
-                const char *lineStart = data;
+                const char *line_start = data;
 
                 const char *p = data;
-                while (p < dataEnd)
+                while (p < data_end)
                 {
-                    const char *next_p = (p + 16 <= dataEnd) ? p + 16 : dataEnd;
+                    const char *next_p = (p + 16 <= data_end) ? p + 16 : data_end;
                     __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
 
                     int mask_nl = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, newline));
@@ -35,17 +35,17 @@ namespace acul
                     while (mask != 0 && p < next_p)
                     {
                         int index = __builtin_ctz(mask);
-                        const char *newlinePos = p + index;
+                        const char *new_line_pos = p + index;
 
-                        if (newlinePos > lineStart)
+                        if (new_line_pos > line_start)
                         {
-                            size_t lineLen = newlinePos - lineStart;
-                            if (lineLen > 0 && lineStart[lineLen - 1] == '\r') lineLen--;
-                            pool.push(lineStart, lineLen);
+                            size_t line_len = new_line_pos - line_start;
+                            if (line_len > 0 && line_start[line_len - 1] == '\r') line_len--;
+                            pool.push(line_start, line_len);
                         }
 
-                        lineStart = newlinePos + 1;
-                        p = newlinePos + 1;
+                        line_start = new_line_pos + 1;
+                        p = new_line_pos + 1;
                         mask >>= (index + 1);
                         i++;
                     }
@@ -53,11 +53,11 @@ namespace acul
                     if (i < 16) p = next_p;
                 }
 
-                if (lineStart < dataEnd)
+                if (line_start < data_end)
                 {
-                    size_t lineLen = dataEnd - lineStart;
-                    if (lineLen > 0 && lineStart[lineLen - 1] == '\r') lineLen--;
-                    pool.push(lineStart, lineLen);
+                    size_t line_len = data_end - line_start;
+                    if (line_len > 0 && line_start[line_len - 1] == '\r') line_len--;
+                    pool.push(line_start, line_len);
                 }
             }
         } // namespace file

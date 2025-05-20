@@ -64,12 +64,12 @@ namespace acul
         return result;
     }
 
-    u16string trim(const u16string &inputStr, size_t max)
+    u16string trim(const u16string &input_str, size_t max)
     {
         u16string output;
         int from = -1;
         int length = -1;
-        for (c16 v : inputStr)
+        for (c16 v : input_str)
         {
             if (v != '\f' && v != '\n' && v != '\r' && v != '\t' && v != '\v')
             {
@@ -87,9 +87,9 @@ namespace acul
         return output.substr(from, to);
     }
 
-    string trim(const string &inputStr, size_t max)
+    string trim(const string &input_str, size_t max)
     {
-        u16string u16string = trim(utf8_to_utf16(inputStr), max);
+        u16string u16string = trim(utf8_to_utf16(input_str), max);
         return utf16_to_utf8(u16string);
     }
 
@@ -100,15 +100,20 @@ namespace acul
         string result;
         va_list args;
         va_start(args, format);
-        int size = vsnprintf(nullptr, 0, format, args) + 1;
-        if (size <= 1)
-            result = "";
+
+        va_list args_copy;
+        va_copy(args_copy, args);
+        int size = vsnprintf(nullptr, 0, format, args_copy) + 1;
+        va_end(args_copy);
+
+        if (size <= 1) { result = ""; }
         else
         {
             char buf[size];
             vsnprintf(buf, size, format, args);
             result = string(buf, buf + size - 1);
         }
+
         va_end(args);
         return result;
     }
@@ -366,40 +371,40 @@ namespace acul
         // Parse integer part
         if (!isdigit(*ptr)) return false; // At least one digit is required
 
-        f32 integerPart = 0.0;
+        f32 integer_part = 0.0;
         while (isdigit(*ptr))
         {
-            integerPart *= 10.0;
-            integerPart += *ptr - '0';
+            integer_part *= 10.0;
+            integer_part += *ptr - '0';
             ptr++;
         }
 
         // Parse fractional part
-        f32 fractionalPart = 0.0;
-        f32 fractionalDiv = 1.0;
+        f32 fractional_part = 0.0;
+        f32 fractional_div = 1.0;
         if (*ptr == '.')
         {
             ptr++;
             while (isdigit(*ptr))
             {
-                fractionalPart *= 10.0;
-                fractionalPart += *ptr - '0';
-                fractionalDiv *= 10.0;
+                fractional_part *= 10.0;
+                fractional_part += *ptr - '0';
+                fractional_div *= 10.0;
                 ptr++;
             }
         }
 
         // Parse exponential part
-        int exponentPart = 0;
+        int exponent_part = 0;
         if (*ptr == 'e' || *ptr == 'E')
         {
             ptr++;
-            bool exponentNegative = false;
+            bool exponent_negative = false;
             if (*ptr == '+')
                 ptr++;
             else if (*ptr == '-')
             {
-                exponentNegative = true;
+                exponent_negative = true;
                 ptr++;
             }
 
@@ -407,15 +412,15 @@ namespace acul
 
             while (isdigit(*ptr))
             {
-                exponentPart *= 10;
-                exponentPart += *ptr - '0';
+                exponent_part *= 10;
+                exponent_part += *ptr - '0';
                 ptr++;
             }
 
-            if (exponentNegative) exponentPart = -exponentPart;
+            if (exponent_negative) exponent_part = -exponent_part;
         }
 
-        f32 result = (integerPart + fractionalPart / fractionalDiv) * pow(10.0, exponentPart);
+        f32 result = (integer_part + fractional_part / fractional_div) * pow(10.0, exponent_part);
         value = negative ? -result : result;
 
         str = ptr; // Update the input pointer

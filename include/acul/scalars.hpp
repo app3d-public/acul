@@ -5,7 +5,9 @@
 #ifdef ACUL_HALF_ENABLE
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+    #if defined(__clang__)
+        #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+    #endif
     #include <half.hpp>
     #pragma GCC diagnostic pop
 #endif
@@ -26,5 +28,6 @@ using f64 = double;
 using c8 = char;
 using c16 = char16_t;
 using c32 = char32_t;
-
+using byte = std::byte;
+using size_t = std::size_t;
 #endif

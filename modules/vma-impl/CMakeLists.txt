@@ -16,7 +16,13 @@ endif(USE_ASAN)
 
 target_compile_options(${PROJECT_NAME} PUBLIC
     -Wno-unused-variable
-    -Wno-nullability-completeness
-    -Wno-unused-function)
+    -Wno-unused-function
+)
 
-gen_manifest_lib("vma" ${vma_VERSION})
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${PROJECT_NAME} PUBLIC -Wno-nullability-completeness)
+endif()
+
+if(WIN32)
+    gen_manifest_lib("vma" ${vma_VERSION})
+endif()

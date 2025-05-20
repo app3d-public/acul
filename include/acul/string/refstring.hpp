@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstring>
 #include "../memory.hpp"
 #include "base.hpp"
 

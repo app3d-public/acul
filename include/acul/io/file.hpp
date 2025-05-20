@@ -50,7 +50,7 @@ namespace acul
                 return (fileAttr != INVALID_FILE_ATTRIBUTES);
 #else
                 struct stat buffer;
-                return (stat(path.c_str(), &buffer) == 0);
+                return (stat(path, &buffer) == 0);
 #endif
             }
 
@@ -61,6 +61,15 @@ namespace acul
              * @return Success if the file was successfully read, error otherwise.
              **/
             APPLIB_API op_state read_binary(const string &filename, vector<char> &buffer);
+
+            /**
+             * @brief Reads a virtual file as binary buffer.
+             * Needs for files wihtout tellg access (/proc/<PID>/task for example)
+             * @param filename The name of the file to read.
+             * @param buffer A reference to a variable to store the data.
+             * @return Success if the file was successfully read, error otherwise.
+             **/
+            APPLIB_API op_state read_virtual(const string &filename, vector<char> &buffer);
 
             /**
              * @brief Writes a binary buffer to a file

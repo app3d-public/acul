@@ -15,9 +15,9 @@ namespace acul
     /// @param src String in UTF-16 encoding
     APPLIB_API string utf16_to_utf8(const u16string &src);
 
-    APPLIB_API u16string trim(const u16string &inputStr, size_t max = std::numeric_limits<size_t>::max());
+    APPLIB_API u16string trim(const u16string &input_str, size_t max = std::numeric_limits<size_t>::max());
 
-    APPLIB_API string trim(const string &inputStr, size_t max = std::numeric_limits<size_t>::max());
+    APPLIB_API string trim(const string &input_str, size_t max = std::numeric_limits<size_t>::max());
 
     /**
      * @brief Formats a string using a format string and arguments.
@@ -70,19 +70,19 @@ namespace acul
                 return 0;
         }
 
-        int numDigits = 0;
-        int tempValue = value;
-        while (tempValue > 0)
+        int num_digits = 0;
+        int tmp = value;
+        while (tmp > 0)
         {
-            numDigits++;
-            tempValue /= 10;
+            num_digits++;
+            tmp /= 10;
         }
-        if (numDigits > buffer_size - 1) return 0;
+        if (num_digits > buffer_size - 1) return 0;
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wvla-cxx-extension"
         // Reverse order array for storing digits
-        char reverseOrder[numDigits];
+        char reverseOrder[num_digits];
 #pragma clang diagnostic pop
 
         int i = 0;

@@ -76,7 +76,7 @@ namespace acul
                 {
                     std::function<void(bin_stream &)> write_callback;
                     entrygroup *group = nullptr;
-                    entrypoint *entrypoint = nullptr;
+                    struct entrypoint *entrypoint = nullptr;
                 };
 
                 struct response
@@ -84,7 +84,7 @@ namespace acul
                     io::file::op_state state;
                     std::promise<void> ready_promise;
                     entrygroup *group = nullptr;
-                    entrypoint *entrypoint = nullptr;
+                    struct entrypoint *entrypoint = nullptr;
 
                     index_entry &entry()
                     {

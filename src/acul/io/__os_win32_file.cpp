@@ -8,34 +8,34 @@ namespace acul
     {
         namespace file
         {
-            bool write_by_block(const string &filename, const char *buffer, size_t blockSize, string &error)
+            bool write_by_block(const string &filename, const char *buffer, size_t block_size, string &error)
             {
-                HANDLE fileHandle =
+                HANDLE file_handle =
                     CreateFile(filename.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                if (fileHandle == INVALID_HANDLE_VALUE)
+                if (file_handle == INVALID_HANDLE_VALUE)
                 {
                     error = "Failed to open file: " + filename;
                     return false;
                 }
 
-                size_t bufferSize = strlen(buffer);
-                size_t numBlocks = (bufferSize + blockSize - 1) / blockSize;
+                size_t buffer_size = strlen(buffer);
+                size_t num_blocks = (buffer_size + block_size - 1) / block_size;
 
-                for (size_t blockIndex = 0; blockIndex < numBlocks; ++blockIndex)
+                for (size_t block_index = 0; block_index < num_blocks; ++block_index)
                 {
-                    size_t offset = blockIndex * blockSize;
-                    size_t size = std::min(bufferSize - offset, blockSize);
+                    size_t offset = block_index * block_size;
+                    size_t size = std::min(buffer_size - offset, block_size);
 
-                    DWORD bytesWritten;
-                    if (!WriteFile(fileHandle, buffer + offset, size, &bytesWritten, NULL) || bytesWritten < size)
+                    DWORD bytes_written;
+                    if (!WriteFile(file_handle, buffer + offset, size, &bytes_written, NULL) || bytes_written < size)
                     {
-                        CloseHandle(fileHandle);
+                        CloseHandle(file_handle);
                         error = "Failed to write block to file: " + filename;
                         return false;
                     }
                 }
 
-                CloseHandle(fileHandle);
+                CloseHandle(file_handle);
                 return true;
             }
 
@@ -59,14 +59,14 @@ namespace acul
                 }
 
                 char buffer[4096];
-                DWORD bytesRead, bytesWritten;
-                bool copySuccess = true;
+                DWORD bytes_read, bytes_written;
+                bool copy_success = true;
 
-                while (ReadFile(hSrc, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0)
+                while (ReadFile(hSrc, buffer, sizeof(buffer), &bytes_read, NULL) && bytes_read > 0)
                 {
-                    if (!WriteFile(hDst, buffer, bytesRead, &bytesWritten, NULL) || bytesRead != bytesWritten)
+                    if (!WriteFile(hDst, buffer, bytes_read, &bytes_written, NULL) || bytes_read != bytes_written)
                     {
-                        copySuccess = false;
+                        copy_success = false;
                         break;
                     }
                 }
@@ -74,7 +74,7 @@ namespace acul
                 CloseHandle(hSrc);
                 CloseHandle(hDst);
 
-                return copySuccess ? op_state::Success : op_state::Error;
+                return copy_success ? op_state::Success : op_state::Error;
             }
 
             op_state create_directory(const char *path)

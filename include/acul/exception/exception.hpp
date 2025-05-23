@@ -34,14 +34,10 @@ namespace acul
     APPLIB_API HANDLE get_exception_process();
     APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
 #else
-    struct except_addr
-    {
-        void *addr = NULL;
-        void *offset = NULL;
-    };
-
+    using except_addr = void *;
     struct except_info
     {
+        pid_t pid;
         ucontext_t context;
         except_addr *addresses = NULL;
         size_t addresses_count = 0;
@@ -64,7 +60,7 @@ namespace acul
     #endif
         }
 #else
-        exception() noexcept
+        exception() noexcept : except_info(0)
         {
     #ifndef PROCESS_UNITTEST
             if (getcontext(&except_info.context) == 0) capture_stack_trace(except_info);

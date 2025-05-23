@@ -77,7 +77,7 @@ namespace acul
         }
     }
 
-    APPLIB_API void write_frame_registers(acul::stringstream &stream, const CONTEXT &context)
+    APPLIB_API void write_frame_registers(stringstream &stream, const CONTEXT &context)
     {
         stream << "Frame registers:\n";
         stream << format("\tRAX: 0x%llx\n", context.Rax);
@@ -122,28 +122,14 @@ namespace acul
 #pragma pack(pop)
 
 #ifdef _MSC_VER
-    string demangle(const char *mangledName)
+    string demangle(const char *mangled_name)
     {
         char undecorated_name[1024];
-        if (UnDecorateSymbolName(mangledName, undecorated_name, sizeof(undecorated_name),
+        if (UnDecorateSymbolName(mangled_name, undecorated_name, sizeof(undecorated_name),
                                  UNDNAME_COMPLETE | UNDNAME_NO_MS_KEYWORDS | UNDNAME_NO_ALLOCATION_MODEL |
                                      UNDNAME_NO_ALLOCATION_LANGUAGE | UNDNAME_NO_MS_THISTYPE | UNDNAME_NO_SPECIAL_SYMS))
             return string(undecorated_name);
-        return string(mangledName);
-    }
-#else
-
-    string demangle(const char *mangledName)
-    {
-        int status = 0;
-        char *demangled = abi::__cxa_demangle(mangledName, nullptr, nullptr, &status);
-        if (status == 0 && demangled)
-        {
-            string result(demangled);
-            free(demangled);
-            return result;
-        }
-        return mangledName;
+        return string(mangled_name);
     }
 #endif
 
@@ -176,7 +162,7 @@ namespace acul
         string name;
     };
 
-    void analyze_COFF_symbols(const vector<char> &file_data, DWORD64 loaded_base_addr,
+    void analyze_coff_symbols(const vector<char> &file_data, DWORD64 loaded_base_addr,
                               map<DWORD64, symbol_info> &symbol_map)
     {
         PIMAGE_DOS_HEADER dos_header = (PIMAGE_DOS_HEADER)file_data.data();
@@ -273,7 +259,7 @@ namespace acul
                 fd.close();
                 auto [inserted_it, inserted] =
                     hmodule_symbol_map.emplace(module_base, std::make_pair(module_name, map<DWORD64, symbol_info>()));
-                analyze_COFF_symbols(file_data, module_base, inserted_it->second.second);
+                analyze_coff_symbols(file_data, module_base, inserted_it->second.second);
                 return inserted_it;
             }
         }
@@ -312,7 +298,7 @@ namespace acul
         return hModule;
     }
 
-    APPLIB_API void write_stack_trace(acul::stringstream &stream, const except_info &except_info)
+    APPLIB_API void write_stack_trace(stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
 
@@ -402,24 +388,24 @@ namespace acul
     void capture_stack_trace(except_info &except_info)
     {
         if (!except_info.hProcess) return;
-        STACKFRAME64 stackFrame = {};
+        STACKFRAME64 stackframe = {};
         CONTEXT context = except_info.context;
 
         DWORD machine_type = IMAGE_FILE_MACHINE_AMD64;
 
-        stackFrame.AddrPC.offset = context.Rip;
-        stackFrame.AddrFrame.offset = context.Rbp;
-        stackFrame.AddrStack.offset = context.Rsp;
-        stackFrame.AddrPC.Mode = AddrModeFlat;
-        stackFrame.AddrFrame.Mode = AddrModeFlat;
-        stackFrame.AddrStack.Mode = AddrModeFlat;
+        stackframe.AddrPC.offset = context.Rip;
+        stackframe.AddrFrame.offset = context.Rbp;
+        stackframe.AddrStack.offset = context.Rsp;
+        stackframe.AddrPC.Mode = AddrModeFlat;
+        stackframe.AddrFrame.Mode = AddrModeFlat;
+        stackframe.AddrStack.Mode = AddrModeFlat;
 
         vector<except_addr> addresses;
-        while (StackWalk64(machine_type, except_info.hProcess, except_info.hThread, &stackFrame, &context, nullptr,
+        while (StackWalk64(machine_type, except_info.hProcess, except_info.hThread, &stackframe, &context, nullptr,
                            SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
         {
-            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackFrame.AddrPC.offset);
-            addresses.emplace_back(base, stackFrame.AddrPC.offset);
+            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackframe.AddrPC.offset);
+            addresses.emplace_back(base, stackframe.AddrPC.offset);
         }
         except_info.addresses_count = addresses.size();
         except_info.addresses = addresses.release();

@@ -3,7 +3,6 @@
 #include <acul/string/sstream.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
-#include "acul/io/file.hpp" // todo
 
 using namespace acul;
 
@@ -64,18 +63,7 @@ void test_write_exception_info(const runtime_error &err)
 
     // Minidump
     vector<char> buffer;
-    pid_t pid = getpid();
-    pid_t tid = syscall(SYS_gettid);
-    assert(create_mini_dump(pid, tid, SIGSEGV, err.except_info.context, buffer));
-
-    // tmp
-    {
-        string filename = "test_minidump.core";
-        if (io::file::write_binary(filename, buffer.data(), buffer.size()) != io::file::op_state::Success)
-            fprintf(stderr, "Failed to write minidump\n");
-        else
-            fprintf(stdout, "Minidump written to %s (%zu bytes)\n", filename.c_str(), buffer.size());
-    }
+    assert(create_mini_dump(err.except_info.pid, syscall(SYS_gettid), SIGSEGV, err.except_info.context, buffer));
     assert(!buffer.empty());
 #endif
 }
@@ -95,7 +83,6 @@ void test_stacktrace()
 
     // Write except info
     test_write_exception_info(err);
-#ifdef _WIN32
     {
         stringstream stream;
         write_frame_registers(stream, err.except_info.context);
@@ -105,6 +92,7 @@ void test_stacktrace()
         stringstream stream;
         write_stack_trace(stream, err.except_info);
     }
+#ifdef _WIN32
     destroy_exception_context();
 #endif
 }

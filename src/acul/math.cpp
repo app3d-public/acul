@@ -1,5 +1,5 @@
 #include <acul/api.hpp>
-#include <acul/point2d.hpp>
+#include <acul/pair.hpp>
 #include <acul/scalars.hpp>
 #include <glm/glm.hpp>
 
@@ -8,7 +8,7 @@ namespace acul
     namespace math
     {
         APPLIB_API std::pair<glm::vec3, glm::vec3> create_ray(const glm::vec2 &ndc_pos, const glm::mat4 &view_inverse,
-                                                             const glm::mat4 &projection)
+                                                              const glm::mat4 &projection)
         {
             glm::mat4 inv_projection = glm::inverse(projection);
             glm::vec4 start_view = inv_projection * glm::vec4{ndc_pos, -1.0f, 1.0f};

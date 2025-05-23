@@ -97,7 +97,7 @@ namespace acul
         inline size_t find_last_of(const char *str, size_t len, char ch) noexcept
         {
 #if defined(__linux__)
-            const char *pos = static_cast<const char *>(memrchr(str, len, ch));
+            const char *pos = static_cast<const char *>(memrchr(str, ch, len));
 #else
             const char *pos = strrchr(str, ch);
 #endif
@@ -145,18 +145,23 @@ namespace acul
             return path + new_extension;
         }
 
-        inline bool get_current_path(char *buffer, size_t buffer_size) noexcept
+        inline bool get_executable_path(char *buffer, size_t buffer_size) noexcept
         {
 #ifdef _WIN32
             if (!GetModuleFileNameA(NULL, buffer, static_cast<DWORD>(buffer_size))) return false;
-            size_t len = strnlen(buffer, buffer_size);
-            size_t pos = find_last_of(buffer, len, '\\');
 #else
             ssize_t count = readlink("/proc/self/exe", buffer, buffer_size - 1);
             if (count == -1 || count >= static_cast<ssize_t>(buffer_size - 1)) return false;
             buffer[count] = '\0'; // Null-terminate
-            size_t pos = find_last_of(buffer, count, '/');
 #endif
+            return true;
+        }
+
+        inline bool get_current_path(char *buffer, size_t buffer_size) noexcept
+        {
+            if (!get_executable_path(buffer, buffer_size)) return false;
+            size_t len = strnlen(buffer, buffer_size);
+            size_t pos = find_last_of(buffer, len, PATH_CHAR_SEP);
             if (pos != string::npos) buffer[pos] = '\0';
             return true;
         }

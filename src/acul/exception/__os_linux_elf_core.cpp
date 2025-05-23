@@ -16,7 +16,7 @@
 
 namespace acul
 {
-    class ProcMem
+    class proc_mem_reader
     {
         pid_t _pid;
         bool _fast{false};
@@ -36,7 +36,7 @@ namespace acul
         }
 
     public:
-        explicit ProcMem(pid_t pid) : _pid(pid)
+        explicit proc_mem_reader(pid_t pid) : _pid(pid)
         {
             _fast = probe();
             if (!_fast)
@@ -65,7 +65,7 @@ namespace acul
         }
     };
 
-    struct Segment
+    struct segment
     {
         uintptr_t vaddr, end;
         u32 flags;
@@ -73,18 +73,18 @@ namespace acul
         size_t file_size; //  .p_filesz
     };
 
-    struct FileMapping
+    struct file_mapping_t
     {
         uintptr_t vaddr, end;
         uintptr_t file_offset;
         string path;
     };
-    struct ProcessView
+    struct process_view
     {
         pid_t pid;
         vector<pid_t> tids;
-        vector<Segment> segs;
-        vector<FileMapping> file_mappings;
+        vector<segment> segs;
+        vector<file_mapping_t> file_mappings;
         vector<Elf64_auxv_t> auxv;
         size_t page;
     };
@@ -120,7 +120,7 @@ namespace acul
         return true;
     }
 
-    static bool parse_maps(pid_t pid, vector<Segment> &segments, vector<FileMapping> &mappings, size_t &page)
+    static bool parse_maps(pid_t pid, vector<segment> &segments, vector<file_mapping_t> &mappings, size_t &page)
     {
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
@@ -181,7 +181,7 @@ namespace acul
         return !segments.empty();
     }
 
-    static bool build_view(pid_t pid, ProcessView &pv)
+    static bool build_view(pid_t pid, process_view &pv)
     {
         pv.pid = pid;
         pv.tids = list_threads(pid);
@@ -210,7 +210,7 @@ namespace acul
         w.write(eh);
     }
 
-    static size_t write_phdrs(bin_stream &w, ProcessView &pv, size_t note_sz)
+    static size_t write_phdrs(bin_stream &w, process_view &pv, size_t note_sz)
     {
         size_t phnum = pv.segs.size() + 1;
         size_t eh_ph =
@@ -302,7 +302,7 @@ namespace acul
         pr.pr_sighold = 0;
     }
 
-    void write_threads(bin_stream &w, const ProcessView &pv, pid_t crash_tid, int crash_sig, const ucontext_t &uc)
+    void write_threads(bin_stream &w, const process_view &pv, pid_t crash_tid, int crash_sig, const ucontext_t &uc)
     {
         for (pid_t tid : pv.tids)
         {
@@ -334,7 +334,7 @@ namespace acul
         for (int i = 0; i < 8; ++i) file_note.push_back(static_cast<u8>(v >> (i * 8)));
     }
 
-    void write_file_mappings(bin_stream &w, const ProcessView &pv)
+    void write_file_mappings(bin_stream &w, const process_view &pv)
     {
         const auto &fm = pv.file_mappings;
         if (fm.empty()) return;
@@ -363,7 +363,7 @@ namespace acul
         write_note_entry(w, NT_FILE, "CORE", file_note.data(), file_note.size());
     }
 
-    static size_t write_notes(bin_stream &w, const ProcessView &pv, pid_t crash_tid, int crash_sig,
+    static size_t write_notes(bin_stream &w, const process_view &pv, pid_t crash_tid, int crash_sig,
                               const ucontext_t &uc)
     {
         size_t start = w.size();
@@ -415,9 +415,9 @@ namespace acul
         return w.size() - start;
     }
 
-    static void dump_memory(bin_stream &w, const ProcessView &pv)
+    static void dump_memory(bin_stream &w, const process_view &pv)
     {
-        ProcMem rdr(pv.pid);
+        proc_mem_reader rdr(pv.pid);
         std::array<char, ELF_BUFFER_CHUNK> buf{};
         for (const auto &s : pv.segs)
         {
@@ -454,7 +454,7 @@ namespace acul
     APPLIB_API bool create_mini_dump(pid_t pid, pid_t crash_tid, int crash_sig, const ucontext_t &uc, vector<char> &out)
     {
         // Build process view
-        ProcessView pv{};
+        process_view pv{};
         if (!build_view(pid, pv)) return false;
         if (!seize_and_stop_threads(pv.tids)) return false;
 

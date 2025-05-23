@@ -4,7 +4,7 @@
  *  Helper device functions
  *****************************************************/
 
-#include "../point2d.hpp"
+#include "../pair.hpp"
 #include "device.hpp"
 
 namespace acul

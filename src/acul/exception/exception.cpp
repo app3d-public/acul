@@ -2,6 +2,9 @@
 #include <acul/hash/utils.hpp>
 #include <acul/io/path.hpp>
 #include <acul/string/utils.hpp>
+#ifndef _MSC_VER
+    #include <cxxabi.h>
+#endif
 
 namespace acul
 {
@@ -19,4 +22,19 @@ namespace acul
         string temp = format("out of range: %zu >= %zu", attempt, max_range);
         _message = temp.c_str();
     }
+
+#ifndef _MSC_VER
+    string demangle(const char *mangled_name)
+    {
+        int status = 0;
+        char *demangled = abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
+        if (status == 0 && demangled)
+        {
+            string result(demangled);
+            free(demangled);
+            return result;
+        }
+        return mangled_name;
+    }
+#endif
 } // namespace acul

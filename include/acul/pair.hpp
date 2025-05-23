@@ -77,4 +77,11 @@ namespace acul
     {
         return {a.x / b, a.y / b};
     }
+
+    template <typename T>
+    struct range
+    {
+        T begin;
+        T end;
+    };
 } // namespace acul

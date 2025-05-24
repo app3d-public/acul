@@ -51,7 +51,10 @@ target_compile_options(${ACUL_LIB_NAME} PRIVATE -fvisibility-inlines-hidden)
 # TBB
 find_package(TBB REQUIRED)
 
-target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd intl)
+target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd)
+if (WIN32)
+    target_link_libraries(${ACUL_LIB_NAME} PUBLIC intl)
+endif()
 
 if(NOT ACUL_BUILD_MIN)
     target_include_directories(${ACUL_LIB_NAME} PUBLIC

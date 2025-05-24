@@ -239,7 +239,7 @@ namespace acul
     } // namespace log
 } // namespace acul
 
-#ifdef ACUL_LOG_ENABLE
+#if defined(ACUL_LOG_ENABLE) && !defined(PROCESS_UNITTEST)
     #define LOG_INFO(...) \
         acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Info, __VA_ARGS__)
     #define LOG_DEBUG(...) \
@@ -253,11 +253,11 @@ namespace acul
     #define LOG_FATAL(...) \
         acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Fatal, __VA_ARGS__)
 #else
-    #define LOG_INFO(...)  ((void)0)
-    #define LOG_DEBUG(...) ((void)0)
-    #define LOG_TRACE(...) ((void)0)
-    #define LOG_WARN(...)  ((void)0)
-    #define LOG_ERROR(...) ((void)0)
-    #define LOG_FATAL(...) ((void)0)
+    #define LOG_INFO(fmt, ...)  printf("[INFO] " fmt "\n", ##__VA_ARGS__)
+    #define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ##__VA_ARGS__)
+    #define LOG_TRACE(fmt, ...) printf("[TRACE] " fmt "\n", ##__VA_ARGS__)
+    #define LOG_WARN(fmt, ...)  printf("[WARN]  " fmt "\n", ##__VA_ARGS__)
+    #define LOG_ERROR(fmt, ...) printf("[ERROR] " fmt "\n", ##__VA_ARGS__)
+    #define LOG_FATAL(fmt, ...) printf("[FATAL] " fmt "\n", ##__VA_ARGS__)
 #endif
 #endif

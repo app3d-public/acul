@@ -6,6 +6,7 @@
 #include <limits>
 #include <oneapi/tbb/scalable_allocator.h>
 #include <type_traits>
+#include <utility>
 #include "scalars.hpp"
 #include "type_traits.hpp"
 
@@ -547,12 +548,10 @@ namespace acul
         D _deleter;
     };
 
-    template <typename T, typename Allocator = mem_allocator<T>, typename... Args>
-    unique_ptr<T, Allocator> make_unique(Args &&...args)
+    template <typename T, typename D = default_delete<T>, typename... Args>
+    unique_ptr<T, D> make_unique(Args &&...args)
     {
-        unique_ptr<T, Allocator> result(Allocator::allocate(1));
-        if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
-            mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
+        unique_ptr<T, D> result(alloc<T>(std::forward<Args>(args)...));
         return result;
     }
 

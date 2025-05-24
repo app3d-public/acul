@@ -111,10 +111,10 @@ namespace acul
             const auto requiredExtensions = get_required_extensions(create_ctx);
             for (const auto &required : requiredExtensions)
                 if (available.find(required) == available.end())
-                    throw acul::runtime_error("Missing required window extension: " + acul::string(required));
+                    throw runtime_error("Missing required window extension: " + acul::string(required));
         }
 
-        void device_initializer::init(const acul::string &app_name, u32 version)
+        void device_initializer::init(const string &app_name, u32 version)
         {
             create_instance(app_name, version);
 #ifndef NDEBUG
@@ -124,7 +124,7 @@ namespace acul
             {
                 has_window_required_instance_extensions(create_ctx, loader);
                 if (create_ctx->create_surface(instance, surface, loader) != vk::Result::eSuccess)
-                    throw acul::runtime_error("Failed to create window surface");
+                    throw runtime_error("Failed to create window surface");
             }
             pick_physical_device();
             create_logical_device();
@@ -140,26 +140,26 @@ namespace acul
                                              vk::DispatchLoaderDynamic &loader)
         {
             auto available_layers = vk::enumerateInstanceLayerProperties(loader);
-            return std::all_of(validation_layers.begin(), validation_layers.end(), [&](const char *layerName) {
+            return std::all_of(validation_layers.begin(), validation_layers.end(), [&](const char *layer_name) {
                 return std::any_of(available_layers.begin(), available_layers.end(),
                                    [&](const VkLayerProperties &layerProperties) {
-                                       return strncmp(layerName, layerProperties.layerName, 255) == 0;
+                                       return strncmp(layer_name, layerProperties.layerName, 255) == 0;
                                    });
             });
         }
 
-        bool check_device_extension_support(const acul::hashset<acul::string> &allExtensions,
+        bool check_device_extension_support(const acul::hashset<acul::string> &all_extensions,
                                             device::create_ctx *create_ctx)
         {
             for (const auto &extension : create_ctx->extensions)
             {
-                auto it = allExtensions.find(extension);
-                if (it == allExtensions.end()) return false;
+                auto it = all_extensions.find(extension);
+                if (it == all_extensions.end()) return false;
             }
             return true;
         }
 
-        int get_device_rating(const vector<const char *> &optExtensions, vk::PhysicalDeviceProperties &properties)
+        int get_device_rating(const vector<const char *> &opt_extensions, vk::PhysicalDeviceProperties &properties)
         {
             int rating(0);
             // Properties
@@ -208,17 +208,17 @@ namespace acul
                 rating += 1;
 
             // Extension support
-            rating += optExtensions.size();
+            rating += opt_extensions.size();
             return rating;
         }
 
         vector<const char *> get_supported_opt_ext(vk::PhysicalDevice device,
-                                                   const acul::hashset<acul::string> &allExtensions,
-                                                   const vector<const char *> &optExtensions)
+                                                   const acul::hashset<acul::string> &all_extensions,
+                                                   const vector<const char *> &opt_extensions)
         {
             vector<const char *> supportedExtensions;
-            for (const auto &reqExt : optExtensions)
-                if (allExtensions.find(reqExt) != allExtensions.end()) supportedExtensions.push_back(reqExt);
+            for (const auto &reqExt : opt_extensions)
+                if (all_extensions.find(reqExt) != all_extensions.end()) supportedExtensions.push_back(reqExt);
             return supportedExtensions;
         }
 
@@ -243,7 +243,7 @@ namespace acul
         {
             LOG_INFO("Searching physical device");
             auto devices = instance.enumeratePhysicalDevices(loader);
-            vector<const char *> optExtensions;
+            vector<const char *> opt_extensions;
             acul::hashset<acul::string> extensions;
             i8 device_id = details.config.device;
             auto &queues = details.queues;
@@ -257,7 +257,7 @@ namespace acul
                     queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
                     queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
                     queues.compute.family_id = indices[DEVICE_QUEUE_COMPUTE];
-                    optExtensions = get_supported_opt_ext(physical_device, extensions, optExtensions);
+                    opt_extensions = get_supported_opt_ext(physical_device, extensions, opt_extensions);
                     details.properties2.pNext = &details.depth_resolve_properties;
                     details.properties2.properties = physical_device.getProperties(loader);
                 }
@@ -269,7 +269,7 @@ namespace acul
 
             if (!physical_device)
             {
-                int maxRating = 0;
+                int max_rating = 0;
                 for (const auto &device : devices)
                 {
                     std::optional<u32> indices[DEVICE_QUEUE_COUNT];
@@ -277,12 +277,12 @@ namespace acul
                     {
                         details.properties2.pNext = &details.depth_resolve_properties;
                         details.properties2 = device.getProperties2(loader);
-                        auto optTmp = get_supported_opt_ext(device, extensions, optExtensions);
-                        int rating = get_device_rating(optTmp, details.properties2.properties);
-                        if (rating > maxRating)
+                        auto opt_tmp = get_supported_opt_ext(device, extensions, opt_extensions);
+                        int rating = get_device_rating(opt_tmp, details.properties2.properties);
+                        if (rating > max_rating)
                         {
-                            maxRating = rating;
-                            optExtensions = optTmp;
+                            max_rating = rating;
+                            opt_extensions = opt_tmp;
                             physical_device = device;
                             queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
                             queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
@@ -291,21 +291,21 @@ namespace acul
                     }
                 }
 
-                if (!physical_device) throw acul::runtime_error("Failed to find a suitable GPU");
+                if (!physical_device) throw runtime_error("Failed to find a suitable GPU");
             }
             LOG_INFO("Using: %s", static_cast<char *>(details.properties2.properties.deviceName));
             vk::SampleCountFlags msaa = details.properties2.properties.limits.framebufferColorSampleCounts;
             if (details.config.msaa > msaa)
             {
                 LOG_WARN("MSAAx%d is not supported in current device. Using MSAAx%d",
-                        static_cast<VkSampleCountFlags>(details.config.msaa), static_cast<VkSampleCountFlags>(msaa));
+                         static_cast<VkSampleCountFlags>(details.config.msaa), static_cast<VkSampleCountFlags>(msaa));
                 details.config.msaa = get_max_MSAA(details.properties2);
             }
             details.memory_properties = physical_device.getMemoryProperties(loader);
 
             using_extensitions.insert(using_extensitions.end(), create_ctx->extensions.begin(),
                                       create_ctx->extensions.end());
-            using_extensitions.insert(using_extensitions.end(), optExtensions.begin(), optExtensions.end());
+            using_extensitions.insert(using_extensitions.end(), opt_extensions.begin(), opt_extensions.end());
             assert(queues.graphics.family_id.has_value() && queues.compute.family_id.has_value());
         }
 

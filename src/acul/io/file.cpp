@@ -13,14 +13,7 @@ namespace acul
             op_state read_binary(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file)
-                {
-                    if (!exists(filename.c_str()))
-                        LOG_ERROR("File does not exist: %s", filename.c_str());
-                    else
-                        LOG_ERROR("Failed to open file: %s", filename.c_str());
-                    return op_state::Error;
-                }
+                if (!file) return op_state::Error;
 
                 fseek(file, 0, SEEK_END);
                 size_t file_size = ftell(file);
@@ -36,14 +29,7 @@ namespace acul
             op_state read_virtual(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file)
-                {
-                    if (!exists(filename.c_str()))
-                        LOG_ERROR("File does not exist: %s\n", filename.c_str());
-                    else
-                        LOG_ERROR("Failed to open file: %s\n", filename.c_str());
-                    return op_state::Error;
-                }
+                if (!file) return op_state::Error;
 
                 char chunk[FILE_READ_STREAM_CHUNK_SIZE];
 
@@ -97,23 +83,23 @@ namespace acul
 
             bool decompress(const char *data, size_t size, vector<char> &decompressed)
             {
-                size_t decompressedSize = ZSTD_getFrameContentSize(data, size);
-                if (decompressedSize == 0 || decompressedSize == ZSTD_CONTENTSIZE_ERROR ||
-                    decompressedSize == ZSTD_CONTENTSIZE_UNKNOWN)
+                size_t decompressed_size = ZSTD_getFrameContentSize(data, size);
+                if (decompressed_size == 0 || decompressed_size == ZSTD_CONTENTSIZE_ERROR ||
+                    decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN)
                 {
                     LOG_ERROR("Cannot determine decompressed size.");
                     return false;
                 }
 
-                decompressed.resize(decompressedSize);
+                decompressed.resize(decompressed_size);
 
-                size_t const actualDecompressedSize =
-                    ZSTD_decompress(decompressed.data(), decompressedSize, data, size);
+                size_t const actual_decompressed_size =
+                    ZSTD_decompress(decompressed.data(), decompressed_size, data, size);
 
-                if (ZSTD_isError(actualDecompressedSize))
+                if (ZSTD_isError(actual_decompressed_size))
                 {
                     decompressed.clear();
-                    LOG_ERROR("Failed to decompress: %s", ZSTD_getErrorName(actualDecompressedSize));
+                    LOG_ERROR("Failed to decompress: %s", ZSTD_getErrorName(actual_decompressed_size));
                     return false;
                 }
 

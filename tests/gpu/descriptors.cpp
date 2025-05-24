@@ -46,6 +46,8 @@ void create_test_image_memory(device &d, vk::Image &image, vk::DeviceMemory &mem
 
     vk::DeviceMemory image_memory = d.vk_device.allocateMemory(alloc_info, nullptr, d.loader);
     d.vk_device.bindImageMemory(image, image_memory, 0, d.loader);
+
+    d.vk_device.freeMemory(image_memory, nullptr, d.loader);
 }
 
 void create_test_image_sampler(device &d, vk::Sampler &sampler)

@@ -7,6 +7,11 @@
 #include "base.hpp"
 #include "string_view.hpp"
 
+#if defined(__GNUC__) && !defined(__clang_analyzer__) && !defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif
+
 namespace acul
 {
     template <typename T, typename Allocator>
@@ -860,4 +865,7 @@ namespace std
     };
 } // namespace std
 
+#if defined(__GNUC__) && !defined(__clang_analyzer__) && !defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif
 #endif

@@ -19,12 +19,12 @@ void test_log()
     console->set_pattern("%(color_auto)[%(level_name)]%(ascii_time)%(thread)%(message)%(color_off)\n");
     assert(console->name() == "console");
 
-    LOG_DEBUG("Test debug log: %d", 123);
-    LOG_TRACE("Test trace log: %d", 123);
-    LOG_ERROR("Test error log: %d", 123);
-    LOG_WARN("Test warn log: %d", 123);
-    LOG_INFO("Test info log: %d", 123);
-    LOG_FATAL("Test fatal log: %d", 123);
+    service->log(console, level::Debug, "Test debug log: %d", 123);
+    service->log(console, level::Trace, "Test trace log: %d", 123);
+    service->log(console, level::Error, "Test error log: %d", 123);
+    service->log(console, level::Warn, "Test warn log: %d", 123);
+    service->log(console, level::Info, "Test info log: %d", 123);
+    service->log(console, level::Fatal, "Test fatal log: %d", 123);
 
     logger_base *fetched = service->get_logger("console");
     assert(fetched == console);

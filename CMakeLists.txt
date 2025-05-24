@@ -46,6 +46,7 @@ if(USE_ASAN)
 endif()
 
 set_target_properties(${ACUL_LIB_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+target_compile_options(${ACUL_LIB_NAME} PRIVATE -fvisibility-inlines-hidden)
 
 # TBB
 find_package(TBB REQUIRED)

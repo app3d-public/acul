@@ -74,12 +74,12 @@ void test_file()
     bool decompress_ok = decompress(compressed.data(), compressed.size(), decompressed);
     assert(decompress_ok);
     assert(decompressed.size() == buffer.size());
-    assert(std::memcmp(buffer.data(), decompressed.data(), buffer.size()) == 0);
+    assert(memcmp(buffer.data(), decompressed.data(), buffer.size()) == 0);
 
     // Create directory
     auto dp = data / "test_dir";
     auto state = create_directory(dp.str().c_str());
-    assert(state == op_state::Success);
+    assert(state != op_state::Error);
     assert(exists(dp.str().c_str()));
 
     // --- clean

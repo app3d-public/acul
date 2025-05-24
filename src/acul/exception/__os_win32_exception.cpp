@@ -8,10 +8,8 @@
 #include <fstream>
 #include <psapi.h>
 #include <winternl.h>
-
 #ifndef _MSC_VER
-    #include <cstdlib>
-    #include <cxxabi.h>
+    #include <acul/exception/utils.hpp>
 #endif
 
 #define SYM_INIT_ATTEMP_COUNT 3
@@ -171,12 +169,12 @@ namespace acul
         PIMAGE_NT_HEADERS64 nt_headers = (PIMAGE_NT_HEADERS64)(file_data.data() + dos_header->e_lfanew);
         if (nt_headers->Signature != IMAGE_NT_SIGNATURE) return;
 
-        DWORD symbol_table_offset = nt_headers->FileHeader.PointerTosymbol_table;
-        DWORD symbols_num = nt_headers->FileHeader.symbols_num;
+        DWORD symbol_table_offset = nt_headers->FileHeader.PointerToSymbolTable;
+        DWORD symbols_num = nt_headers->FileHeader.NumberOfSymbols;
 
         if (symbol_table_offset == 0 || symbols_num == 0) return;
 
-        DWORD64 image_base = nt_headers->OptionalHeader.image_base;
+        DWORD64 image_base = nt_headers->OptionalHeader.ImageBase;
         if (image_base == 0) return;
 
         DWORD64 base_address_offset = loaded_base_addr - image_base;
@@ -208,7 +206,7 @@ namespace acul
                 DWORD64 start_address = symbol->value + section_base + base_address_offset;
                 symbol_list_tmp.push_back({start_address, 0, get_symbol_name(*symbol, string_table)});
             }
-            i += symbol->NumberOfAuxSymbols;
+            i += symbol->number_of_aux_symbols;
         }
 
         std::sort(
@@ -393,9 +391,9 @@ namespace acul
 
         DWORD machine_type = IMAGE_FILE_MACHINE_AMD64;
 
-        stackframe.AddrPC.offset = context.Rip;
-        stackframe.AddrFrame.offset = context.Rbp;
-        stackframe.AddrStack.offset = context.Rsp;
+        stackframe.AddrPC.Offset = context.Rip;
+        stackframe.AddrFrame.Offset = context.Rbp;
+        stackframe.AddrStack.Offset = context.Rsp;
         stackframe.AddrPC.Mode = AddrModeFlat;
         stackframe.AddrFrame.Mode = AddrModeFlat;
         stackframe.AddrStack.Mode = AddrModeFlat;
@@ -404,8 +402,8 @@ namespace acul
         while (StackWalk64(machine_type, except_info.hProcess, except_info.hThread, &stackframe, &context, nullptr,
                            SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
         {
-            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackframe.AddrPC.offset);
-            addresses.emplace_back(base, stackframe.AddrPC.offset);
+            DWORD64 base = SymGetModuleBase64(except_info.hProcess, stackframe.AddrPC.Offset);
+            addresses.emplace_back(base, stackframe.AddrPC.Offset);
         }
         except_info.addresses_count = addresses.size();
         except_info.addresses = addresses.release();

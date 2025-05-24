@@ -7,7 +7,6 @@
 #include <oneapi/tbb/scalable_allocator.h>
 #include <type_traits>
 #include <utility>
-#include "scalars.hpp"
 #include "type_traits.hpp"
 
 namespace acul
@@ -179,7 +178,7 @@ namespace acul
         using pointer = value_type *;
         using size_type = size_t;
         using allocator = typename Allocator::template rebind<value_type>::other;
-        using block_allocator = typename Allocator::template rebind<byte>::other;
+        using block_allocator = typename Allocator::template rebind<std::byte>::other;
 
     private:
         detail::mem_control_block *_ctrl;
@@ -196,7 +195,7 @@ namespace acul
                     if (_ctrl->is_external()) allocator::deallocate(_data, 1);
                     if (_ctrl->weak_count() == 0)
                     {
-                        block_allocator::deallocate((byte *)_ctrl, 1);
+                        block_allocator::deallocate((std::byte *)_ctrl, 1);
                         _ctrl = nullptr;
                     }
                 }
@@ -225,7 +224,7 @@ namespace acul
             const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(value_type) * size;
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(blockSize);
             _ctrl->ref_counts = 1ULL << 32;
-            _data = reinterpret_cast<value_type *>((byte *)_ctrl + sizeof(detail::mem_control_block));
+            _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(detail::mem_control_block));
         }
 
         explicit shared_ptr(pointer ptr) : _ctrl(nullptr), _data(ptr)
@@ -341,9 +340,9 @@ namespace acul
     {
         shared_ptr<T> result;
         const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(T);
-        result._ctrl = (detail::mem_control_block *)mem_allocator<byte>::allocate(blockSize);
+        result._ctrl = (detail::mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
         result._ctrl->ref_counts = 1ULL << 32;
-        result._data = reinterpret_cast<T *>((byte *)result._ctrl + sizeof(detail::mem_control_block));
+        result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(detail::mem_control_block));
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
         detail::accept_owner(result._data, result);
@@ -374,12 +373,12 @@ namespace acul
         return shared_ptr<To>(from, reinterpret_cast<pointer>(from.get()));
     }
 
-    template <typename T, typename Allocator = mem_allocator<byte>>
+    template <typename T, typename Allocator = mem_allocator<std::byte>>
     class weak_ptr
     {
         detail::mem_control_block *_ctrl;
         T *_data;
-        using block_allocator = typename Allocator::template rebind<byte>::other;
+        using block_allocator = typename Allocator::template rebind<std::byte>::other;
 
         template <typename U, typename Au>
         friend class shared_ptr;
@@ -415,7 +414,7 @@ namespace acul
             {
                 _ctrl->decrement_weak();
                 if (_ctrl->strong_count() == 0 && _ctrl->weak_count() == 0)
-                    block_allocator::deallocate((byte *)_ctrl, 1);
+                    block_allocator::deallocate((std::byte *)_ctrl, 1);
             }
         }
 

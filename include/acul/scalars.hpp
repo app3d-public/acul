@@ -28,6 +28,5 @@ using f64 = double;
 using c8 = char;
 using c16 = char16_t;
 using c32 = char32_t;
-using byte = std::byte;
 using size_t = std::size_t;
 #endif

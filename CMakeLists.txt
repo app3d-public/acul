@@ -39,7 +39,7 @@ endif()
 set(ACUL_LIB_NAME ${PROJECT_NAME}-${APP_SIMD_ARCH})
 
 add_library(${ACUL_LIB_NAME} SHARED ${SOURCE_FILES})
-target_compile_definitions(${ACUL_LIB_NAME} PRIVATE -DAPPLIB_BUILD)
+target_compile_definitions(${ACUL_LIB_NAME} PRIVATE APPLIB_BUILD)
 
 if(USE_ASAN)
     target_link_options(${ACUL_LIB_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
@@ -51,7 +51,7 @@ target_compile_options(${ACUL_LIB_NAME} PRIVATE -fvisibility-inlines-hidden)
 # TBB
 find_package(TBB REQUIRED)
 
-target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd)
+target_link_libraries(${ACUL_LIB_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd intl)
 
 if(NOT ACUL_BUILD_MIN)
     target_include_directories(${ACUL_LIB_NAME} PUBLIC

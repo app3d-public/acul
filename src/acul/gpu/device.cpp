@@ -429,21 +429,22 @@ namespace acul
 #ifndef NDEBUG
         static VKAPI_ATTR VkBool32 VKAPI_CALL
         debug_callback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type,
-                       const vk::DebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data)
+                       const vk::DebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
         {
             switch (severity)
             {
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
-                    LOG_DEBUG("%s", callback_data->pMessage);
+                    LOG_DEBUG("%s", pCallbackData->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-                    LOG_INFO("%s", callback_data->pMessage);
+                    LOG_INFO("%s", pCallbackData->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-                    LOG_WARN("%s", callback_data->pMessage);
+                    LOG_WARN("%s", pCallbackData->pMessage);
                     break;
                 case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-                    LOG_ERROR("%s", callback_data->pMessage);
+                    LOG_ERROR("%s", pCallbackData->pMessage);
+                    break;
                 default:
                     break;
             }
@@ -458,7 +459,7 @@ namespace acul
             createInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
                                      vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
                                      vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-            createInfo.pfnUserCallback = debug_callback;
+            createInfo.pfnUserCallback = reinterpret_cast<decltype(createInfo.pfnUserCallback)>(debug_callback);
         }
 
         void device_initializer::setup_debug_messenger()

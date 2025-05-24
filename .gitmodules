@@ -1,9 +1,11 @@
 [submodule "half"]
 	path = modules/3rd-party/half
-	url = git@git.fp.lan:root/half.git
+	url = git@git.dev.lan:root/half.git
 [submodule "vma"]
 	path = modules/3rd-party/vma
 	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 [submodule "glm"]
 	path = modules/3rd-party/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "modules/3rd-party/half"]
+	url = git@git.dev.lan:app3d/half.git

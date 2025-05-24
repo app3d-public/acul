@@ -26,7 +26,7 @@ void test_gpu()
 
     device::create_ctx ctx;
     ctx.set_validation_layers({"VK_LAYER_KHRONOS_validation"})
-        .set_extensions({vk::EXTPrivateDataExtensionName})
+        .set_extensions({vk::EXTDebugUtilsExtensionName})
         .set_opt_extensions({vk::EXTMemoryPriorityExtensionName, vk::EXTPageableDeviceLocalMemoryExtensionName})
         .set_fence_pool_size(8);
     device d;

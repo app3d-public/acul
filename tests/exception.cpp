@@ -32,7 +32,7 @@ void test_out_of_range()
     assert(strstr(range_ex.what(), "15") != nullptr);
 }
 
-void test_write_exception_info(const runtime_error &err)
+void test_write_exception_info(runtime_error &err)
 {
 #ifdef _WIN32
     stringstream stream;

@@ -84,4 +84,10 @@ namespace acul
         T begin;
         T end;
     };
+
+    template <typename T>
+    struct rect
+    {
+        T x, y, w, h;
+    };
 } // namespace acul

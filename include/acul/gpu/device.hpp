@@ -1,5 +1,6 @@
 #pragma once
 #include "../meta.hpp"
+#include "../set.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 #include <vk_mem_alloc.h>
@@ -115,13 +116,13 @@ namespace acul
 
             virtual ~create_ctx() = default;
 
+            virtual void init_extensions(const acul::set<acul::string> &ext, acul::vector<const char *> &dst) {}
+
             virtual vk::Result create_surface(vk::Instance &instance, vk::SurfaceKHR &surface,
                                               vk::DispatchLoaderDynamic &loader)
             {
                 return vk::Result::eSuccess;
             };
-
-            virtual vector<const char *> get_window_extensions() { return vector<const char *>(); }
 
             create_ctx &set_validation_layers(const vector<const char *> &validation_layers)
             {

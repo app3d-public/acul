@@ -93,25 +93,20 @@ namespace acul
 
         vector<const char *> using_extensitions;
 
-        vector<const char *> get_required_extensions(device::create_ctx *create_ctx)
+        vector<const char *> get_required_extensions(device::create_ctx *create_ctx, vk::DispatchLoaderDynamic &loader)
         {
-            vector<const char *> extensions = create_ctx->get_window_extensions();
+            vector<const char *> extensions;
 #ifndef NDEBUG
             extensions.push_back(vk::EXTDebugUtilsExtensionName);
 #endif
-            return extensions;
-        }
-
-        void has_window_required_instance_extensions(device::create_ctx *create_ctx, vk::DispatchLoaderDynamic &loader)
-        {
             acul::set<acul::string> available{};
             for (const auto &extension : vk::enumerateInstanceExtensionProperties(nullptr, loader))
                 available.insert(extension.extensionName.data());
-            LOG_INFO("Checking for required extensions");
-            const auto requiredExtensions = get_required_extensions(create_ctx);
-            for (const auto &required : requiredExtensions)
+            create_ctx->init_extensions(available, extensions);
+            for (const auto &required : extensions)
                 if (available.find(required) == available.end())
-                    throw runtime_error("Missing required window extension: " + acul::string(required));
+                    throw runtime_error("Missing required extension: " + acul::string(required));
+            return extensions;
         }
 
         void device_initializer::init(const string &app_name, u32 version)
@@ -122,7 +117,6 @@ namespace acul
 #endif
             if (create_ctx->present_enabled)
             {
-                has_window_required_instance_extensions(create_ctx, loader);
                 if (create_ctx->create_surface(instance, surface, loader) != vk::Result::eSuccess)
                     throw runtime_error("Failed to create window surface");
             }
@@ -489,7 +483,7 @@ namespace acul
 
             vk::InstanceCreateInfo create_info({}, &app_info);
 
-            auto extensions = get_required_extensions(create_ctx);
+            auto extensions = get_required_extensions(create_ctx, loader);
             create_info.setEnabledExtensionCount(static_cast<u32>(extensions.size()))
                 .setPpEnabledExtensionNames(extensions.data());
 

@@ -11,6 +11,7 @@ void test_meta()
     using namespace acul::meta;
 
     task::service_dispatch sd;
+    sd.run();
     auto *service = acul::alloc<log::log_service>();
     sd.register_service(service);
     service->level = log::level::Trace;

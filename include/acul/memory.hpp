@@ -151,7 +151,11 @@ namespace acul
 
             void increment_weak() { ++ref_counts; }
 
-            size_t decrement_strong() { return (ref_counts -= 1ULL << 32) >> 32; }
+            size_t decrement_strong()
+            {
+                ref_counts -= (1ULL << 32);
+                return (ref_counts & strong_count_mask) >> 32;
+            }
 
             size_t decrement_weak() { return --ref_counts & weak_count_mask; }
 
@@ -186,19 +190,13 @@ namespace acul
 
         void release() noexcept
         {
-            if (_ctrl && _ctrl->strong_count() > 0)
+            if (_ctrl && _ctrl->decrement_strong() == 0)
             {
-                _ctrl->decrement_strong();
-                if (_ctrl->strong_count() == 0)
-                {
-                    allocator::destroy(_data);
-                    if (_ctrl->is_external()) allocator::deallocate(_data, 1);
-                    if (_ctrl->weak_count() == 0)
-                    {
-                        block_allocator::deallocate((std::byte *)_ctrl, 1);
-                        _ctrl = nullptr;
-                    }
-                }
+                allocator::destroy(_data);
+                if (_ctrl->is_external()) allocator::deallocate(_data, 1);
+                if (_ctrl->decrement_weak() == 0) block_allocator::deallocate((std::byte *)_ctrl, 1);
+                _ctrl = nullptr;
+                _data = nullptr;
             }
         }
 
@@ -223,7 +221,7 @@ namespace acul
                           "Only trivially constructible arrays supported");
             const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(value_type) * size;
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(blockSize);
-            _ctrl->ref_counts = 1ULL << 32;
+            _ctrl->ref_counts = (1ULL << 32) | 1ULL;
             _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(detail::mem_control_block));
         }
 
@@ -231,7 +229,7 @@ namespace acul
         {
             if (!ptr) return;
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(sizeof(detail::mem_control_block));
-            _ctrl->ref_counts = 1ULL << 32;
+            _ctrl->ref_counts = (1ULL << 32) | 1ULL;
             _ctrl->set_external();
             detail::accept_owner(ptr, *this);
         }
@@ -341,7 +339,7 @@ namespace acul
         shared_ptr<T> result;
         const size_t blockSize = sizeof(detail::mem_control_block) + sizeof(T);
         result._ctrl = (detail::mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
-        result._ctrl->ref_counts = 1ULL << 32;
+        result._ctrl->ref_counts = (1ULL << 32) | 1ULL;
         result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(detail::mem_control_block));
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
@@ -413,8 +411,7 @@ namespace acul
             if (_ctrl)
             {
                 _ctrl->decrement_weak();
-                if (_ctrl->strong_count() == 0 && _ctrl->weak_count() == 0)
-                    block_allocator::deallocate((std::byte *)_ctrl, 1);
+                if (_ctrl->no_strong() && _ctrl->no_weak()) block_allocator::deallocate((std::byte *)_ctrl, 1);
             }
         }
 
@@ -424,7 +421,7 @@ namespace acul
             return nullptr;
         }
 
-        bool expired() const { return !_ctrl || _ctrl->strong_count() == 0; }
+        bool expired() const { return !_ctrl || _ctrl->no_strong(); }
     };
 
     template <typename T, typename Allocator = mem_allocator<T>>

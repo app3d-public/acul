@@ -5,9 +5,7 @@
 #ifdef ACUL_HALF_ENABLE
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    #if defined(__clang__)
-        #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
-    #endif
+    #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
     #include <half.hpp>
     #pragma GCC diagnostic pop
 #endif

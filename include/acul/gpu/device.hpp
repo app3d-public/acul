@@ -1,10 +1,15 @@
 #pragma once
+#include "../hash/hashset.hpp"
 #include "../meta.hpp"
 #include "../set.hpp"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnullability-completeness"
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wnullability-completeness"
+#endif
 #include <vk_mem_alloc.h>
-#pragma clang diagnostic pop
+#if defined(__clang__)
+    #pragma clang diagnostic pop
+#endif
 #include <vulkan/vulkan.hpp>
 #include "../api.hpp"
 #include "../exception/exception.hpp"
@@ -267,14 +272,21 @@ namespace acul
             }
 
             /// @brief Get aligned size for UBO buffer by current physical device
-            /// @param originalSize Size of original buffer
-            size_t get_aligned_UBO_size(size_t original_size) const
+            /// @param original_size Size of original buffer
+            size_t get_aligned_ubo_size(size_t original_size) const
             {
-                size_t min_UBO_alignment = properties2.properties.limits.minUniformBufferOffsetAlignment;
-                if (min_UBO_alignment > 0)
-                    original_size = (original_size + min_UBO_alignment - 1) & ~(min_UBO_alignment - 1);
+                size_t min_ubo_alignment = properties2.properties.limits.minUniformBufferOffsetAlignment;
+                if (min_ubo_alignment > 0)
+                    original_size = (original_size + min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
                 return original_size;
             }
+
+            bool is_opt_extension_supported(const char *extension) { return _extensions.contains(extension); }
+
+        private:
+            hashset<const char *> _extensions;
+
+            friend struct device_initializer;
         };
 
         inline vk::PhysicalDeviceProperties &device::get_device_properties() const
@@ -290,7 +302,7 @@ namespace acul
         /// @brief Get maximum MSAA sample count for a physical device
         /// @param properties Physical device properties
         /// @return Maximum MSAA sample count
-        APPLIB_API vk::SampleCountFlagBits get_max_MSAA(const vk::PhysicalDeviceProperties2 &properties);
+        APPLIB_API vk::SampleCountFlagBits get_max_msaa(const vk::PhysicalDeviceProperties2 &properties);
 
         namespace streams
         {

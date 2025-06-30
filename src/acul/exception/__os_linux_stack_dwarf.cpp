@@ -301,7 +301,7 @@ namespace acul
         iovec loc = {buf, read_size};
         iovec rem = {reinterpret_cast<void *>(remote_addr), read_size};
 
-        if (process_vm_readv(pid, &loc, 1, &rem, 1, 0) != read_size) return 0;
+        if (process_vm_readv(pid, &loc, 1, &rem, 1, 0) != (ssize_t)read_size) return 0;
 
         const u8 *p = buf;
         result = read_encoded_pointer(p, encoding, base);

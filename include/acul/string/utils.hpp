@@ -70,7 +70,7 @@ namespace acul
                 return 0;
         }
 
-        int num_digits = 0;
+        size_t num_digits = 0;
         int tmp = value;
         while (tmp > 0)
         {
@@ -79,22 +79,25 @@ namespace acul
         }
         if (num_digits > buffer_size - 1) return 0;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
         // Reverse order array for storing digits
-        char reverseOrder[num_digits];
-#pragma clang diagnostic pop
-
+        char reverse_order[num_digits];
+#ifdef __clang__
+    #pragma clang diagnostic pop
+#endif
         int i = 0;
         do {
-            reverseOrder[i++] = value % 10;
+            reverse_order[i++] = value % 10;
             value /= 10;
         } while (value);
 
         // Writing digits to the buffer in the correct order
         while (i--)
         {
-            *ptr = '0' + reverseOrder[i];
+            *ptr = '0' + reverse_order[i];
             ptr++;
         }
         return ptr - buffer;

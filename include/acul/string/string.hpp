@@ -167,9 +167,10 @@ namespace acul
         basic_string &operator=(const basic_string &other) noexcept
         {
             if (this == &other) return *this;
-            u8 other_alloc = _salloc.size.alloc_flags;
+            u8 self_alloc = _salloc.size.alloc_flags;
             if (other._salloc.size.alloc_flags == ALLOC_RDATA)
             {
+                if (self_alloc == ALLOC_HEAP) Allocator::deallocate(_lalloc.ptr);
                 _lalloc.ptr = other._lalloc.ptr;
                 _lalloc.size = other._lalloc.size;
                 _lalloc.cap = other._lalloc.cap;
@@ -179,7 +180,7 @@ namespace acul
             size_type other_size = other.size();
             size_type required_capacity = other.capacity();
 
-            if (other_alloc == ALLOC_STACK && required_capacity <= _sso_size)
+            if (self_alloc == ALLOC_STACK && required_capacity <= _sso_size)
             {
                 memcpy(_salloc.data, other._salloc.data, required_capacity * sizeof(value_type));
                 _salloc.size = other._salloc.size;
@@ -197,28 +198,22 @@ namespace acul
         basic_string &operator=(basic_string &&other) noexcept
         {
             if (this == &other) return *this;
-
+            if (_salloc.size.alloc_flags == ALLOC_HEAP) Allocator::deallocate(_lalloc.ptr);
             switch (other._salloc.size.alloc_flags)
             {
                 case ALLOC_STACK:
-                    _salloc.size = other._salloc.size;
-                    memmove(_salloc.data, other._salloc.data, _salloc.size.data * sizeof(value_type));
+                    _salloc = other._salloc;
                     break;
 
                 case ALLOC_RDATA:
                 case ALLOC_HEAP:
-                    if (_salloc.size.alloc_flags == ALLOC_HEAP) Allocator::deallocate(_lalloc.ptr);
                     _lalloc = other._lalloc;
                     other._lalloc.ptr = nullptr;
                     other._lalloc.cap = 0;
                     other._salloc.size.alloc_flags = ALLOC_STACK;
                     other._lalloc.size.data = 0;
                     break;
-
-                default:
-                    break;
             }
-
             return *this;
         }
 

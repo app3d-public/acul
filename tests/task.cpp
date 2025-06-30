@@ -58,9 +58,10 @@ void test_thread_dispatch_void()
 void test_shedule_service()
 {
     using namespace acul::task;
-    service_dispatch dispatcher;
+    service_dispatch  sd;
+    sd.run();
     shedule_service *scheduler = acul::alloc<shedule_service>();
-    dispatcher.register_service(scheduler);
+    sd.register_service(scheduler);
 
     bool first = false;
     bool second = false;
@@ -78,9 +79,10 @@ void test_shedule_service()
 void test_shedule_service_order()
 {
     using namespace acul::task;
-    service_dispatch dispatcher;
+    service_dispatch sd;
+    sd.run();
     shedule_service *scheduler = acul::alloc<shedule_service>();
-    dispatcher.register_service(scheduler);
+    sd.register_service(scheduler);
 
     acul::vector<int> result;
 

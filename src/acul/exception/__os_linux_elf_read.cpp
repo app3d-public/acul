@@ -1,6 +1,8 @@
 #include <acul/hash/hashmap.hpp>
 #include <acul/io/file.hpp>
 #include <acul/string/utils.hpp>
+#include <cstring>
+#include "acul/fwd/string.hpp"
 #include "elf_read.hpp"
 
 namespace acul
@@ -46,7 +48,6 @@ namespace acul
     static void collect_sec(Sec &src, elf_module &m)
     {
         if (!src.sym) return;
-
         for (size_t i = 0; i < src.cnt; ++i)
         {
             auto &e = src.sym[i];
@@ -54,8 +55,7 @@ namespace acul
 
             uintptr_t start = e.st_value; // RVA
             uintptr_t end = e.st_size ? start + e.st_size : 0;
-            string name = src.str + e.st_name;
-            m.symbols[start] = {std::move(name), end}; // key=RVA
+            m.symbols[start] = {src.str + e.st_name, end}; // key=RVA
         }
     }
 

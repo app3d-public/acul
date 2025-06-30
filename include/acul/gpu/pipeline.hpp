@@ -188,7 +188,7 @@ namespace acul
                 vk::Pipeline pipelines[size];
                 create_info create_info[size];
                 auto it = artifacts.begin();
-                for (int i = 0; i < size; i++, ++it) create_info[i] = it->create_info;
+                for (size_t i = 0; i < size; i++, ++it) create_info[i] = it->create_info;
 
                 vk::Result res;
                 if constexpr (std::is_same<T, vk::GraphicsPipelineCreateInfo>::value)
@@ -205,7 +205,7 @@ namespace acul
                 }
 
                 it = artifacts.begin();
-                for (int i = 0; i < size; i++, ++it)
+                for (size_t i = 0; i < size; i++, ++it)
                     if (it->commit)
                         it->commit(pipelines[i]);
                     else

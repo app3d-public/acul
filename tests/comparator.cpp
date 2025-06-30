@@ -5,30 +5,30 @@ void test_comparator()
 {
     using namespace acul;
 
-    case_insensitive_map<string, int> fontMap;
+    case_insensitive_map<string, int> font_map;
 
-    fontMap.insert("Arial", {1, 2});
-    assert(fontMap.size() == 1);
+    font_map.insert("Arial", {1, 2});
+    assert(font_map.size() == 1);
 
-    auto it = fontMap["arial"];
-    assert(it != fontMap.end());
+    auto it = font_map["arial"];
+    assert(it != font_map.end());
     assert(it->second.size() == 2);
     assert(it->second[0] == 1);
     assert(it->second[1] == 2);
 
-    fontMap.emplace("arial", 3);
-    assert(fontMap["ARIAL"]->second.size() == 3);
-    assert(fontMap["ARIAL"] != fontMap.end());
+    font_map.emplace("arial", 3);
+    assert(font_map["ARIAL"]->second.size() == 3);
+    assert(font_map["ARIAL"] != font_map.end());
 
-    fontMap.erase("ARIAL");
-    assert(fontMap.empty());
+    font_map.erase("ARIAL");
+    assert(font_map.empty());
 
-    fontMap.insert("Roboto", {5});
-    fontMap.insert("Helvetica", {6});
-    int count = 0;
-    for (auto it = fontMap.cbegin(); it != fontMap.cend(); ++it) ++count;
-    assert(count == fontMap.size());
-    fontMap.clear();
-    assert(fontMap.empty());
+    font_map.insert("Roboto", {5});
+    font_map.insert("Helvetica", {6});
+    size_t count = 0;
+    for (auto it = font_map.cbegin(); it != font_map.cend(); ++it) ++count;
+    assert(count == font_map.size());
+    font_map.clear();
+    assert(font_map.empty());
     printf("test_case_insensitive_map passed.\n");
 }

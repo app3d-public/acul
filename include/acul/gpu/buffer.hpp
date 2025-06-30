@@ -32,7 +32,7 @@ namespace acul
 
         inline void construct_ubo_buffer(buffer &buffer, size_t instance_size, device &device)
         {
-            buffer.alignment_size = device.details->get_aligned_UBO_size(instance_size);
+            buffer.alignment_size = device.details->get_aligned_ubo_size(instance_size);
             buffer.buffer_size = buffer.alignment_size * buffer.instance_count;
             LOG_DEBUG("Created new buffer %p, purpose: %s", &buffer, vk::to_string(buffer.vk_usage_flags).c_str());
         }

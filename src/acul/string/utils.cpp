@@ -93,8 +93,10 @@ namespace acul
         return utf16_to_utf8(u16string);
     }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
     string format(const char *format, ...) noexcept
     {
         string result;
@@ -157,8 +159,8 @@ namespace acul
             {
                 *ptr = '0';
                 ptr++;
-                buffer_size--;
-                if (precision > 0 && buffer_size > precision + 1)
+                --buffer_size;
+                if (precision > 0 && buffer_size > static_cast<size_t>(precision + 1))
                 {
                     *ptr = '.';
                     ptr++;
@@ -177,67 +179,68 @@ namespace acul
                 return 0;
         }
 
-        f32 tempValue = value;
-        int numDigits = 0;
-        if (tempValue >= 1)
+        f32 temp_value = value;
+        int num_digits = 0;
+        if (temp_value >= 1)
         {
-            while (tempValue >= 1)
+            while (temp_value >= 1)
             {
-                numDigits++;
-                tempValue /= 10;
+                ++num_digits;
+                temp_value /= 10;
             }
         }
-        int intValue = (int)value;
-        if (numDigits > buffer_size - 1) return 0;
+        int int_value = (int)value;
+        if (num_digits < 0 || (size_t)num_digits > buffer_size - 1) return 0;
 
         // Reverse order array for storing digits
-        char reverseOrder[numDigits];
+        char reverse_order[num_digits];
 
         int i = 0;
         do {
-            reverseOrder[i++] = intValue % 10;
-            intValue /= 10;
-        } while (intValue);
+            reverse_order[i++] = int_value % 10;
+            int_value /= 10;
+        } while (int_value);
 
         // Writing digits to the buffer in the correct order
         while (i--)
         {
-            *ptr = '0' + reverseOrder[i];
+            *ptr = '0' + reverse_order[i];
             ptr++;
         }
 
         if (value - (int)value > 0 || precision > 0)
         {
-            if (buffer_size - numDigits - 2 < 0) return 0;
+            if (buffer_size - num_digits - 2 < 0) return 0;
 
             *ptr = '.';
             ptr++;
 
             f32 fraction = value - (int)value;
 
-            int numFractionalDigits = 0;
-            while (fraction > 0 && (numFractionalDigits < precision || precision == 0) && buffer_size > 2)
+            int num_fractional_digits = 0;
+            while (fraction > 0 && (num_fractional_digits < precision || precision == 0) && buffer_size > 2)
             {
                 fraction *= 10;
                 int digit = (int)(fraction + 0.5f);
                 fraction -= digit;
                 *ptr = '0' + digit;
                 ptr++;
-                numFractionalDigits++;
+                ++num_fractional_digits;
             }
 
-            // Добавление нулей для достижения точности
-            while (numFractionalDigits < precision)
+            while (num_fractional_digits < precision)
             {
                 *ptr = '0';
-                ptr++;
-                numFractionalDigits++;
+                ++ptr;
+                ++num_fractional_digits;
             }
         }
 
         return ptr - buffer;
     }
-#pragma clang diagnostic pop
+#if defined(__clang__)
+    #pragma clang diagnostic pop
+#endif
 #ifdef ACUL_GLM_ENABLE
     int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
     {

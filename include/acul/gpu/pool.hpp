@@ -67,7 +67,7 @@ namespace acul
 
             void release(T *pData, size_t size)
             {
-                for (int i = 0; i < size; ++i) release(pData[i]);
+                for (size_t i = 0; i < size; ++i) release(pData[i]);
             }
 
             size_t size() const { return _size - _pos + _released.size(); }
@@ -76,7 +76,7 @@ namespace acul
             size_t _size = 0;
             size_t _pos = 0;
             vector<T> _data;
-            std::queue<size_t> _released;
+            queue<size_t> _released;
         };
     } // namespace gpu
 } // namespace acul

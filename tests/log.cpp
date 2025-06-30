@@ -10,6 +10,7 @@ void test_log()
     using namespace acul::log;
 
     task::service_dispatch sd;
+    sd.run();
     auto *service = acul::alloc<log_service>();
     sd.register_service(service);
     service->level = level::Trace;

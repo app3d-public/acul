@@ -533,7 +533,7 @@ namespace acul
             std::move_backward(_data + index, _data + _size, _data + _size + 1);
         else
         {
-            for (size_t i = _size; i > index; --i)
+            for (size_type i = _size; i > static_cast<size_type>(index); --i)
             {
                 Allocator::construct(_data + i, std::move(_data[i - 1]));
                 Allocator::destroy(_data + i - 1);

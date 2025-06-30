@@ -73,6 +73,7 @@ namespace acul
             listener_base *listener;
             u64 id;
         };
+
         // Manages event listeners and dispatches events to them.
         class APPLIB_API dispatcher
         {
@@ -82,11 +83,11 @@ namespace acul
 
             // Adds a listener for a specific type of event and returns an iterator to it.
             template <typename E>
-            iterator addListener(u64 event, std::function<void(E &)> listener, int priority = 5)
+            iterator add_listener(u64 event, std::function<void(E &)> listener, int priority = 5)
             {
                 static_assert(std::is_base_of<acul::events::event, E>::value, "E must inherit from event");
-                auto eventListener = acul::alloc<acul::events::listener<E>>(listener);
-                return _listeners[event].emplace(priority, eventListener);
+                auto event_listener = acul::alloc<acul::events::listener<E>>(listener);
+                return _listeners[event].emplace(priority, event_listener);
             }
 
             // Checks if any listener exists for a specific event.
@@ -192,7 +193,7 @@ namespace acul
                 using event_type = typename std::remove_reference<arg_type>::type;
                 static_assert(std::is_base_of<acul::events::event, event_type>::value,
                               "EventType must inherit from event");
-                auto id = addListener<event_type>(event, std::forward<Listener>(listener), priority);
+                auto id = add_listener<event_type>(event, std::forward<Listener>(listener), priority);
                 pointers[owner].emplace_back(id->second, event);
             }
 
@@ -207,15 +208,17 @@ namespace acul
             // Clears all registered listeners from the manager, ensuring all memory is properly freed.
             void clear()
             {
-                for (auto &eventPair : _listeners)
+                for (auto &event_pair : _listeners)
                 {
-                    auto &listeners = eventPair.second;
-                    for (auto &listenerPair : listeners) acul::release(listenerPair.second);
+                    auto &listeners = event_pair.second;
+                    for (auto &listener_pair : listeners) acul::release(listener_pair.second);
                     listeners.clear();
                 }
                 _listeners.clear();
                 pointers.clear();
             }
+
+            ~dispatcher() { clear(); }
 
         private:
             acul::hashmap<u64, acul::multimap<int, listener_base *>> _listeners;

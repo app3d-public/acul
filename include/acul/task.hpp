@@ -172,7 +172,11 @@ namespace acul
         class service_dispatch
         {
         public:
-            service_dispatch() : _running(true), _thread(&service_dispatch::worker_thread, this) {}
+            void run()
+            {
+                _running = true;
+                _thread = std::thread(&service_dispatch::worker_thread, this);
+            }
 
             ~service_dispatch()
             {
@@ -192,7 +196,7 @@ namespace acul
             }
 
         public:
-            bool _running{true};
+            bool _running{false};
             std::thread _thread;
             std::mutex _mutex;
             std::condition_variable _cv;
@@ -203,8 +207,6 @@ namespace acul
             friend class service_base;
         };
 
-        extern APPLIB_API service_dispatch *g_service_dispatch;
-
         inline void service_base::notify() { _sd->_cv.notify_one(); }
 
         class APPLIB_API shedule_service final : public service_base
@@ -212,8 +214,8 @@ namespace acul
         public:
             virtual std::chrono::steady_clock::time_point dispatch() override;
 
-            template<typename F>
-            void add_task(F&& task, std::chrono::steady_clock::time_point time)
+            template <typename F>
+            void add_task(F &&task, std::chrono::steady_clock::time_point time)
             {
                 _tasks.emplace(acul::task::add_task(std::forward<F>(task)), time);
                 notify();

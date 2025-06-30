@@ -210,13 +210,13 @@ namespace acul
                                                    const acul::hashset<acul::string> &all_extensions,
                                                    const vector<const char *> &opt_extensions)
         {
-            vector<const char *> supportedExtensions;
-            for (const auto &reqExt : opt_extensions)
-                if (all_extensions.find(reqExt) != all_extensions.end()) supportedExtensions.push_back(reqExt);
-            return supportedExtensions;
+            vector<const char *> supported_extensions;
+            for (const auto &extension : opt_extensions)
+                if (all_extensions.find(extension) != all_extensions.end()) supported_extensions.push_back(extension);
+            return supported_extensions;
         }
 
-        vk::SampleCountFlagBits get_max_MSAA(const vk::PhysicalDeviceProperties2 &properties)
+        vk::SampleCountFlagBits get_max_msaa(const vk::PhysicalDeviceProperties2 &properties)
         {
             if (properties.properties.limits.sampledImageColorSampleCounts & vk::SampleCountFlagBits::e64)
                 return vk::SampleCountFlagBits::e64;
@@ -242,7 +242,7 @@ namespace acul
             i8 device_id = details.config.device;
             auto &queues = details.queues;
 
-            if (device_id >= 0 && device_id < devices.size())
+            if (device_id >= 0 && device_id < (int)devices.size())
             {
                 std::optional<u32> indices[DEVICE_QUEUE_COUNT];
                 if (validate_physical_device(devices[device_id], extensions, indices))
@@ -251,7 +251,7 @@ namespace acul
                     queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
                     queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
                     queues.compute.family_id = indices[DEVICE_QUEUE_COMPUTE];
-                    opt_extensions = get_supported_opt_ext(physical_device, extensions, opt_extensions);
+                    opt_extensions = get_supported_opt_ext(physical_device, extensions, create_ctx->extensions_opt);
                     details.properties2.pNext = &details.depth_resolve_properties;
                     details.properties2.properties = physical_device.getProperties(loader);
                 }
@@ -271,7 +271,7 @@ namespace acul
                     {
                         details.properties2.pNext = &details.depth_resolve_properties;
                         details.properties2 = device.getProperties2(loader);
-                        auto opt_tmp = get_supported_opt_ext(device, extensions, opt_extensions);
+                        auto opt_tmp = get_supported_opt_ext(device, extensions, create_ctx->extensions_opt);
                         int rating = get_device_rating(opt_tmp, details.properties2.properties);
                         if (rating > max_rating)
                         {
@@ -288,12 +288,14 @@ namespace acul
                 if (!physical_device) throw runtime_error("Failed to find a suitable GPU");
             }
             LOG_INFO("Using: %s", static_cast<char *>(details.properties2.properties.deviceName));
+            for (auto *extension : opt_extensions) details._extensions.emplace(extension);
+
             vk::SampleCountFlags msaa = details.properties2.properties.limits.framebufferColorSampleCounts;
             if (details.config.msaa > msaa)
             {
                 LOG_WARN("MSAAx%d is not supported in current device. Using MSAAx%d",
                          static_cast<VkSampleCountFlags>(details.config.msaa), static_cast<VkSampleCountFlags>(msaa));
-                details.config.msaa = get_max_MSAA(details.properties2);
+                details.config.msaa = get_max_msaa(details.properties2);
             }
             details.memory_properties = physical_device.getMemoryProperties(loader);
 
@@ -341,9 +343,9 @@ namespace acul
         bool device_initializer::validate_physical_device(vk::PhysicalDevice device, acul::hashset<acul::string> &ext,
                                                           std::optional<u32> *indices)
         {
-            auto availableExtensions = device.enumerateDeviceExtensionProperties(nullptr, loader);
+            auto available_extensions = device.enumerateDeviceExtensionProperties(nullptr, loader);
             ext.clear();
-            for (const auto &extension : availableExtensions) ext.insert(extension.extensionName.data());
+            for (const auto &extension : available_extensions) ext.insert(extension.extensionName.data());
             find_queue_families(indices, device);
             return is_device_suitable(device, ext, indices);
         }
@@ -497,6 +499,7 @@ namespace acul
             instance = vk::createInstance(create_info, nullptr, loader);
             if (!instance) throw acul::runtime_error("Failed to create vk:instance");
             loader.init(instance);
+            for (auto *extension : extensions) LOG_INFO("Enabling Vulkan extension: %s", extension);
         }
 
         void device_initializer::allocate_cmd_buf_pool(const vk::CommandPoolCreateInfo &create_info, command_pool &dst,

@@ -21,7 +21,7 @@ void test_gpu_pipeline(device &d)
 
     batch.artifacts.emplace_back();
     auto &artifact = batch.artifacts.back();
-    artifact.config.load_defaults().enable_alpha_blending().enable_MSAA(d.details->config);
+    artifact.config.load_defaults().enable_alpha_blending().enable_msaa(vk::SampleCountFlagBits::e1);
 
     // Prepare requirements for pipeline creation
     vk::PipelineLayoutCreateInfo layoutInfo{};

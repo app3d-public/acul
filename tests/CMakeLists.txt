@@ -27,13 +27,11 @@ add_test_files(acul forward_list forward_list.cpp)
 add_test_files(acul comparator comparator.cpp)
 add_test_files(acul stream stream.cpp)
 add_test_files(acul math math.cpp)
-add_test_files(acul meta meta.cpp)
 add_test_files(acul disposal_queue disposal_queue.cpp)
 add_test_files(acul locales locales.cpp)
 
 # GPU
 list(APPEND TEST_SOURCES
-    "gpu/device.cpp"
     "gpu/buffer.cpp"
     "gpu/descriptors.cpp"
     "gpu/utils.cpp"

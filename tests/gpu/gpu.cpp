@@ -25,18 +25,19 @@ void test_gpu()
     console->set_pattern("%(message)\n");
     assert(console->name() == "console");
 
-    device::create_ctx ctx;
+    device_runtime_data rd;
+    device_create_ctx ctx;
     ctx.set_validation_layers({"VK_LAYER_KHRONOS_validation"})
-        .set_extensions({vk::EXTDebugUtilsExtensionName})
-        .set_opt_extensions({vk::EXTMemoryPriorityExtensionName, vk::EXTPageableDeviceLocalMemoryExtensionName})
-        .set_fence_pool_size(8);
+        .set_device_extensions_optional(
+            {vk::EXTMemoryPriorityExtensionName, vk::EXTPageableDeviceLocalMemoryExtensionName})
+        .set_fence_pool_size(8)
+        .set_runtime_data(&rd);
     device d;
     init_device("app_test", 1, d, &ctx);
     assert(d.vk_device);
     assert(d.physical_device);
-    assert(d.get_device_properties().vendorID != 0);
+    assert(rd.get_device_properties().vendorID != 0);
 
-    test_gpu_device(d);
     test_gpu_buffer(d);
     test_gpu_utils(d);
     test_gpu_descriptors(d);

@@ -329,6 +329,7 @@ namespace acul::gpu
 
     private:
         device *_device = nullptr;
+        device_runtime_data *_rd = nullptr;
         buffer _data;
         size_type _size = 0;
 

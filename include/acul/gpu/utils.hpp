@@ -26,8 +26,8 @@ namespace acul
 
             single_time_exec(device &device)
                 : vk_device(device.vk_device),
-                  queue(device.details->queues.graphics),
-                  fence_pool(device.details->fence_pool),
+                  queue(device.rd->queues.graphics),
+                  fence_pool(device.rd->fence_pool),
                   loader(device.loader)
             {
                 queue.pool.primary.request(&command_buffer, 1);
@@ -93,32 +93,24 @@ namespace acul
         /// @param image Image
         /// @param old_layout Current layout
         /// @param new_layout New layout
-        /// @param mipLevels Image mip level
+        /// @param mip_levels Image mip level
         APPLIB_API void transition_image_layout(single_time_exec &exec, vk::Image image, vk::ImageLayout old_layout,
-                                                vk::ImageLayout new_layout, u32 mipLevels);
+                                                vk::ImageLayout new_layout, u32 mip_levels);
 
         inline vk::Result transition_image_layout(device &device, vk::Image image, vk::ImageLayout old_layout,
-                                                  vk::ImageLayout new_layout, u32 mipLevels)
+                                                  vk::ImageLayout new_layout, u32 mip_levels)
         {
             single_time_exec exec{device};
-            transition_image_layout(exec, image, old_layout, new_layout, mipLevels);
+            transition_image_layout(exec, image, old_layout, new_layout, mip_levels);
             return exec.end();
         }
 
-        /// @brief Copy buffer to VK image
+        /// @brief Copy image to vk buffer
         /// @param device Device
         /// @param buffer Source buffer
         /// @param image Destination image
         /// @param dimensions Image dimensions
         /// @param layer_count Layer count
-        /// @param offset Offset
-
-        /// @brief Copy image from VK Buffer
-        /// @param device Device
-        /// @param buffer Source buffer
-        /// @param image Destination image
-        /// @param dimensions Image dimensions
-        /// @param layerCount Layer count
         /// @param offset Offset
         inline void copy_image_to_buffer(device &device, vk::Buffer buffer, vk::Image image, point2D<u32> dimensions,
                                          u32 layerCount, point2D<int> offset = {0, 0})

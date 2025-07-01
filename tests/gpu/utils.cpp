@@ -1,11 +1,10 @@
 #include <acul/gpu/buffer.hpp>
 #include <acul/gpu/utils.hpp>
 
-
 using namespace acul;
 using namespace acul::gpu;
 
-void test_gpu_utils(device& d)
+void test_gpu_utils(device &d)
 {
     const u32 width = 16, height = 16, pixel_size = 4;
     const vk::DeviceSize image_size = width * height * pixel_size;

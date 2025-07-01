@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../list.hpp"
 #include "../log.hpp"
 #include "device.hpp"
 
@@ -10,7 +11,7 @@ namespace acul
         // Сonfiguration settings for a Vulkan graphics pipeline.
         struct pipeline_config_base
         {
-            vector<vk::PipelineShaderStageCreateInfo> shader_stages;
+            acul::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
             vk::PipelineLayout pipeline_layout = nullptr;
         };
 
@@ -31,13 +32,13 @@ namespace acul
             vk::PipelineColorBlendStateCreateInfo color_blend_info;
             vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
             vk::PipelineRasterizationConservativeStateCreateInfoEXT conservative_state_info;
-            vector<vk::DynamicState> dynamic_state_enables;
+            acul::vector<vk::DynamicState> dynamic_state_enables;
             vk::PipelineDynamicStateCreateInfo dynamic_state_info;
-            vector<vk::VertexInputBindingDescription> binding_descriptions;
-            vector<vk::VertexInputAttributeDescription> attribute_descriptions;
+            acul::vector<vk::VertexInputBindingDescription> binding_descriptions;
+            acul::vector<vk::VertexInputAttributeDescription> attribute_descriptions;
             vk::PipelineVertexInputStateCreateInfo vertex_input_info;
             vk::SpecializationInfo specialization_info;
-            vector<vk::SpecializationMapEntry> specialization_map;
+            acul::vector<vk::SpecializationMapEntry> specialization_map;
             vk::RenderPass render_pass = nullptr;
             u32 subpass = 0;
 
@@ -63,17 +64,15 @@ namespace acul
 
             /**
              * @brief Enable multi-sample anti-aliasing (MSAA) in the pipeline configuration.
-             *
-             * This method configures the pipeline to use MSAA based on the given device configuration.
-             *
-             * @param config The device configuration specifying the MSAA settings.
+             * @param msaa MSAA Levelt
+             * @param sample_shading Sample Shading. If set to 0.0 (default) then no apply this option
              * @return Reference to the updated pipeline_config object.
              */
-            pipeline_config &enable_MSAA(const device::config config)
+            pipeline_config &enable_msaa(vk::SampleCountFlagBits msaa, f32 sample_shading = 0.0f)
             {
-                multisample_info.setRasterizationSamples(config.msaa);
-                if (config.msaa > vk::SampleCountFlagBits::e1 && config.sample_shading)
-                    multisample_info.setSampleShadingEnable(true).setMinSampleShading(config.sample_shading);
+                multisample_info.setRasterizationSamples(msaa);
+                if (msaa > vk::SampleCountFlagBits::e1 && sample_shading != 0.0f)
+                    multisample_info.setSampleShadingEnable(true).setMinSampleShading(sample_shading);
                 return *this;
             }
         };

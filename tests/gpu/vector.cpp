@@ -34,7 +34,7 @@ void test_gpu_vector_basic(device &d)
     b1.vma_usage_flags = VMA_MEMORY_USAGE_CPU_ONLY;
     b1.memory_property_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     b1.instance_count = 10;
-    gpu::vector<uint32_t> v2(d, b1, 7);
+    gpu::vector<u32> v2(d, b1, 7);
     assert(v2.size() == 10);
     assert(v2[0] == 7);
 }
@@ -121,7 +121,7 @@ void test_gpu_vector_insert_erase(device &d)
     assert(v[2] == 4);
 }
 
-void test_gpu_vector_assign(device& d)
+void test_gpu_vector_assign(device &d)
 {
     buffer b;
     b.vk_usage_flags = vk::BufferUsageFlagBits::eStorageBuffer;

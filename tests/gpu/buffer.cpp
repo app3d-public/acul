@@ -36,14 +36,14 @@ void check_buffer_ubo(device &d)
     b.memory_property_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     b.priority = 0.1f;
 
-    construct_ubo_buffer(b, sizeof(uint32_t), d);
+    construct_ubo_buffer(b, sizeof(u32), d.rd);
     assert(acul::gpu::allocate_buffer(b, d));
     assert(acul::gpu::map_buffer(b, d));
 
-    uint32_t values[3] = {1, 2, 3};
+    u32 values[3] = {1, 2, 3};
     for (int i = 0; i < 3; ++i)
     {
-        write_to_buffer_index(b, sizeof(uint32_t), &values[i], i);
+        write_to_buffer_index(b, sizeof(u32), &values[i], i);
         flush_buffer_index(b, i, d);
         assert(invalidate_buffer_index(b, i, d) == vk::Result::eSuccess);
     }

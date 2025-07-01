@@ -1,6 +1,4 @@
 #include <acul/gpu/device.hpp>
-#include <acul/hash/hashset.hpp>
-#include <acul/set.hpp>
 
 #define DEVICE_QUEUE_GRAPHICS 0
 #define DEVICE_QUEUE_PRESENT  1
@@ -26,11 +24,11 @@ namespace acul
             vk::DebugUtilsMessengerEXT &debug_messenger;
 #endif
             VmaAllocator &allocator;
-            device::create_ctx *create_ctx;
-            struct device::details &details;
+            device_create_ctx *create_ctx;
+            device_runtime_data &runtime_data;
             vk::DispatchLoaderDynamic &loader;
 
-            device_initializer(struct device &device, device::create_ctx *create_ctx)
+            device_initializer(struct device &device, device_create_ctx *create_ctx)
                 : device(device.vk_device),
                   instance(device.instance),
                   physical_device(device.physical_device),
@@ -40,7 +38,7 @@ namespace acul
 #endif
                   allocator(device.allocator),
                   create_ctx(create_ctx),
-                  details(*device.details),
+                  runtime_data(*create_ctx->runtime_data),
                   loader(internal::libgpu.dispatch_loader)
             {
             }
@@ -63,12 +61,20 @@ namespace acul
             void allocate_command_pools();
         };
 
-        void init_device(const acul::string &app_name, u32 version, device &device, device::create_ctx *create_ctx,
-                         device::config *config)
+        void assign_instance_extensions_default(device_create_ctx *ctx, const set<string> &ext,
+                                                vector<const char *> &dst)
+        {
+#ifndef NDEBUG
+            dst.push_back(vk::EXTDebugUtilsExtensionName);
+#endif
+            if (ctx->present_ctx) ctx->present_ctx->assign_instance_extensions(ext, dst);
+        };
+
+        void init_device(const acul::string &app_name, u32 version, device &device, device_create_ctx *create_ctx)
         {
             if (!create_ctx) throw acul::runtime_error("Failed to get create context");
-            device.details = alloc<struct device::details>();
-            if (config) device.details->config = *config;
+            assert(create_ctx->runtime_data);
+            device.rd = create_ctx->runtime_data;
             device_initializer init{device, create_ctx};
             init.init(app_name, version);
         }
@@ -76,11 +82,6 @@ namespace acul
         void destroy_device(device &device)
         {
             if (!device.vk_device) return;
-
-            device.details->destroy(device.vk_device, device.loader);
-            release(device.details);
-            device.details = nullptr;
-
             if (device.allocator) vmaDestroyAllocator(device.allocator);
             LOG_INFO("Destroying vk:device");
             device.vk_device.destroy(nullptr, device.loader);
@@ -93,38 +94,22 @@ namespace acul
 
         vector<const char *> using_extensitions;
 
-        vector<const char *> get_required_extensions(device::create_ctx *create_ctx, vk::DispatchLoaderDynamic &loader)
-        {
-            vector<const char *> extensions;
-#ifndef NDEBUG
-            extensions.push_back(vk::EXTDebugUtilsExtensionName);
-#endif
-            acul::set<acul::string> available{};
-            for (const auto &extension : vk::enumerateInstanceExtensionProperties(nullptr, loader))
-                available.insert(extension.extensionName.data());
-            create_ctx->init_extensions(available, extensions);
-            for (const auto &required : extensions)
-                if (available.find(required) == available.end())
-                    throw runtime_error("Missing required extension: " + acul::string(required));
-            return extensions;
-        }
-
         void device_initializer::init(const string &app_name, u32 version)
         {
             create_instance(app_name, version);
 #ifndef NDEBUG
             setup_debug_messenger();
 #endif
-            if (create_ctx->present_enabled)
+            if (create_ctx->present_ctx)
             {
-                if (create_ctx->create_surface(instance, surface, loader) != vk::Result::eSuccess)
+                if (create_ctx->present_ctx->create_surface(instance, surface, loader) != vk::Result::eSuccess)
                     throw runtime_error("Failed to create window surface");
             }
             pick_physical_device();
             create_logical_device();
             create_allocator();
             allocate_command_pools();
-            auto &fence_pool = details.fence_pool;
+            auto &fence_pool = runtime_data.fence_pool;
             fence_pool.allocator.device = &device;
             fence_pool.allocator.loader = &loader;
             fence_pool.allocate(create_ctx->fence_pool_size);
@@ -143,9 +128,9 @@ namespace acul
         }
 
         bool check_device_extension_support(const acul::hashset<acul::string> &all_extensions,
-                                            device::create_ctx *create_ctx)
+                                            device_create_ctx *create_ctx)
         {
-            for (const auto &extension : create_ctx->extensions)
+            for (const auto &extension : create_ctx->device_extensions)
             {
                 auto it = all_extensions.find(extension);
                 if (it == all_extensions.end()) return false;
@@ -236,72 +221,60 @@ namespace acul
         void device_initializer::pick_physical_device()
         {
             LOG_INFO("Searching physical device");
+            vector<const char *> extensions_optional;
+            hashset<string> extensions;
+            auto &queues = runtime_data.queues;
             auto devices = instance.enumeratePhysicalDevices(loader);
-            vector<const char *> opt_extensions;
-            acul::hashset<acul::string> extensions;
-            i8 device_id = details.config.device;
-            auto &queues = details.queues;
-
-            if (device_id >= 0 && device_id < (int)devices.size())
+            std::optional<u32> indices[DEVICE_QUEUE_COUNT];
+            if (create_ctx->ph_selector)
             {
-                std::optional<u32> indices[DEVICE_QUEUE_COUNT];
-                if (validate_physical_device(devices[device_id], extensions, indices))
+                auto *device = create_ctx->ph_selector->select(devices);
+                if (device && validate_physical_device(*device, extensions, indices))
                 {
-                    physical_device = devices[device_id];
-                    queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
-                    queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
-                    queues.compute.family_id = indices[DEVICE_QUEUE_COMPUTE];
-                    opt_extensions = get_supported_opt_ext(physical_device, extensions, create_ctx->extensions_opt);
-                    details.properties2.pNext = &details.depth_resolve_properties;
-                    details.properties2.properties = physical_device.getProperties(loader);
+                    physical_device = *device;
+                    extensions_optional =
+                        get_supported_opt_ext(physical_device, extensions, create_ctx->device_extensions_optional);
+                    runtime_data.properties2.pNext = create_ctx->device_physical_next;
+                    runtime_data.properties2.properties = physical_device.getProperties(loader);
                 }
                 else
-                    LOG_WARN("User-selected device is not suitable. Searching for another one.");
+                    LOG_WARN("Failed to validate device by provided info. Searching for another one.");
             }
-            else if (device_id != -1)
-                LOG_WARN("Invalid device index provided. Searching for a suitable device.");
 
             if (!physical_device)
             {
                 int max_rating = 0;
                 for (const auto &device : devices)
                 {
-                    std::optional<u32> indices[DEVICE_QUEUE_COUNT];
                     if (validate_physical_device(device, extensions, indices))
                     {
-                        details.properties2.pNext = &details.depth_resolve_properties;
-                        details.properties2 = device.getProperties2(loader);
-                        auto opt_tmp = get_supported_opt_ext(device, extensions, create_ctx->extensions_opt);
-                        int rating = get_device_rating(opt_tmp, details.properties2.properties);
+                        runtime_data.properties2.pNext = create_ctx->device_physical_next;
+                        runtime_data.properties2 = device.getProperties2(loader);
+                        auto opt_tmp =
+                            get_supported_opt_ext(device, extensions, create_ctx->device_extensions_optional);
+                        int rating = get_device_rating(opt_tmp, runtime_data.properties2.properties);
                         if (rating > max_rating)
                         {
                             max_rating = rating;
-                            opt_extensions = opt_tmp;
+                            extensions_optional = opt_tmp;
                             physical_device = device;
-                            queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
-                            queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
-                            queues.compute.family_id = indices[DEVICE_QUEUE_COMPUTE];
                         }
                     }
                 }
 
                 if (!physical_device) throw runtime_error("Failed to find a suitable GPU");
             }
-            LOG_INFO("Using: %s", static_cast<char *>(details.properties2.properties.deviceName));
-            for (auto *extension : opt_extensions) details._extensions.emplace(extension);
+            queues.graphics.family_id = indices[DEVICE_QUEUE_GRAPHICS];
+            queues.present.family_id = indices[DEVICE_QUEUE_PRESENT];
+            queues.compute.family_id = indices[DEVICE_QUEUE_COMPUTE];
+            LOG_INFO("Using: %s", static_cast<char *>(runtime_data.properties2.properties.deviceName));
+            for (auto *extension : extensions_optional) runtime_data._extensions.emplace(extension);
 
-            vk::SampleCountFlags msaa = details.properties2.properties.limits.framebufferColorSampleCounts;
-            if (details.config.msaa > msaa)
-            {
-                LOG_WARN("MSAAx%d is not supported in current device. Using MSAAx%d",
-                         static_cast<VkSampleCountFlags>(details.config.msaa), static_cast<VkSampleCountFlags>(msaa));
-                details.config.msaa = get_max_msaa(details.properties2);
-            }
-            details.memory_properties = physical_device.getMemoryProperties(loader);
+            runtime_data.memory_properties = physical_device.getMemoryProperties(loader);
 
-            using_extensitions.insert(using_extensitions.end(), create_ctx->extensions.begin(),
-                                      create_ctx->extensions.end());
-            using_extensitions.insert(using_extensitions.end(), opt_extensions.begin(), opt_extensions.end());
+            using_extensitions.insert(using_extensitions.end(), create_ctx->device_extensions.begin(),
+                                      create_ctx->device_extensions.end());
+            using_extensitions.insert(using_extensitions.end(), extensions_optional.begin(), extensions_optional.end());
             assert(queues.graphics.family_id.has_value() && queues.compute.family_id.has_value());
         }
 
@@ -320,24 +293,24 @@ namespace acul
             {
                 if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) dst[DEVICE_QUEUE_GRAPHICS] = i;
                 if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) dst[DEVICE_QUEUE_COMPUTE] = i;
-                if (create_ctx->present_enabled)
+                if (create_ctx->present_ctx)
                     if (device.getSurfaceSupportKHR(i, surface, loader)) dst[DEVICE_QUEUE_PRESENT] = i;
-                if (is_family_indices_complete(dst, create_ctx->present_enabled)) break;
+                if (is_family_indices_complete(dst, create_ctx->present_ctx != nullptr)) break;
                 i++;
             }
         }
 
         bool device_initializer::is_device_suitable(vk::PhysicalDevice device,
                                                     const acul::hashset<acul::string> &extensions,
-                                                    std::optional<u32> *familyIndices)
+                                                    std::optional<u32> *family_indices)
         {
             bool ret = check_device_extension_support(extensions, create_ctx) &&
-                       is_family_indices_complete(familyIndices, create_ctx->present_enabled);
-            if (!create_ctx->present_enabled) return ret;
+                       is_family_indices_complete(family_indices, create_ctx->present_ctx != nullptr);
+            if (!create_ctx->present_ctx) return ret;
             bool swapchain_adequate = false;
             swapchain_support_details swapchain_support = query_swapchain_support(device, surface, loader);
             swapchain_adequate = !swapchain_support.formats.empty() && !swapchain_support.present_modes.empty();
-            return ret && familyIndices[DEVICE_QUEUE_PRESENT].has_value() && swapchain_adequate;
+            return ret && family_indices[DEVICE_QUEUE_PRESENT].has_value() && swapchain_adequate;
         }
 
         bool device_initializer::validate_physical_device(vk::PhysicalDevice device, acul::hashset<acul::string> &ext,
@@ -367,25 +340,14 @@ namespace acul
         {
             LOG_INFO("Creating logical device");
             vector<vk::DeviceQueueCreateInfo> queue_create_infos;
-            auto &queues = details.queues;
+            auto &queues = runtime_data.queues;
             assert(queues.graphics.family_id.has_value() && queues.compute.family_id.has_value());
-            acul::set<u32> uniqueQueueFamilies = {queues.graphics.family_id.value(), queues.compute.family_id.value()};
-            if (create_ctx->present_enabled) uniqueQueueFamilies.insert(queues.present.family_id.value());
+            acul::set<u32> unique_queue_families = {queues.graphics.family_id.value(),
+                                                    queues.compute.family_id.value()};
+            if (create_ctx->present_ctx) unique_queue_families.insert(queues.present.family_id.value());
             f32 queue_priority = 1.0f;
-            for (u32 queue_family : uniqueQueueFamilies)
+            for (u32 queue_family : unique_queue_families)
                 queue_create_infos.emplace_back(vk::DeviceQueueCreateFlags(), queue_family, 1, &queue_priority);
-
-            vk::PhysicalDeviceFeatures device_features;
-            device_features.setSamplerAnisotropy(true)
-                .setSampleRateShading(true)
-                .setFillModeNonSolid(true)
-                .setGeometryShader(true)
-                .setShaderTessellationAndGeometryPointSize(true)
-                .setWideLines(true);
-
-            vk::PhysicalDeviceShaderDrawParametersFeatures draw_features;
-            draw_features.setShaderDrawParameters(true);
-
             for (const auto &extension : using_extensitions) LOG_INFO("Enabling Vulkan extension: %s", extension);
 
             vk::DeviceCreateInfo create_info;
@@ -393,13 +355,13 @@ namespace acul
                 .setPQueueCreateInfos(queue_create_infos.data())
                 .setEnabledExtensionCount(static_cast<u32>(using_extensitions.size()))
                 .setPpEnabledExtensionNames(using_extensitions.data())
-                .setPEnabledFeatures(&device_features)
-                .setPNext(&draw_features);
+                .setPEnabledFeatures(&create_ctx->device_features)
+                .setPNext(create_ctx->device_logical_next);
             device = physical_device.createDevice(create_info, nullptr, loader);
 
             queues.graphics.vk_queue = device.getQueue(queues.graphics.family_id.value(), 0, loader);
             queues.compute.vk_queue = device.getQueue(queues.compute.family_id.value(), 0, loader);
-            if (create_ctx->present_enabled)
+            if (create_ctx->present_ctx)
                 queues.present.vk_queue = device.getQueue(queues.present.family_id.value(), 0, loader);
         }
 
@@ -485,7 +447,11 @@ namespace acul
 
             vk::InstanceCreateInfo create_info({}, &app_info);
 
-            auto extensions = get_required_extensions(create_ctx, loader);
+            vector<const char *> extensions;
+            set<string> available{};
+            for (const auto &extension : vk::enumerateInstanceExtensionProperties(nullptr, loader))
+                available.insert(extension.extensionName.data());
+            create_ctx->assign_instance_extensions(create_ctx, available, extensions);
             create_info.setEnabledExtensionCount(static_cast<u32>(extensions.size()))
                 .setPpEnabledExtensionNames(extensions.data());
 
@@ -513,13 +479,13 @@ namespace acul
 
             dst.secondary.allocator.device = &device;
             dst.secondary.allocator.loader = &loader;
-            dst.secondary.allocator.command_pool = &details.queues.graphics.pool.vk_pool;
+            dst.secondary.allocator.command_pool = &runtime_data.queues.graphics.pool.vk_pool;
             dst.secondary.allocate(secondary);
         }
 
         void device_initializer::allocate_command_pools()
         {
-            auto &queues = details.queues;
+            auto &queues = runtime_data.queues;
             vk::CommandPoolCreateInfo graphics_pool_info;
             graphics_pool_info
                 .setFlags(vk::CommandPoolCreateFlagBits::eTransient |

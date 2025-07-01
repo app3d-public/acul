@@ -1,6 +1,5 @@
 #pragma once
 #include "../hash/hashset.hpp"
-#include "../meta.hpp"
 #include "../set.hpp"
 #if defined(__clang__)
     #pragma clang diagnostic push
@@ -48,17 +47,15 @@ namespace acul
 
         struct device
         {
-            struct details;
-
             vk::Instance instance;
             vk::Device vk_device;
             vk::PhysicalDevice physical_device;
             VmaAllocator allocator;
             vk::SurfaceKHR surface;
-            details *details;
             vk::DispatchLoaderDynamic &loader;
+            struct device_runtime_data *rd;
 
-            device() : details(nullptr), loader(internal::libgpu.dispatch_loader) {}
+            device() : loader(internal::libgpu.dispatch_loader), rd(nullptr) {}
 
             void destroy_window_surface(vk::DispatchLoaderDynamic &dispatch_loader)
             {
@@ -96,80 +93,21 @@ namespace acul
                 throw acul::runtime_error("Failed to find supported format");
             }
 
-            inline vk::PhysicalDeviceProperties &get_device_properties() const;
             inline swapchain_support_details query_swapchain_support();
-
-            struct config;
-            struct queue;
-            class create_ctx;
-
 #ifndef NDEBUG
             vk::DebugUtilsMessengerEXT debug_messenger;
 #endif
         };
 
-        class device::create_ctx
+        class device_present_ctx
         {
         public:
-            vector<const char *> validation_layers;
-            vector<const char *> extensions;
-            vector<const char *> extensions_opt;
-            bool present_enabled;
-            size_t fence_pool_size;
-
-            create_ctx() : present_enabled(false), fence_pool_size(0) {}
-
-            virtual ~create_ctx() = default;
-
-            virtual void init_extensions(const acul::set<acul::string> &ext, acul::vector<const char *> &dst) {}
+            virtual ~device_present_ctx() = default;
 
             virtual vk::Result create_surface(vk::Instance &instance, vk::SurfaceKHR &surface,
-                                              vk::DispatchLoaderDynamic &loader)
-            {
-                return vk::Result::eSuccess;
-            };
+                                              vk::DispatchLoaderDynamic &loader) = 0;
 
-            create_ctx &set_validation_layers(const vector<const char *> &validation_layers)
-            {
-                this->validation_layers = validation_layers;
-                return *this;
-            }
-
-            create_ctx &set_extensions(const vector<const char *> &extensions)
-            {
-                this->extensions = extensions;
-                return *this;
-            }
-
-            create_ctx &set_opt_extensions(const vector<const char *> &extensions)
-            {
-                this->extensions_opt = extensions;
-                return *this;
-            }
-
-            create_ctx &set_fence_pool_size(size_t fence_pool_size)
-            {
-                this->fence_pool_size = fence_pool_size;
-                return *this;
-            }
-
-        protected:
-            create_ctx(bool present_enabled) : present_enabled(present_enabled), fence_pool_size(0) {}
-        };
-
-        struct fence_pool_alloc
-        {
-            vk::Device *device = nullptr;
-            vk::DispatchLoaderDynamic *loader = nullptr;
-
-            void alloc(vk::Fence *pFences, size_t size)
-            {
-                vk::FenceCreateFlags flags = vk::FenceCreateFlagBits::eSignaled;
-                vk::FenceCreateInfo createInfo(flags);
-                for (size_t i = 0; i < size; ++i) pFences[i] = device->createFence(createInfo, nullptr, *loader);
-            }
-
-            void release(vk::Fence &fence) { device->destroyFence(fence, nullptr, *loader); }
+            virtual void assign_instance_extensions(const set<string> &ext, acul::vector<const char *> &dst) = 0;
         };
 
         template <vk::CommandBufferLevel Level>
@@ -206,7 +144,7 @@ namespace acul
             command_pool pool;
         };
 
-        struct device::queue
+        struct device_queue_group
         {
             queue_family_info graphics;
             queue_family_info compute;
@@ -220,48 +158,26 @@ namespace acul
             }
         };
 
-        inline swapchain_support_details query_swapchain_support(vk::PhysicalDevice device, vk::SurfaceKHR surface,
-                                                                 vk::DispatchLoaderDynamic &loader)
+        struct fence_pool_alloc
         {
-            swapchain_support_details details;
-            details.capabilities = device.getSurfaceCapabilitiesKHR(surface, loader);
-            details.formats = device.getSurfaceFormatsKHR(surface, loader);
-            details.present_modes = device.getSurfacePresentModesKHR(surface, loader);
-            return details;
-        }
+            vk::Device *device = nullptr;
+            vk::DispatchLoaderDynamic *loader = nullptr;
 
-        inline swapchain_support_details device::query_swapchain_support()
-        {
-            return gpu::query_swapchain_support(physical_device, surface, loader);
-        }
-
-        namespace sign_block
-        {
-            enum : u32
+            void alloc(vk::Fence *pFences, size_t size)
             {
-                Device = 0x2AF818FE
-            };
-        }
+                vk::FenceCreateFlags flags = vk::FenceCreateFlagBits::eSignaled;
+                vk::FenceCreateInfo createInfo(flags);
+                for (size_t i = 0; i < size; ++i) pFences[i] = device->createFence(createInfo, nullptr, *loader);
+            }
 
-        // Configuration settings for the Device instance.
-        struct device::config : acul::meta::block
-        {
-            vk::SampleCountFlagBits msaa = vk::SampleCountFlagBits::e1; // The number of samples to use for MSAA.
-            i8 device = -1;                                             // The index of the GPU device to use.
-            // The minimum fraction of sample shading.
-            // A value of 1.0 ensures per-sample shading.
-            f32 sample_shading = 0.0f;
-
-            virtual u32 signature() const override { return sign_block::Device; }
+            void release(vk::Fence &fence) { device->destroyFence(fence, nullptr, *loader); }
         };
 
-        struct device::details
+        struct device_runtime_data
         {
-            device::config config;
-            device::queue queues;
+            device_queue_group queues;
             vk::PhysicalDeviceProperties2 properties2;
             vk::PhysicalDeviceMemoryProperties memory_properties;
-            vk::PhysicalDeviceDepthStencilResolveProperties depth_resolve_properties;
             resource_pool<vk::Fence, fence_pool_alloc> fence_pool;
 
             void destroy(vk::Device &device, vk::DispatchLoaderDynamic &loader)
@@ -281,6 +197,8 @@ namespace acul
                 return original_size;
             }
 
+            vk::PhysicalDeviceProperties &get_device_properties() { return properties2.properties; }
+
             bool is_opt_extension_supported(const char *extension) { return _extensions.contains(extension); }
 
         private:
@@ -289,13 +207,128 @@ namespace acul
             friend struct device_initializer;
         };
 
-        inline vk::PhysicalDeviceProperties &device::get_device_properties() const
+        class physical_device_selector
         {
-            return details->properties2.properties;
+        public:
+            virtual ~physical_device_selector() = default;
+
+            virtual const vk::PhysicalDevice *select(const std::vector<vk::PhysicalDevice> &devices) = 0;
+        };
+
+        class device_create_ctx
+        {
+        public:
+            vector<const char *> validation_layers;
+            vector<const char *> device_extensions;
+            vector<const char *> device_extensions_optional;
+            size_t fence_pool_size;
+            vk::PhysicalDeviceFeatures device_features;
+            void *device_logical_next;
+            void *device_physical_next;
+            device_runtime_data *runtime_data;
+            physical_device_selector *ph_selector;
+
+            // Callback types
+            using PFN_assign_instance_extensions = void (*)(device_create_ctx *, const set<string> &,
+                                                            vector<const char *> &);
+            PFN_assign_instance_extensions assign_instance_extensions;
+
+            device_present_ctx *present_ctx;
+
+            inline device_create_ctx();
+
+            device_create_ctx &set_validation_layers(const vector<const char *> &validation_layers)
+            {
+                this->validation_layers = validation_layers;
+                return *this;
+            }
+
+            device_create_ctx &set_device_extensions(const vector<const char *> &extensions)
+            {
+                device_extensions = extensions;
+                return *this;
+            }
+
+            device_create_ctx &set_device_extensions_optional(const vector<const char *> &extensions)
+            {
+                device_extensions_optional = extensions;
+                return *this;
+            }
+
+            device_create_ctx &set_fence_pool_size(size_t fence_pool_size)
+            {
+                this->fence_pool_size = fence_pool_size;
+                return *this;
+            }
+
+            device_create_ctx &set_present_ctx(device_present_ctx *ctx)
+            {
+                present_ctx = ctx;
+                return *this;
+            }
+
+            device_create_ctx &set_assign_instance_extensions(PFN_assign_instance_extensions callback)
+            {
+                assign_instance_extensions = callback;
+                return *this;
+            }
+
+            device_create_ctx &set_ph_selector(physical_device_selector *selector)
+            {
+                ph_selector = selector;
+                return *this;
+            }
+
+            device_create_ctx &set_device_logical_next(void *pNext)
+            {
+                device_logical_next = pNext;
+                return *this;
+            }
+
+            device_create_ctx &set_device_physical_next(void *pNext)
+            {
+                device_physical_next = pNext;
+                return *this;
+            }
+
+            device_create_ctx &set_runtime_data(device_runtime_data *data)
+            {
+                this->runtime_data = data;
+                return *this;
+            }
+        };
+
+        APPLIB_API void assign_instance_extensions_default(device_create_ctx *ctx, const set<string> &ext,
+                                                           vector<const char *> &dst);
+
+        inline device_create_ctx::device_create_ctx()
+            : fence_pool_size(0),
+              device_logical_next(nullptr),
+              device_physical_next(nullptr),
+              runtime_data(nullptr),
+              ph_selector(nullptr),
+              assign_instance_extensions(assign_instance_extensions_default),
+              present_ctx(nullptr)
+        {
+        }
+
+        inline swapchain_support_details query_swapchain_support(vk::PhysicalDevice device, vk::SurfaceKHR surface,
+                                                                 vk::DispatchLoaderDynamic &loader)
+        {
+            swapchain_support_details details;
+            details.capabilities = device.getSurfaceCapabilitiesKHR(surface, loader);
+            details.formats = device.getSurfaceFormatsKHR(surface, loader);
+            details.present_modes = device.getSurfacePresentModesKHR(surface, loader);
+            return details;
+        }
+
+        inline swapchain_support_details device::query_swapchain_support()
+        {
+            return gpu::query_swapchain_support(physical_device, surface, loader);
         }
 
         APPLIB_API void init_device(const acul::string &app_name, u32 version, device &device,
-                                    device::create_ctx *create_ctx, device::config *config = nullptr);
+                                    device_create_ctx *create_ctx);
 
         APPLIB_API void destroy_device(device &device);
 
@@ -303,23 +336,5 @@ namespace acul
         /// @param properties Physical device properties
         /// @return Maximum MSAA sample count
         APPLIB_API vk::SampleCountFlagBits get_max_msaa(const vk::PhysicalDeviceProperties2 &properties);
-
-        namespace streams
-        {
-            inline void write_device_config(acul::bin_stream &stream, acul::meta::block *block)
-            {
-                device::config *conf = static_cast<device::config *>(block);
-                stream.write(conf->msaa).write(conf->device).write(conf->sample_shading);
-            }
-
-            inline acul::meta::block *read_device_config(acul::bin_stream &stream)
-            {
-                device::config *conf = acul::alloc<device::config>();
-                stream.read(conf->msaa).read(conf->device).read(conf->sample_shading);
-                return conf;
-            }
-
-            constexpr acul::meta::stream device = {read_device_config, write_device_config};
-        } // namespace streams
     } // namespace gpu
 } // namespace acul

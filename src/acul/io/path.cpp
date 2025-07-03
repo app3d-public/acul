@@ -1,4 +1,9 @@
 #include <acul/io/path.hpp>
+#ifdef _WIN32
+    #include <acul/string/utils.hpp>
+#else
+    #include <dlfcn.h>
+#endif
 
 #define IS_SEPARATOR(c) (c == PATH_CHAR_SEP_WIN32 || c == PATH_CHAR_SEP_UNIX)
 
@@ -167,6 +172,26 @@ namespace acul
             }
 
             return _path;
+        }
+
+        path get_module_directory() noexcept
+        {
+#ifdef _WIN32
+            HMODULE hModule = nullptr;
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               reinterpret_cast<LPCWSTR>(&get_module_directory), &hModule);
+
+            wchar_t path[MAX_PATH];
+            GetModuleFileNameW(hModule, path, MAX_PATH);
+
+            u16string full_path((c16 *)path);
+            io::path p = utf16_to_utf8(full_path);
+#else
+            Dl_info info;
+            dladdr(reinterpret_cast<void *>(&get_module_directory), &info);
+            io::path p(info.dli_fname);
+#endif
+            return p.parent_path();
         }
     } // namespace io
 } // namespace acul

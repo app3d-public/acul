@@ -173,5 +173,6 @@ namespace acul
             return (const char *)buffer;
         }
 
+        APPLIB_API path get_module_directory() noexcept;
     } // namespace io
 } // namespace acul

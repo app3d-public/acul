@@ -5,10 +5,12 @@
 #include <acul/api.hpp>
 #include <array>
 #include <cstdint>
+#include <cstdio>
 #include <stddef.h>
 
 constexpr std::array<uint32_t, 256> generate_crc32_table()
 {
+    constexpr uint32_t polynomial = 0x82F63B78;
     std::array<uint32_t, 256> table{};
     for (uint32_t i = 0; i < 256; ++i)
     {
@@ -16,7 +18,7 @@ constexpr std::array<uint32_t, 256> generate_crc32_table()
         for (uint32_t j = 0; j < 8; ++j)
         {
             if (crc & 1)
-                crc = (crc >> 1) ^ 0xEDB88320;
+                crc = (crc >> 1) ^ polynomial;
             else
                 crc >>= 1;
         }
@@ -29,16 +31,18 @@ constexpr auto crc32_table = generate_crc32_table();
 
 namespace acul
 {
-
-    APPLIB_API uint32_t crc32(uint32_t crc0, const char *buf, size_t len)
+    namespace nosimd
     {
-        uint32_t crc = ~crc0;
-
-        for (size_t i = 0; i < len; ++i)
+        APPLIB_API uint32_t crc32(uint32_t crc0, const char *buf, size_t len)
         {
-            uint8_t byte = static_cast<uint8_t>(buf[i]);
-            crc = (crc >> 8) ^ crc32_table[(crc ^ byte) & 0xFF];
+            uint32_t crc = ~crc0;
+
+            for (size_t i = 0; i < len; ++i)
+            {
+                uint8_t byte = static_cast<uint8_t>(buf[i]);
+                crc = (crc >> 8) ^ crc32_table[(crc ^ byte) & 0xFF];
+            }
+            return ~crc;
         }
-        return ~crc;
-    }
+    } // namespace nosimd
 } // namespace acul

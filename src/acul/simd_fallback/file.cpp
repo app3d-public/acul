@@ -3,9 +3,9 @@
 
 namespace acul
 {
-    namespace io
+    namespace nosimd
     {
-        namespace file
+        namespace io
         {
             APPLIB_API void fill_line_buffer(const char *data, size_t size, string_pool<char> &dst)
             {
@@ -36,6 +36,6 @@ namespace acul
                 }
             }
 
-        } // namespace file
-    } // namespace io
+        } // namespace io
+    } // namespace nosimd
 } // namespace acul

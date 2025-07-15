@@ -82,7 +82,7 @@ namespace acul
         }
 
         constexpr operator mask_t() const noexcept { return _mask; }
-    public:
+    private:
         mask_t _mask;
     };
 

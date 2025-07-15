@@ -9,6 +9,15 @@ namespace acul
     {
         T x;
         T y;
+
+        point2D() = default;
+
+        point2D(T x, T y) : x(x), y(y) {}
+
+        template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+        point2D(const point2D<U> &other) : x(static_cast<T>(other.x)), y(static_cast<T>(other.y))
+        {
+        }
     };
 
     template <typename T>

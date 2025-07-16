@@ -50,7 +50,7 @@ namespace acul
 
         void shader_module::load(device &device)
         {
-            if (io::file::read_binary(path, code) != io::file::op_state::Success)
+            if (io::file::read_binary(path, code) != io::file::op_state::success)
                 throw runtime_error("Failed to read shader: %s" + io::get_filename(path));
             vk::ShaderModuleCreateInfo create_info;
             create_info.setCodeSize(code.size()).setPCode(reinterpret_cast<const u32 *>(code.data()));

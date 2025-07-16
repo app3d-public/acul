@@ -124,7 +124,7 @@ namespace acul
     {
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
-        if (io::file::read_virtual(maps_file, content) != io::file::op_state::Success) return false;
+        if (io::file::read_virtual(maps_file, content) != io::file::op_state::success) return false;
         acul::string_pool<char> lines(content.size());
         io::file::fill_line_buffer(content.data(), content.size(), lines);
 
@@ -256,7 +256,7 @@ namespace acul
     {
         string path = format("/proc/%d/comm", pid);
         vector<char> buf;
-        if (io::file::read_virtual(path, buf) != io::file::op_state::Success) return "unknown";
+        if (io::file::read_virtual(path, buf) != io::file::op_state::success) return "unknown";
         return trim_end(buf.data());
     }
 
@@ -264,7 +264,7 @@ namespace acul
     {
         string path = format("/proc/%d/cmdline", pid);
         vector<char> buf;
-        if (io::file::read_virtual(path, buf) != io::file::Success) return {};
+        if (io::file::read_virtual(path, buf) != io::file::op_state::success) return {};
         std::replace(buf.begin(), buf.end(), '\0', ' ');
         return buf.data();
     }

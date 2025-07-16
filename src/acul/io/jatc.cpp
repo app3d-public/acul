@@ -110,20 +110,20 @@ namespace acul
                     if (entry.size == 0)
                     {
                         LOG_ERROR("Entry size is zero.");
-                        return op_state::Error;
+                        return op_state::error;
                     }
 
                     if (!entrypoint || !group)
                     {
                         LOG_ERROR("Invalid entrypoint or group pointer.");
-                        return op_state::Error;
+                        return op_state::error;
                     }
 
                     vector<char> buffer(entry.size);
                     if (!buffer.data())
                     {
                         LOG_ERROR("Failed to allocate buffer of size: %" PRIu64, entry.size);
-                        return op_state::Error;
+                        return op_state::error;
                     }
 
                     {
@@ -134,14 +134,14 @@ namespace acul
                         if (!fd)
                         {
                             LOG_ERROR("Failed to open file stream.");
-                            return op_state::Error;
+                            return op_state::error;
                         }
 
                         fd->seekg(entry.offset);
                         if (!fd->good())
                         {
                             LOG_ERROR("Failed to seek file to offset: %" PRIu64, entry.offset);
-                            return op_state::Error;
+                            return op_state::error;
                         }
 
                         fd->read(buffer.data(), entry.size);
@@ -149,7 +149,7 @@ namespace acul
                         {
                             LOG_ERROR("Failed to read data at offset: %" PRIu64, entry.offset);
                             fd->clear();
-                            return op_state::Error;
+                            return op_state::error;
                         }
                     }
 
@@ -162,7 +162,7 @@ namespace acul
                         if (!io::file::decompress(dst.data() + dst.pos(), dst.size() - dst.pos(), decompressed))
                         {
                             LOG_ERROR("Failed to decompress data at offset: %" PRIu64, entry.offset);
-                            return op_state::Error;
+                            return op_state::error;
                         }
                         dst = bin_stream(std::move(decompressed));
                     }
@@ -171,10 +171,10 @@ namespace acul
                     if (acul::crc32(0, dst.data(), dst.size()) != entry.checksum)
                     {
                         LOG_ERROR("Invalid entrypoint index checksum.");
-                        return op_state::ChecksumMismatch;
+                        return op_state::checksum_mismatch;
                     }
 
-                    return op_state::Success;
+                    return op_state::success;
                 }
 
                 void cache::filter_index_entries(entrypoint *entrypoint, entrygroup *group,
@@ -237,7 +237,7 @@ namespace acul
                         {
                             request.entrypoint->pos += data_offset + index_entry.size;
                             index_entry.offset = data_offset;
-                            response.state = io::file::op_state::Success;
+                            response.state = io::file::op_state::success;
                             response.entry(index_entry);
                         }
                     }
@@ -288,7 +288,7 @@ namespace acul
                     if (err)
                     {
                         LOG_ERROR("%s", err);
-                        response.state = op_state::Error;
+                        response.state = op_state::error;
                     }
                     --request.entrypoint->op_count;
                     response.ready_promise.set_value();

@@ -88,7 +88,7 @@ namespace acul
 
                     index_entry &entry()
                     {
-                        if (state == op_state::Undefined) ready_promise.get_future().wait();
+                        if (state == op_state::unknown) ready_promise.get_future().wait();
                         return _entry;
                     }
 
@@ -131,7 +131,7 @@ namespace acul
 
                     void add_request(const request &request, response *response)
                     {
-                        response->state = io::file::op_state::Undefined;
+                        response->state = io::file::op_state::unknown;
                         response->group = request.group;
                         response->entrypoint = request.entrypoint;
                         ++request.entrypoint->op_count;

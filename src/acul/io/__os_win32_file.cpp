@@ -43,7 +43,7 @@ namespace acul
             {
                 HANDLE hSrc = CreateFileA(src, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
                                           FILE_ATTRIBUTE_NORMAL, NULL);
-                if (hSrc == INVALID_HANDLE_VALUE) return op_state::Error;
+                if (hSrc == INVALID_HANDLE_VALUE) return op_state::error;
 
                 DWORD creation = overwrite ? CREATE_ALWAYS : CREATE_NEW;
                 HANDLE hDst = CreateFileA(dst, GENERIC_WRITE, 0, NULL, creation, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -53,9 +53,9 @@ namespace acul
                     DWORD err = GetLastError();
                     CloseHandle(hSrc);
 
-                    if (!overwrite && err == ERROR_FILE_EXISTS) return op_state::SkippedExisting;
+                    if (!overwrite && err == ERROR_FILE_EXISTS) return op_state::eSkippedExisting;
 
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 char buffer[4096];
@@ -74,31 +74,31 @@ namespace acul
                 CloseHandle(hSrc);
                 CloseHandle(hDst);
 
-                return copy_success ? op_state::Success : op_state::Error;
+                return copy_success ? op_state::success : op_state::error;
             }
 
             op_state create_directory(const char *path)
             {
                 if (CreateDirectoryA(path, NULL))
-                    return op_state::Success;
+                    return op_state::success;
                 else
                 {
                     DWORD error = GetLastError();
-                    if (error == ERROR_ALREADY_EXISTS) return op_state::SkippedExisting;
+                    if (error == ERROR_ALREADY_EXISTS) return op_state::eSkippedExisting;
                     LOG_ERROR("Failed to create directory %s. Error code: %lu", path, error);
-                    return op_state::Error;
+                    return op_state::error;
                 }
             }
 
             op_state remove_file(const char *path)
             {
                 if (DeleteFileA(path))
-                    return op_state::Success;
+                    return op_state::success;
                 else
                 {
                     DWORD error = GetLastError();
                     LOG_ERROR("Failed to remove file %s. Error code: %lu", path, error);
-                    return op_state::Error;
+                    return op_state::error;
                 }
             }
 
@@ -111,7 +111,7 @@ namespace acul
                 if (handle == INVALID_HANDLE_VALUE)
                 {
                     LOG_ERROR("Failed to open directory: %s. Error code: %lu", base_path.c_str(), GetLastError());
-                    return op_state::Error;
+                    return op_state::error;
                 }
                 do {
                     const wchar_t *name = find_data.cFileName;
@@ -126,7 +126,7 @@ namespace acul
 
                 } while (FindNextFileW(handle, &find_data) != 0);
                 FindClose(handle);
-                return op_state::Success;
+                return op_state::success;
             }
 
             op_state read_by_block(const string &filename, const std::function<void(char *, size_t)> &callback)
@@ -134,20 +134,20 @@ namespace acul
                 u16string w_filename = utf8_to_utf16(filename);
                 HANDLE file_handle = CreateFileW((LPCWSTR)w_filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
                                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                if (file_handle == INVALID_HANDLE_VALUE) return op_state::Error;
+                if (file_handle == INVALID_HANDLE_VALUE) return op_state::error;
 
                 LARGE_INTEGER file_size;
                 if (!GetFileSizeEx(file_handle, &file_size))
                 {
                     CloseHandle(file_handle);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 HANDLE mapping_handle = CreateFileMapping(file_handle, NULL, PAGE_READONLY, 0, 0, NULL);
                 if (mapping_handle == NULL)
                 {
                     CloseHandle(file_handle);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 char *file_data =
@@ -156,18 +156,18 @@ namespace acul
                 {
                     CloseHandle(mapping_handle);
                     CloseHandle(file_handle);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 // Parse the file in parallel
-                op_state res = op_state::Success;
+                op_state res = op_state::success;
                 try
                 {
                     callback(file_data, file_size.QuadPart);
                 }
                 catch (...)
                 {
-                    res = op_state::Error;
+                    res = op_state::error;
                 }
 
                 // Unmap the file from memory

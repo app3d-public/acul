@@ -15,12 +15,12 @@ namespace acul
     {
         enum class level
         {
-            Fatal,
-            Error,
-            Warn,
-            Info,
-            Debug,
-            Trace
+            fatal,
+            error,
+            warn,
+            info,
+            debug,
+            trace
         };
 
         class token_handler_base
@@ -171,7 +171,7 @@ namespace acul
             logger_base *default_logger;
             enum level level;
 
-            log_service() : default_logger(nullptr), level(level::Error) { g_log_service = this; }
+            log_service() : default_logger(nullptr), level(level::error) { g_log_service = this; }
             ~log_service();
 
             /**
@@ -241,17 +241,17 @@ namespace acul
 
 #if defined(ACUL_LOG_ENABLE) && !defined(PROCESS_UNITTEST)
     #define LOG_INFO(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Info, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
     #define LOG_DEBUG(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Debug, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
     #define LOG_TRACE(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Trace, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
     #define LOG_WARN(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Warn, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
     #define LOG_ERROR(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Error, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
     #define LOG_FATAL(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::Fatal, __VA_ARGS__)
+        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
 #else
     #define LOG_INFO(fmt, ...)  printf("[INFO] " fmt "\n", ##__VA_ARGS__)
     #define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ##__VA_ARGS__)

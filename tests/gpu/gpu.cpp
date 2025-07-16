@@ -18,7 +18,7 @@ void test_gpu()
     sd.run();
     auto *service = acul::alloc<log::log_service>();
     sd.register_service(service);
-    service->level = log::level::Trace;
+    service->level = log::level::trace;
 
     auto *console = service->add_logger<log::console_logger>("console");
     service->default_logger = console;

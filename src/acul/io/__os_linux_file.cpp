@@ -43,7 +43,7 @@ namespace acul
             op_state copy(const char *src, const char *dst, bool overwrite) noexcept
             {
                 int src_fd = open(src, O_RDONLY);
-                if (src_fd < 0) return op_state::Error;
+                if (src_fd < 0) return op_state::error;
 
                 int flags = O_WRONLY | O_CREAT;
                 flags |= overwrite ? O_TRUNC : O_EXCL;
@@ -54,9 +54,9 @@ namespace acul
                     int err = errno;
                     close(src_fd);
 
-                    if (!overwrite && err == EEXIST) return op_state::SkippedExisting;
+                    if (!overwrite && err == EEXIST) return op_state::skipped_existing;
 
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 char buffer[4096];
@@ -78,32 +78,32 @@ namespace acul
                 close(src_fd);
                 close(dst_fd);
 
-                return copy_success ? op_state::Success : op_state::Error;
+                return copy_success ? op_state::success : op_state::error;
             }
 
             op_state create_directory(const char *path)
             {
                 if (mkdir(path, 0755) == 0)
-                    return op_state::Success;
+                    return op_state::success;
                 else
                 {
                     int error = errno;
-                    if (error == EEXIST) return op_state::SkippedExisting;
+                    if (error == EEXIST) return op_state::skipped_existing;
 
                     LOG_ERROR("Failed to create directory %s. Error code: %d", path, error);
-                    return op_state::Error;
+                    return op_state::error;
                 }
             }
 
             op_state remove_file(const char *path)
             {
                 if (unlink(path) == 0)
-                    return op_state::Success;
+                    return op_state::success;
                 else
                 {
                     int error = errno;
                     LOG_ERROR("Failed to remove file %s. Error code: %d", path, error);
-                    return op_state::Error;
+                    return op_state::error;
                 }
             }
 
@@ -115,7 +115,7 @@ namespace acul
                 if (!dir)
                 {
                     LOG_ERROR("Failed to open directory: %s. Error code: %d", base_path.c_str(), errno);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 struct dirent *entry;
@@ -137,42 +137,42 @@ namespace acul
                 }
 
                 closedir(dir);
-                return op_state::Success;
+                return op_state::success;
             }
 
             op_state read_by_block(const string &filename, const std::function<void(char *, size_t)> &callback)
             {
                 int fd = open(filename.c_str(), O_RDONLY);
-                if (fd < 0) return op_state::Error;
+                if (fd < 0) return op_state::error;
 
                 struct stat st;
                 if (fstat(fd, &st) < 0)
                 {
                     close(fd);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
                 if (st.st_size == 0)
                 {
                     close(fd);
-                    return op_state::Success;
+                    return op_state::success;
                 }
 
                 void *mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
                 if (mapped == MAP_FAILED)
                 {
                     close(fd);
-                    return op_state::Error;
+                    return op_state::error;
                 }
 
-                op_state res = op_state::Success;
+                op_state res = op_state::success;
                 try
                 {
                     callback(static_cast<char *>(mapped), st.st_size);
                 }
                 catch (...)
                 {
-                    res = op_state::Error;
+                    res = op_state::error;
                 }
 
                 munmap(mapped, st.st_size);

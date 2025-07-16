@@ -10,7 +10,7 @@ void test_jatc()
     task::service_dispatch sd;
     auto *service = acul::alloc<log::log_service>();
     sd.register_service(service);
-    service->level = log::level::Trace;
+    service->level = log::level::trace;
 
     auto *console = service->add_logger<log::console_logger>("console");
     service->default_logger = console;
@@ -49,7 +49,7 @@ void test_jatc()
     // Read
     bin_stream read_stream;
     io::file::op_state state = jatc.read(ep, &group, original, read_stream);
-    assert(state == io::file::op_state::Success);
+    assert(state == io::file::op_state::success);
 
     read_stream.pos(0);
     int read_value = 0;
@@ -64,7 +64,7 @@ void test_jatc()
 
     bin_stream filtered_stream;
     auto filtered_state = jatc.read(ep, &group, *index_entries[0], filtered_stream);
-    assert(filtered_state == io::file::op_state::Success);
+    assert(filtered_state == io::file::op_state::success);
 
     filtered_stream.pos(0);
     int filtered_value = 0;

@@ -33,22 +33,22 @@ namespace acul
         {
             switch (level)
             {
-                case level::Info:
+                case level::info:
                     ss << "INFO";
                     break;
-                case level::Debug:
+                case level::debug:
                     ss << "DEBUG";
                     break;
-                case level::Trace:
+                case level::trace:
                     ss << "TRACE";
                     break;
-                case level::Warn:
+                case level::warn:
                     ss << "WARN";
                     break;
-                case level::Error:
+                case level::error:
                     ss << "ERROR";
                     break;
-                case level::Fatal:
+                case level::fatal:
                     ss << "FATAL";
                     break;
                 default:
@@ -61,22 +61,22 @@ namespace acul
         {
             switch (level)
             {
-                case level::Fatal:
+                case level::fatal:
                     ss << colors::magenta;
                     break;
-                case level::Error:
+                case level::error:
                     ss << colors::red;
                     break;
-                case level::Warn:
+                case level::warn:
                     ss << colors::yellow;
                     break;
-                case level::Info:
+                case level::info:
                     ss << colors::green;
                     break;
-                case level::Debug:
+                case level::debug:
                     ss << colors::blue;
                     break;
-                case level::Trace:
+                case level::trace:
                     ss << colors::cyan;
                     break;
                 default:

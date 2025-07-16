@@ -13,19 +13,19 @@ void test_log()
     sd.run();
     auto *service = acul::alloc<log_service>();
     sd.register_service(service);
-    service->level = level::Trace;
+    service->level = level::trace;
 
     auto *console = service->add_logger<console_logger>("console");
     service->default_logger = console;
     console->set_pattern("%(color_auto)[%(level_name)]%(ascii_time)%(thread)%(message)%(color_off)\n");
     assert(console->name() == "console");
 
-    service->log(console, level::Debug, "Test debug log: %d", 123);
-    service->log(console, level::Trace, "Test trace log: %d", 123);
-    service->log(console, level::Error, "Test error log: %d", 123);
-    service->log(console, level::Warn, "Test warn log: %d", 123);
-    service->log(console, level::Info, "Test info log: %d", 123);
-    service->log(console, level::Fatal, "Test fatal log: %d", 123);
+    service->log(console, level::debug, "Test debug log: %d", 123);
+    service->log(console, level::trace, "Test trace log: %d", 123);
+    service->log(console, level::error, "Test error log: %d", 123);
+    service->log(console, level::warn, "Test warn log: %d", 123);
+    service->log(console, level::info, "Test info log: %d", 123);
+    service->log(console, level::fatal, "Test fatal log: %d", 123);
 
     logger_base *fetched = service->get_logger("console");
     assert(fetched == console);
@@ -43,7 +43,7 @@ void test_log()
 
     service->default_logger = filelog;
     assert(service->default_logger = service->get_logger("file"));
-    service->log(filelog, level::Info, "File log: %d", 456);
+    service->log(filelog, level::info, "File log: %d", 456);
     {
         auto next = service->dispatch();
         while (next != std::chrono::steady_clock::time_point::max()) next = service->dispatch();
@@ -53,7 +53,7 @@ void test_log()
     {
         vector<char> buffer;
         auto state = io::file::read_binary(filepath, buffer);
-        assert(state == io::file::op_state::Success);
+        assert(state == io::file::op_state::success);
 
         string content(buffer.data(), buffer.size());
         assert(content.find("File log: 456") != string::npos);

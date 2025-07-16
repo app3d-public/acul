@@ -62,14 +62,6 @@ namespace acul
             return {0.0f, 0.0f, 0.0f};
         }
 
-        /// @brief Axis constants. May be positive or negative
-        enum class Axis
-        {
-            X,
-            Y,
-            Z
-        };
-
         /**
          * Rounds a floating-point number to the nearest power of 10.
          * @param value The value to be rounded.

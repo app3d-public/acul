@@ -13,7 +13,7 @@ namespace acul
             op_state read_binary(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file) return op_state::Error;
+                if (!file) return op_state::error;
 
                 fseek(file, 0, SEEK_END);
                 size_t file_size = ftell(file);
@@ -23,13 +23,13 @@ namespace acul
                 fread(buffer.data(), 1, file_size, file);
                 fclose(file);
 
-                return op_state::Success;
+                return op_state::success;
             }
 
             op_state read_virtual(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file) return op_state::Error;
+                if (!file) return op_state::error;
 
                 char chunk[FILE_READ_STREAM_CHUNK_SIZE];
 
@@ -44,13 +44,13 @@ namespace acul
                         if (ferror(file))
                         {
                             fclose(file);
-                            return op_state::Error;
+                            return op_state::error;
                         }
                     }
                 }
 
                 fclose(file);
-                return op_state::Success;
+                return op_state::success;
             }
 
             bool write_binary(const string &filename, const char *buffer, size_t size)

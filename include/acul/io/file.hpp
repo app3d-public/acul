@@ -26,11 +26,11 @@ namespace acul
         {
             enum op_state
             {
-                Undefined,
-                Success,
-                Error,
-                ChecksumMismatch,
-                SkippedExisting
+                unknown,
+                success,
+                error,
+                checksum_mismatch,
+                skipped_existing
             };
 
             /**
@@ -93,8 +93,8 @@ namespace acul
              * Reads a file in blocks and processes it using a callback function.
              * @param filename The name of the file to read.
              * @param callback The callback function that will be called with the processed file data.
-             * @return op_state::Success if the file was successfully read and processed,
-             * op_state::Error otherwise.
+             * @return op_state::success if the file was successfully read and processed,
+             * op_state::error otherwise.
              */
 
             APPLIB_API op_state read_by_block(const string &filename,

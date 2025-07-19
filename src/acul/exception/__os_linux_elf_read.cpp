@@ -2,7 +2,6 @@
 #include <acul/io/file.hpp>
 #include <acul/string/utils.hpp>
 #include <cstring>
-#include "acul/fwd/string.hpp"
 #include "elf_read.hpp"
 
 namespace acul

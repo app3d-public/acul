@@ -4,6 +4,7 @@ project(acul-simd
     LANGUAGES CXX C
     DESCRIPTION "ACUL Simd Module")
 
+set(SOURCE_FILES "")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -24,3 +25,8 @@ set_target_properties(${PROJECT_NAME}
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS YES
 )
+
+if (WIN32)
+    # Manifest
+    gen_manifest_lib(${PROJECT_NAME} ${PROJECT_VERSION})
+endif()

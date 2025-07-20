@@ -32,8 +32,6 @@ if(NOT ACUL_BUILD_MIN)
         GLM_FORCE_INTRINSICS
         GLM_FORCE_ALIGNED_GENTYPES
     )
-
-    add_subdirectory(simd)
 else()
     list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/math.cpp")
     list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc.cpp")
@@ -99,4 +97,8 @@ set_target_properties(${PROJECT_NAME}
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if (NOT ACUL_BUILD_MIN)
+    add_subdirectory(simd)
 endif()

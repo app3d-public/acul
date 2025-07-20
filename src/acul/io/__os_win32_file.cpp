@@ -53,7 +53,7 @@ namespace acul
                     DWORD err = GetLastError();
                     CloseHandle(hSrc);
 
-                    if (!overwrite && err == ERROR_FILE_EXISTS) return op_state::eSkippedExisting;
+                    if (!overwrite && err == ERROR_FILE_EXISTS) return op_state::skipped_existing;
 
                     return op_state::error;
                 }
@@ -84,7 +84,7 @@ namespace acul
                 else
                 {
                     DWORD error = GetLastError();
-                    if (error == ERROR_ALREADY_EXISTS) return op_state::eSkippedExisting;
+                    if (error == ERROR_ALREADY_EXISTS) return op_state::skipped_existing;
                     LOG_ERROR("Failed to create directory %s. Error code: %lu", path, error);
                     return op_state::error;
                 }

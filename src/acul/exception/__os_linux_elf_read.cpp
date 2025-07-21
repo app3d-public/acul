@@ -83,7 +83,6 @@ namespace acul
         auto *sh = reinterpret_cast<Elf64_Shdr *>((char *)data + eh->e_shoff);
 
         Sec symtab, dynsym;
-        const char *shstr = (char *)data + sh[eh->e_shstrndx].sh_offset;
         for (int i = 0; i < eh->e_shnum; ++i)
         {
             if (sh[i].sh_type == SHT_SYMTAB || sh[i].sh_type == SHT_DYNSYM)

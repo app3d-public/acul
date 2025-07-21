@@ -19,11 +19,7 @@ namespace acul
             constexpr size_t MaxFrames = 64;
             void *buffer[MaxFrames];
             int nptrs = backtrace(buffer, MaxFrames);
-            for (int i = 0; i < nptrs; ++i)
-            {
-                Dl_info dlinfo;
-                addresses.push_back(buffer[i]);
-            }
+            for (int i = 0; i < nptrs; ++i) addresses.push_back(buffer[i]);
         }
         else if (!capture_stack_trace_remote(info.pid, info.context, addresses))
             return;

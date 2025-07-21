@@ -229,7 +229,6 @@ namespace acul
         const u8 *p = cie_p + 4;
         p += 4; // CIE-id (0)
 
-        u8 version = *p++;
         const char *aug = reinterpret_cast<const char *>(p);
         p += strlen(aug) + 1; //  augmentation
 
@@ -605,19 +604,7 @@ namespace acul
             exec_cfi(fde.cfi, fde.cfi_size, rel, fde, cur);
 
             // Step frame
-            uintptr_t reg_value = (cur.cfa_reg == 7    ? cur.regs[REG_RSP]
-                                   : cur.cfa_reg == 6  ? cur.regs[REG_RBP]
-                                   : cur.cfa_reg == 3  ? cur.regs[REG_RBX]
-                                   : cur.cfa_reg == 12 ? cur.regs[REG_R12]
-                                   : cur.cfa_reg == 13 ? cur.regs[REG_R13]
-                                   : cur.cfa_reg == 14 ? cur.regs[REG_R14]
-                                   : cur.cfa_reg == 15 ? cur.regs[REG_R15]
-                                                       : 0);
-
             if (cur.ra_rule.kind != cfa_rule::OFFSET) break;
-
-            uintptr_t cfa = reg_value + cur.cfa_offs;
-            uintptr_t addr = cfa + cur.ra_rule.offs;
 
             unwind_state next = cur;
             if (!step_frame_remote(pid, fde, cur, next)) break;

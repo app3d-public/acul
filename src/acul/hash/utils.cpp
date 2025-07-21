@@ -3,8 +3,7 @@
 #include <cstring>
 #include <utility>
 
-namespace acul
-{
+typedef std::pair<u64, u64> u128;
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
     #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         #define WORDS_BIGENDIAN 1
@@ -14,6 +13,7 @@ namespace acul
 #ifdef _WIN32
 
     #include <stdlib.h>
+
     #define bswap_32(x) _byteswap_ulong(x)
     #define bswap_64(x) _byteswap_uint64(x)
 
@@ -74,7 +74,8 @@ namespace acul
     #endif
 #endif
 
-    typedef std::pair<u64, u64> u128;
+namespace acul
+{
 
     inline u64 Uint128Low64(const u128 &x) { return x.first; }
     inline u64 Uint128High64(const u128 &x) { return x.second; }

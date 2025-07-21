@@ -1,5 +1,6 @@
 #include <acul/io/file.hpp>
 #include <acul/log.hpp>
+#include <cassert>
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>

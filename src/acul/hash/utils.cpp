@@ -1,5 +1,7 @@
 #include <acul/api.hpp>
 #include <acul/scalars.hpp>
+#include <cstring>
+#include <utility>
 
 namespace acul
 {

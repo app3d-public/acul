@@ -3,6 +3,9 @@
 #include <acul/string/sstream.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
+#ifndef _WIN32
+    #include <sys/wait.h>
+#endif
 
 using namespace acul;
 
@@ -40,31 +43,54 @@ void test_write_exception_info(runtime_error &err)
     fake_record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
     fake_record.ExceptionAddress = (void *)0xDEADBEEF;
     fake_record.NumberParameters = 2;
-    fake_record.ExceptionInformation[0] = 1; // write access
+    fake_record.ExceptionInformation[0] = 1;
     fake_record.ExceptionInformation[1] = 0x12345678;
+
     write_exception_info(fake_record, stream);
     assert(!stream.str().empty());
 
-    // Minidump
     vector<char> buffer;
     assert(create_mini_dump(err.except_info.hProcess, err.except_info.hThread, fake_record, err.except_info.context,
                             buffer));
     assert(!buffer.empty());
 #else
-    stringstream stream;
+    pid_t child = fork();
+    assert(child >= 0);
 
-    siginfo_t fake_info = {};
-    fake_info.si_signo = SIGSEGV;
-    fake_info.si_code = SEGV_ACCERR;
-    fake_info.si_addr = (void *)0x12345678;
+    if (child == 0)
+    {
+        // потомок: сигнализируем родителю, что готовы
+        raise(SIGSTOP);
+        pause(); // остаёмся в паузе пока нас не убьют
+        _exit(0);
+    }
+    else
+    {
+        stringstream stream;
 
-    write_exception_info(SIGSEGV, &fake_info, err.except_info.context, stream);
-    assert(!stream.str().empty());
+        siginfo_t fake_info = {};
+        fake_info.si_signo = SIGSEGV;
+        fake_info.si_code = SEGV_ACCERR;
+        fake_info.si_addr = (void *)0x12345678;
 
-    // Minidump
-    vector<char> buffer;
-    assert(create_mini_dump(err.except_info.pid, syscall(SYS_gettid), SIGSEGV, err.except_info.context, buffer));
-    assert(!buffer.empty());
+        write_exception_info(SIGSEGV, &fake_info, err.except_info.context, stream);
+        assert(!stream.str().empty());
+
+        // SIGSTOP awaiting
+        int status = 0;
+        assert(waitpid(child, &status, WUNTRACED) == child);
+        assert(WIFSTOPPED(status));
+
+        vector<char> buffer;
+        bool ok = create_mini_dump(child, child, SIGSEGV, err.except_info.context, buffer);
+
+        assert(ok && "create_mini_dump failed");
+        assert(!buffer.empty() && "minidump buffer is empty");
+
+        // Free child
+        kill(child, SIGKILL);
+        waitpid(child, nullptr, 0);
+    }
 #endif
 }
 
@@ -91,6 +117,7 @@ void test_stacktrace()
     {
         stringstream stream;
         write_stack_trace(stream, err.except_info);
+        assert(!stream.str().empty());
     }
 #ifdef _WIN32
     destroy_exception_context();

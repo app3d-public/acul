@@ -27,8 +27,9 @@ namespace acul
         info.addresses = addresses.release();
     }
 
-    void write_exception_info(int sig, siginfo_t *info, const ucontext_t &context, stringstream &stream)
+    void write_exception_info(siginfo_t *info, stringstream &stream)
     {
+        int sig = info->si_signo;
         stream << format("Signal: %d (%s)\n", sig, strsignal(sig));
 
         if (info)

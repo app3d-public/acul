@@ -18,7 +18,7 @@ namespace acul
                                      CONTEXT &context, vector<char> &buffer);
 #else
     APPLIB_API void write_frame_registers(stringstream &stream, const ucontext_t &context);
-    APPLIB_API void write_exception_info(int signal, siginfo_t *info, const ucontext_t &context, stringstream &stream);
+    APPLIB_API void write_exception_info(siginfo_t *info, stringstream &stream);
     APPLIB_API bool create_mini_dump(pid_t pid, pid_t tid, int signal, const ucontext_t &context, vector<char> &buffer);
 #endif
 

@@ -73,7 +73,7 @@ void test_write_exception_info(runtime_error &err)
         fake_info.si_code = SEGV_ACCERR;
         fake_info.si_addr = (void *)0x12345678;
 
-        write_exception_info(SIGSEGV, &fake_info, err.except_info.context, stream);
+        write_exception_info(&fake_info, stream);
         assert(!stream.str().empty());
 
         // SIGSTOP awaiting

@@ -102,7 +102,7 @@ namespace acul
              *
              * @param device The Vulkan device to load the shader module into.
              */
-            void load(device &device);
+            bool load(device &device);
 
             /**
              * @brief Destroy the shader module.
@@ -142,14 +142,14 @@ namespace acul
             template <>
             struct pipeline_artifact_configure<vk::GraphicsPipelineCreateInfo>
             {
-                using callback_type = void (*)(artifact<vk::GraphicsPipelineCreateInfo> &, shader_list &,
+                using callback_type = bool (*)(artifact<vk::GraphicsPipelineCreateInfo> &, shader_list &,
                                                vk::RenderPass, vk::PipelineLayout &, device &);
             };
 
             template <>
             struct pipeline_artifact_configure<vk::ComputePipelineCreateInfo>
             {
-                using callback_type = void (*)(artifact<vk::ComputePipelineCreateInfo> &, shader_list &,
+                using callback_type = bool (*)(artifact<vk::ComputePipelineCreateInfo> &, shader_list &,
                                                vk::PipelineLayout &, device &);
             };
         } // namespace details
@@ -235,7 +235,7 @@ namespace acul
          * @param frag The fragment shader module.
          * @param device The Vulkan device to be used for pipeline creation.
          */
-        APPLIB_API void
+        APPLIB_API bool
         prepare_base_graphics_pipeline(pipeline_batch<vk::GraphicsPipelineCreateInfo>::artifact &artifact,
                                        shader_module &vert, shader_module &frag, device &device);
     } // namespace gpu

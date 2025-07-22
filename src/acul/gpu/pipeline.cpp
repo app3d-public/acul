@@ -48,22 +48,28 @@ namespace acul
             return *this;
         }
 
-        void shader_module::load(device &device)
+        bool shader_module::load(device &device)
         {
             if (io::file::read_binary(path, code) != io::file::op_state::success)
-                throw runtime_error("Failed to read shader: %s" + io::get_filename(path));
+            {
+                LOG_ERROR("Failed to read shader: %s", io::get_filename(path).c_str());
+                return false;
+            }
             vk::ShaderModuleCreateInfo create_info;
             create_info.setCodeSize(code.size()).setPCode(reinterpret_cast<const u32 *>(code.data()));
             if (device.vk_device.createShaderModule(&create_info, nullptr, &module, device.loader) !=
                 vk::Result::eSuccess)
-                throw runtime_error("Failed to create shader module");
+            {
+                LOG_ERROR("Failed to create shader module: %s", io::get_filename(path).c_str());
+                return false;
+            }
+            return true;
         }
 
-        void prepare_base_graphics_pipeline(pipeline_batch<vk::GraphicsPipelineCreateInfo>::artifact &artifact,
+        bool prepare_base_graphics_pipeline(pipeline_batch<vk::GraphicsPipelineCreateInfo>::artifact &artifact,
                                             shader_module &vert, shader_module &frag, device &device)
         {
-            vert.load(device);
-            frag.load(device);
+            if (!vert.load(device) || !frag.load(device)) return false;
             artifact.config.shader_stages.emplace_back();
             artifact.config.shader_stages.back()
                 .setStage(vk::ShaderStageFlagBits::eVertex)
@@ -91,6 +97,7 @@ namespace acul
                 .setSubpass(artifact.config.subpass)
                 .setBasePipelineIndex(-1)
                 .setBasePipelineHandle(nullptr);
+            return true;
         }
     } // namespace gpu
 } // namespace acul

@@ -1,7 +1,5 @@
 #pragma once
-#ifdef ACUL_GLM_ENABLE
-    #include <glm/glm.hpp>
-#endif
+#include "../math/types.hpp"
 #include "string.hpp"
 
 namespace acul
@@ -160,16 +158,15 @@ namespace acul
      **/
     APPLIB_API bool stof(const char *&str, f32 &value);
 
-#ifdef ACUL_GLM_ENABLE
-
+#ifdef ACUL_MATH_TYPES
     /**
      * @brief Converts the 2-dimensional vector to the C-style string
      * @param vec Source vector
      * @param buffer Destination buffer
-     * @param bufferSize Buffer size
+     * @param buffer_size Buffer size
      * @return The number of characters written
      **/
-    APPLIB_API int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset);
+    APPLIB_API int to_string(const vec2 &vec, char *buffer, size_t buffer_size, size_t offset);
 
     /**
      * @brief Converts the 3-dimensional vector to the C-style string
@@ -178,7 +175,7 @@ namespace acul
      * @param bufferSize Buffer size
      * @return The number of characters written
      **/
-    APPLIB_API int to_string(const glm::vec3 &vec, char *buffer, size_t buffer_size, size_t offset);
+    APPLIB_API int to_string(const vec3 &vec, char *buffer, size_t buffer_size, size_t offset);
 
     /**
      * @brief Deserialize the C-style string to the 2-dimensional vector.
@@ -187,7 +184,7 @@ namespace acul
      * @param vec Destination vector
      * @return True if successful. Otherwise false
      **/
-    inline bool stov2(const char *&str, glm::vec2 &vec) { return stof(str, vec.x) && stof(str, vec.y); }
+    inline bool stov2(const char *&str, vec2 &vec) { return stof(str, vec.x) && stof(str, vec.y); }
 
     /**
      * @brief Deserialize the C-style string to the 2-dimensional vector.
@@ -196,7 +193,7 @@ namespace acul
      * @param vec Destination vector
      * @return True if successful. Otherwise false
      **/
-    inline void stov2_opt(const char *&str, glm::vec2 &vec)
+    inline void stov2_opt(const char *&str, vec2 &vec)
     {
         if (!stof(str, vec.x)) return;
         if (!stof(str, vec.y)) return;
@@ -209,10 +206,7 @@ namespace acul
      * @param vec Destination vector
      * @return True if successful. Otherwise false
      **/
-    inline bool stov3(const char *&str, glm::vec3 &vec)
-    {
-        return stof(str, vec.x) && stof(str, vec.y) && stof(str, vec.z);
-    }
+    inline bool stov3(const char *&str, vec3 &vec) { return stof(str, vec.x) && stof(str, vec.y) && stof(str, vec.z); }
 
     /**
      * @brief Deserialize the C-style string to the 3-dimensional vector.
@@ -221,7 +215,7 @@ namespace acul
      * @param vec Destination vector
      * @return True if successful. Otherwise false
      **/
-    inline void stov3_opt(const char *&str, glm::vec3 &vec)
+    inline void stov3_opt(const char *&str, vec3 &vec)
     {
         if (!stof(str, vec.x)) return;
         if (!stof(str, vec.y)) return;

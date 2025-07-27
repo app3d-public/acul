@@ -127,7 +127,7 @@ void test_utils_glm()
     using namespace acul;
 
     {
-        glm::vec2 v(1.0f, 2.0f);
+        vec2 v(1.0f, 2.0f);
         char buffer[64]{};
         int written = to_string(v, buffer, sizeof(buffer), 0);
         assert(written > 0);
@@ -138,7 +138,7 @@ void test_utils_glm()
     }
 
     {
-        glm::vec3 v(3.0f, 4.0f, 5.0f);
+        vec3 v(3.0f, 4.0f, 5.0f);
         char buffer[64]{};
         int written = to_string(v, buffer, sizeof(buffer), 0);
         assert(written > 0);
@@ -151,7 +151,7 @@ void test_utils_glm()
 
     {
         const char *text = "10.5 20.25";
-        glm::vec2 v(0.0f);
+        vec2 v(0.0f);
         bool ok = stov2(text, v);
         assert(ok);
         assert(v.x > 10.4f && v.x < 10.6f);
@@ -160,7 +160,7 @@ void test_utils_glm()
 
     {
         const char *text = "30.75";
-        glm::vec2 v(0.0f);
+        vec2 v(0.0f);
         stov2_opt(text, v);
         assert(v.x > 30.7f && v.x < 30.8f);
         assert(v.y == 0.0f);
@@ -168,7 +168,7 @@ void test_utils_glm()
 
     {
         const char *text = "1.1 2.2 3.3";
-        glm::vec3 v(0.0f);
+        vec3 v(0.0f);
         bool ok = stov3(text, v);
         assert(ok);
         assert(v.x > 1.0f && v.x < 1.2f);
@@ -178,7 +178,7 @@ void test_utils_glm()
 
     {
         const char *text = "7.7 8.8";
-        glm::vec3 v(0.0f);
+        vec3 v(0.0f);
         stov3_opt(text, v);
         assert(v.x > 7.6f && v.x < 7.8f);
         assert(v.y > 8.7f && v.y < 8.9f);

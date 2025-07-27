@@ -4,38 +4,7 @@ project(acul
     LANGUAGES CXX C
     DESCRIPTION "App3d Core Utils Library")
 
-add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/simd_fallback")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/hash")
-add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exception")
-
-if(NOT ACUL_BUILD_MIN)
-    add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/gpu")
-    add_subdirectory("modules/vma-impl")
-
-    # GLM
-    set(GLM_ENABLE_CXX_20 ON)
-    set(BUILD_SHARED_LIBS ON)
-    add_subdirectory("modules/3rd-party/glm")
-    set(BUILD_SHARED_LIBS OFF)
-
-    if(USE_ASAN)
-        target_link_options(glm PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-    endif(USE_ASAN)
-
-    target_compile_definitions(glm PUBLIC
-        GLM_FORCE_RADIANS
-        GLM_FORCE_DEPTH_ZERO_TO_ONE
-        GLM_ENABLE_EXPERIMENTAL
-        GLM_FORCE_INTRINSICS
-        GLM_FORCE_ALIGNED_GENTYPES
-    )
-else()
-    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/math.cpp")
-    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc.cpp")
-endif()
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
@@ -47,26 +16,46 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 
+option(ENABLE_HALF "Enable half support" ON)
+option(ENABLE_LOG "Enable log support" ON)
+option(ENABLE_SIMD "Enable SIMD support" ON)
+option(ENABLE_GLM "Enable GLM support" ON)
+
 # TBB
 find_package(TBB REQUIRED)
+set(ACUL_PUBLIC_LIBS TBB::tbb TBB::tbbmalloc)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC TBB::tbb TBB::tbbmalloc zstd)
-if (WIN32)
-    target_link_libraries(${PROJECT_NAME} PUBLIC intl)
-endif()
+set(ACUL_PRIVATE_LIBS zstd)
 
-if(NOT ACUL_BUILD_MIN)
-    target_include_directories(${PROJECT_NAME} PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/glm
-    )
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_HALF_ENABLE ACUL_LOG_ENABLE ACUL_GLM_ENABLE)
-    target_link_libraries(${PROJECT_NAME} PUBLIC glm vma)
+if(ENABLE_GLM)
+    set(GLM_ENABLE_CXX_20 ON)
+    add_compile_definitions(GLM_ENABLE_CXX_20 GLM_FORCE_INTRINSICS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_GLM_ENABLE)
+    add_subdirectory("modules/3rd-party/glm")
+    list(APPEND ACUL_PUBLIC_LIBS glm)
 endif()
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Dbghelp Synchronization)
+    list(APPEND ACUL_PUBLIC_LIBS intl)
 endif()
+
+if(ENABLE_HALF)
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_HALF_ENABLE)
+endif()
+
+if(ENABLE_LOG)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_LOG_ENABLE)
+endif()
+
+if(WIN32)
+    list(APPEND ACUL_PUBLIC_LIBS Dbghelp Synchronization)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC ${ACUL_PUBLIC_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${ACUL_PRIVATE_LIBS})
+
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -99,6 +88,6 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-if (NOT ACUL_BUILD_MIN)
+if(ENABLE_SIMD)
     add_subdirectory(simd)
 endif()

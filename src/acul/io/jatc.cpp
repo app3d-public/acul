@@ -3,8 +3,6 @@
 #include <acul/log.hpp>
 #include <inttypes.h>
 
-#ifndef ACUL_BUILD_MIN
-
 namespace acul
 {
     namespace io
@@ -321,4 +319,3 @@ namespace acul
         } // namespace file
     } // namespace io
 } // namespace acul
-#endif

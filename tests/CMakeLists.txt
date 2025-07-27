@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
 
 set(TEST_LIBRARIES acul)
-set(TEST_DATA_DIR "${CMAKE_CURRENT_BINARY_DIR}/data")
 set(TEST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/tests/artifacts")
 file(MAKE_DIRECTORY "${TEST_OUTPUT_DIR}")
-set(TEST_ENV "TEST_DATA_DIR=${TEST_DATA_DIR};TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR}")
+set(TEST_ENV "TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR}")
 set(TEST_SOURCES "")
 
 add_test_files(acul flags flags.cpp)
@@ -25,38 +24,9 @@ add_test_files(acul list list.cpp)
 add_test_files(acul forward_list forward_list.cpp)
 add_test_files(acul comparator comparator.cpp)
 add_test_files(acul stream stream.cpp)
-
 add_test_files(acul disposal_queue disposal_queue.cpp)
 add_test_files(acul locales locales.cpp)
-
-if(NOT ACUL_BUILD_MIN)
-    add_test_files(acul math math.cpp)
-    add_test_files(acul jatc io/jatc.cpp)
-
-    # GPU
-    list(APPEND TEST_SOURCES
-        "gpu/buffer.cpp"
-        "gpu/descriptors.cpp"
-        "gpu/utils.cpp"
-        "gpu/pipeline.cpp"
-        "gpu/vector.cpp"
-    )
-
-    # Prepare Shaders
-    function(add_shader INPUT_NAME OUTPUT_NAME)
-        add_custom_command(
-            OUTPUT ${OUTPUT_NAME}
-            COMMAND glslc ${INPUT_NAME} -o ${OUTPUT_NAME}
-            DEPENDS ${INPUT_NAME}
-            COMMENT "Compiling shader ${INPUT_NAME} to SPIR-V binary ${OUTPUT_NAME}"
-        )
-    endfunction()
-
-    add_shader(${CMAKE_CURRENT_SOURCE_DIR}/data/test.vert ${TEST_DATA_DIR}/vs_test.spv)
-    add_shader(${CMAKE_CURRENT_SOURCE_DIR}/data/test.frag ${TEST_DATA_DIR}/fs_test.spv)
-    add_custom_target(SHADERS ALL DEPENDS ${TEST_DATA_DIR}/vs_test.spv ${TEST_DATA_DIR}/fs_test.spv)
-    add_test_files(acul gpu gpu/gpu.cpp)
-endif()
+add_test_files(acul jatc io/jatc.cpp)
 
 if(ENABLE_COVERAGE)
     add_test_coverage(acul)

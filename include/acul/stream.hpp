@@ -6,7 +6,7 @@
 #include "string/string.hpp"
 #include "vector.hpp"
 #ifdef ACUL_GLM_ENABLE
-    #include <glm/glm.hpp>
+    #include "math/types.hpp"
 #endif
 
 namespace acul
@@ -96,13 +96,13 @@ namespace acul
             _data.push_back('\0');
             return *this;
         }
-#ifdef ACUL_GLM_ENABLE
+#ifdef ACUL_MATH_TYPES
 
-        bin_stream &write(const glm::vec2 &vec) { return write(vec.x).write(vec.y); }
+        bin_stream &write(const vec2 &vec) { return write(vec.x).write(vec.y); }
 
-        bin_stream &write(const glm::vec3 &vec) { return write(vec.x).write(vec.y).write(vec.z); }
+        bin_stream &write(const vec3 &vec) { return write(vec.x).write(vec.y).write(vec.z); }
 
-        bin_stream &write(const glm::mat4 &mat)
+        bin_stream &write(const mat4 &mat)
         {
             return write(mat[0][0])
                 .write(mat[0][1])
@@ -175,12 +175,11 @@ namespace acul
             }
             return *this;
         }
-#ifdef ACUL_GLM_ENABLE
+#ifdef ACUL_MATH_TYPES
+        bin_stream &read(vec2 &vec) { return read(vec.x).read(vec.y); }
+        bin_stream &read(vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
 
-        bin_stream &read(glm::vec2 &vec) { return read(vec.x).read(vec.y); }
-        bin_stream &read(glm::vec3 &vec) { return read(vec.x).read(vec.y).read(vec.z); }
-
-        bin_stream &read(glm::mat4 &mat)
+        bin_stream &read(mat4 &mat)
         {
             return read(mat[0][0])
                 .read(mat[0][1])

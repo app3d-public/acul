@@ -1,12 +1,9 @@
 #include <acul/list.hpp>
+#include <acul/math/types.hpp>
 #include <acul/stream.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
 #include <cstring> // memcpy
-
-#ifdef ACUL_GLM_ENABLE
-    #include <glm/gtc/matrix_transform.hpp>
-#endif
 
 void test_bin_stream_basic_types()
 {
@@ -103,20 +100,20 @@ void test_bin_stream_exceptions()
     assert(caught);
 }
 
-#ifdef ACUL_GLM_ENABLE
-void test_bin_stream_glm()
+#ifdef ACUL_MATH_TYPES
+void test_bin_stream_math()
 {
     acul::bin_stream s;
 
-    glm::vec2 v2(1.0f, 2.0f);
-    glm::vec3 v3(3.0f, 4.0f, 5.0f);
-    glm::mat4 m(1.0f); // identity
+    acul::vec2 v2(1.0f, 2.0f);
+    acul::vec3 v3(3.0f, 4.0f, 5.0f);
+    acul::mat4 m(1.0f); // identity
 
     s.write(v2).write(v3).write(m);
 
-    glm::vec2 v2r;
-    glm::vec3 v3r;
-    glm::mat4 mr;
+    acul::vec2 v2r;
+    acul::vec3 v3r;
+    acul::mat4 mr;
 
     s.read(v2r).read(v3r).read(mr);
 
@@ -134,7 +131,7 @@ void test_stream()
     test_bin_stream_raw_data();
     test_bin_stream_positioning();
     test_bin_stream_exceptions();
-#ifdef ACUL_GLM_ENABLE
-    test_bin_stream_glm();
+#ifdef ACUL_MATH_TYPES
+    test_bin_stream_math();
 #endif
 }

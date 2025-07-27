@@ -241,8 +241,8 @@ namespace acul
 #if defined(__clang__)
     #pragma clang diagnostic pop
 #endif
-#ifdef ACUL_GLM_ENABLE
-    int to_string(const glm::vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
+#ifdef ACUL_MATH_TYPES
+    int to_string(const vec2 &vec, char *buffer, size_t buffer_size, size_t offset)
     {
         int written = to_string(vec.x, buffer + offset, buffer_size - offset, 5);
         if (written == 0) return 0;
@@ -259,7 +259,7 @@ namespace acul
         return offset;
     }
 
-    int to_string(const glm::vec3 &vec, char *buffer, size_t buffer_size, size_t offset)
+    int to_string(const vec3 &vec, char *buffer, size_t buffer_size, size_t offset)
     {
         int written = to_string(vec.x, buffer + offset, buffer_size - offset, 5);
         if (written == 0) return 0;

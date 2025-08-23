@@ -15,8 +15,8 @@ if(USE_ASAN)
     target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
-target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
+# set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+# target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 target_compile_options(${PROJECT_NAME} PRIVATE -march=native)
 
 set_target_properties(${PROJECT_NAME}

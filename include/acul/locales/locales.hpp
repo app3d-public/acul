@@ -2,8 +2,8 @@
 #define APP_ABC_HPP
 
 #include <libintl.h>
-#include "api.hpp"
-#include "fwd/string.hpp"
+#include "../api.hpp"
+#include "../fwd/string.hpp"
 
 #define _(STRING) gettext(STRING)
 

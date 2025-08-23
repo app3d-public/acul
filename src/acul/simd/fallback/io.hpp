@@ -1,8 +1,8 @@
 #pragma once
 
 #include <acul/api.hpp>
+#include <acul/fwd/string_pool.hpp>
 #include <acul/scalars.hpp>
-#include <acul/string/string_pool.hpp>
 
 namespace acul
 {

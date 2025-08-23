@@ -1,4 +1,4 @@
-#include <acul/memory.hpp>
+#include <acul/memory/smart_ptr.hpp>
 #include <cassert>
 
 struct Dummy

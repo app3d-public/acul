@@ -2,7 +2,7 @@
 #include <acul/string/string_pool.hpp>
 #include <immintrin.h>
 
-extern "C" APPLIB_API void acul_io_fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
+extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
 {
     const char *data_end = data + size;
 

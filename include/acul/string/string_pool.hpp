@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iterator>
+#include "../fwd/string_pool.hpp"
 #include "../vector.hpp"
 #include "base.hpp"
 
@@ -20,7 +21,7 @@ namespace acul
     template <typename T>
     inline constexpr bool is_string_char_v = is_string_char<T>::value;
 
-    template <typename T, typename Allocator = mem_allocator<T>>
+    template <typename T, typename Allocator>
     class string_pool
     {
         static_assert(is_string_char_v<T>, "string_pool requires a string character type");
@@ -39,7 +40,10 @@ namespace acul
         using reverse_iterator = std::reverse_iterator<Iterator>;
         using const_reverse_iterator = std::reverse_iterator<Iterator>;
 
-        explicit string_pool(size_type pool_size) : _pool_size(pool_size), _data(Allocator::allocate(pool_size)), _pos(0) {}
+        explicit string_pool(size_type pool_size)
+            : _pool_size(pool_size), _data(Allocator::allocate(pool_size)), _pos(0)
+        {
+        }
 
         ~string_pool() noexcept { Allocator::deallocate(_data, _pool_size); }
 

@@ -2,7 +2,7 @@
 #define APP_ACUL_STD_VECTOR_H
 
 #include "exception/exception.hpp"
-#include "memory.hpp"
+#include "memory/alloc.hpp"
 #include "type_traits.hpp"
 
 namespace acul
@@ -18,11 +18,10 @@ namespace acul
         using const_pointer = typename Allocator::const_pointer;
         using size_type = typename Allocator::size_type;
 
-        class Iterator;
-        using iterator = Iterator;
-        using const_iterator = const Iterator;
-        using reverse_iterator = std::reverse_iterator<Iterator>;
-        using const_reverse_iterator = const std::reverse_iterator<Iterator>;
+        class iterator;
+        using const_iterator = const iterator;
+        using reverse_iterator = std::reverse_iterator<iterator>;
+        using const_reverse_iterator = const std::reverse_iterator<iterator>;
 
         vector() noexcept : _size(0), _capacity(0), _data(nullptr) {}
 
@@ -423,7 +422,7 @@ namespace acul
     };
 
     template <typename T, typename Allocator>
-    class vector<T, Allocator>::Iterator
+    class vector<T, Allocator>::iterator
     {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -433,58 +432,58 @@ namespace acul
         using reference = T &;
         using const_reference = const T &;
 
-        Iterator(pointer ptr = nullptr) : _ptr(ptr) {}
+        iterator(pointer ptr = nullptr) : _ptr(ptr) {}
 
         reference operator*() { return *_ptr; }
         reference operator*() const { return *_ptr; }
         pointer operator->() { return _ptr; }
         pointer operator->() const { return _ptr; }
 
-        Iterator &operator++()
+        iterator &operator++()
         {
             ++_ptr;
             return *this;
         }
-        Iterator operator++(int)
+        iterator operator++(int)
         {
-            Iterator temp = *this;
+            iterator temp = *this;
             ++(*this);
             return temp;
         }
-        Iterator &operator--()
+        iterator &operator--()
         {
             --_ptr;
             return *this;
         }
-        Iterator operator--(int)
+        iterator operator--(int)
         {
-            Iterator temp = *this;
+            iterator temp = *this;
             --(*this);
             return temp;
         }
 
-        friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr; }
-        friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr; }
+        friend bool operator==(const iterator &a, const iterator &b) { return a._ptr == b._ptr; }
+        friend bool operator!=(const iterator &a, const iterator &b) { return a._ptr != b._ptr; }
 
-        Iterator &operator+=(difference_type movement)
+        iterator &operator+=(difference_type movement)
         {
             _ptr += movement;
             return *this;
         }
-        Iterator &operator-=(difference_type movement)
+        iterator &operator-=(difference_type movement)
         {
             _ptr -= movement;
             return *this;
         }
-        Iterator operator+(difference_type movement) const { return Iterator(_ptr + movement); }
-        Iterator operator-(difference_type movement) const { return Iterator(_ptr - movement); }
+        iterator operator+(difference_type movement) const { return iterator(_ptr + movement); }
+        iterator operator-(difference_type movement) const { return iterator(_ptr - movement); }
 
-        difference_type operator-(const Iterator &other) const { return _ptr - other._ptr; }
+        difference_type operator-(const iterator &other) const { return _ptr - other._ptr; }
 
-        friend bool operator<(const Iterator &a, const Iterator &b) { return a._ptr < b._ptr; }
-        friend bool operator>(const Iterator &a, const Iterator &b) { return a._ptr > b._ptr; }
-        friend bool operator<=(const Iterator &a, const Iterator &b) { return a._ptr <= b._ptr; }
-        friend bool operator>=(const Iterator &a, const Iterator &b) { return a._ptr >= b._ptr; }
+        friend bool operator<(const iterator &a, const iterator &b) { return a._ptr < b._ptr; }
+        friend bool operator>(const iterator &a, const iterator &b) { return a._ptr > b._ptr; }
+        friend bool operator<=(const iterator &a, const iterator &b) { return a._ptr <= b._ptr; }
+        friend bool operator>=(const iterator &a, const iterator &b) { return a._ptr >= b._ptr; }
 
         reference operator[](difference_type offset) const { return *(*this + offset); }
 
@@ -523,7 +522,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    vector<T, Allocator>::iterator vector<T, Allocator>::insert(Iterator pos, const_reference value)
+    vector<T, Allocator>::iterator vector<T, Allocator>::insert(iterator pos, const_reference value)
     {
         if (pos < begin() || pos > end()) return end();
         std::ptrdiff_t index = pos - begin();
@@ -549,7 +548,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    typename vector<T, Allocator>::iterator vector<T, Allocator>::insert(Iterator pos, T &&value)
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::insert(iterator pos, T &&value)
     {
         if (pos < begin() || pos > end()) return end();
         const std::ptrdiff_t index = pos - begin();

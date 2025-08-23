@@ -59,9 +59,8 @@ void test_write_exception_info(runtime_error &err)
 
     if (child == 0)
     {
-        // потомок: сигнализируем родителю, что готовы
         raise(SIGSTOP);
-        pause(); // остаёмся в паузе пока нас не убьют
+        pause();
         _exit(0);
     }
     else

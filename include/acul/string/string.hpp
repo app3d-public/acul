@@ -117,6 +117,33 @@ namespace acul
             }
         }
 
+        basic_string(size_type len, value_type ch) noexcept
+        {
+            if (len >= _sso_size)
+            {
+                _salloc.size.alloc_flags = ALLOC_HEAP;
+                _lalloc.size.data = len;
+                _lalloc.cap = len + 1;
+                _lalloc.ptr = Allocator::allocate(_lalloc.cap);
+
+                if constexpr (std::is_integral_v<value_type> && sizeof(value_type) == 1)
+                    std::memset(_lalloc.ptr, static_cast<unsigned char>(ch), static_cast<size_t>(len));
+                else
+                    for (size_t i = 0; i < len; ++i) _lalloc.ptr[i] = ch;
+                _lalloc.ptr[len] = 0;
+            }
+            else
+            {
+                _salloc.size.alloc_flags = ALLOC_STACK;
+                _salloc.size.data = len;
+                if constexpr (std::is_integral_v<value_type> && sizeof(value_type) == 1)
+                    std::memset(_salloc.data, static_cast<unsigned char>(ch), static_cast<size_t>(len));
+                else
+                    for (size_t i = 0; i < len; ++i) _salloc.data[i] = ch;
+                _salloc.data[len] = 0;
+            }
+        }
+
         template <typename InputIt>
         basic_string(InputIt first, InputIt last) noexcept
         {

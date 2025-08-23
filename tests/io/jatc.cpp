@@ -1,4 +1,4 @@
-#include <acul/io/jatc.hpp>
+#include <acul/io/jatc/jatc.hpp>
 #include <acul/log.hpp>
 #include <cassert>
 

@@ -4,7 +4,27 @@ project(acul
     LANGUAGES CXX C
     DESCRIPTION "App3d Core Utils Library")
 
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
+option(ACUL_LOG_ENABLE "Enable log support" ON)
+option(ACUL_SIMD_ENABLE "Enable SIMD support" ON)
+option(ACUL_INTL_ENABLE "Enable intl support" OFF)
+option(ACUL_ZSTD_ENABLE "Enable zstd support" OFF)
+
+add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/hash")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exception")
+add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
+add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
+if (ACUL_SIMD_ENABLE)
+    add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/simd")
+endif()
+
+
+if(ACUL_ENABLE_INTL)
+    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/intl")
+endif()
+if (ACUL_ENABLE_ZSTD)
+    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc")
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
@@ -16,33 +36,16 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 
-option(ENABLE_HALF "Enable half support" ON)
-option(ENABLE_LOG "Enable log support" ON)
-option(ENABLE_SIMD "Enable SIMD support" ON)
-option(ENABLE_GLM "Enable GLM support" ON)
-
 # TBB
 find_package(TBB REQUIRED)
 set(ACUL_PUBLIC_LIBS TBB::tbb TBB::tbbmalloc)
 
-set(ACUL_PRIVATE_LIBS zstd)
-
-if(ENABLE_GLM)
-    set(GLM_ENABLE_CXX_20 ON)
-    add_compile_definitions(GLM_ENABLE_CXX_20 GLM_FORCE_INTRINSICS)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_GLM_ENABLE)
-    add_subdirectory("modules/3rd-party/glm")
-    list(APPEND ACUL_PUBLIC_LIBS glm)
+if(ACUL_ENABLE_ZSTD)
+    set(ACUL_PRIVATE_LIBS zstd)
 endif()
 
-if(WIN32)
+if(WIN32 AND ACUL_ENABLE_INTL)
     list(APPEND ACUL_PUBLIC_LIBS intl)
-endif()
-
-if(ENABLE_HALF)
-    target_include_directories(${PROJECT_NAME} PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/3rd-party/half/include)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_HALF_ENABLE)
 endif()
 
 if(ENABLE_LOG)
@@ -55,7 +58,6 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ACUL_PUBLIC_LIBS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${ACUL_PRIVATE_LIBS})
-
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include

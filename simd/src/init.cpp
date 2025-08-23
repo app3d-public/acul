@@ -1,5 +1,5 @@
 #include <acul/api.hpp>
-#include <acul/simd.hpp>
+#include <acul/simd/simd.hpp>
 
 extern "C" APPLIB_API uint16_t acul_get_simd_flags()
 {

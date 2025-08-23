@@ -1,6 +1,0 @@
-[submodule "half"]
-	path = modules/3rd-party/half
-	url = git@git.dev.lan:root/half.git
-[submodule "modules/3rd-party/glm"]
-	path = modules/3rd-party/glm
-	url = git@github.com:g-truc/glm.git

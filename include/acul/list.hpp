@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory.hpp"
+#include "memory/alloc.hpp"
 #include "type_traits.hpp"
 
 namespace acul
@@ -609,7 +609,7 @@ namespace acul
 
         reference operator*() { return _ptr->data; }
         reference operator*() const { return _ptr->data; }
-        value_type* operator->() const { return &_ptr->data; }
+        value_type *operator->() const { return &_ptr->data; }
 
         friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr; }
         friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr; }

@@ -4,6 +4,7 @@
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "../api.hpp"
+#include "../simd/simd.hpp"
 #include "../string/string_pool.hpp"
 #include "../vector.hpp"
 
@@ -87,7 +88,10 @@ namespace acul
              * @param size Size of the data buffer
              * @param dst Dynamic array to store the parsed lines
              */
-            APPLIB_API void fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst);
+            inline void fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
+            {
+                internal::g_simd_ctx.fill_line_buffer(data, size, dst);
+            }
 
             /**
              * Reads a file in blocks and processes it using a callback function.

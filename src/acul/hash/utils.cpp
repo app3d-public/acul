@@ -1,9 +1,11 @@
 #include <acul/api.hpp>
+#include <acul/pair.hpp>
 #include <acul/scalars.hpp>
 #include <cstring>
 #include <utility>
 
-typedef std::pair<u64, u64> u128;
+
+typedef acul::pair<u64, u64> u128;
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
     #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         #define WORDS_BIGENDIAN 1
@@ -179,7 +181,7 @@ namespace acul
 
     // Return a 16-byte hash for 48 bytes.  Quick and dirty.
     // Callers do best to use "random-looking" values for a and b.
-    static std::pair<u64, u64> weak_hash32_with_seeds(u64 w, u64 x, u64 y, u64 z, u64 a, u64 b)
+    static pair<u64, u64> weak_hash32_with_seeds(u64 w, u64 x, u64 y, u64 z, u64 a, u64 b)
     {
         a += w;
         b = rotate(b + a + z, 21);
@@ -187,11 +189,11 @@ namespace acul
         a += x;
         a += y;
         b += rotate(a, 44);
-        return std::make_pair(a + z, b + c);
+        return {a + z, b + c};
     }
 
     // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
-    static std::pair<u64, u64> weak_hash32_with_seeds(const char *s, u64 a, u64 b)
+    static pair<u64, u64> weak_hash32_with_seeds(const char *s, u64 a, u64 b)
     {
         return weak_hash32_with_seeds(fetch64(s), fetch64(s + 8), fetch64(s + 16), fetch64(s + 24), a, b);
     }
@@ -233,8 +235,8 @@ namespace acul
         u64 x = fetch64(s + len - 40);
         u64 y = fetch64(s + len - 16) + fetch64(s + len - 56);
         u64 z = hash16(fetch64(s + len - 48) + len, fetch64(s + len - 24));
-        std::pair<u64, u64> v = weak_hash32_with_seeds(s + len - 64, len, z);
-        std::pair<u64, u64> w = weak_hash32_with_seeds(s + len - 32, y + k1, x);
+        pair<u64, u64> v = weak_hash32_with_seeds(s + len - 64, len, z);
+        pair<u64, u64> w = weak_hash32_with_seeds(s + len - 32, y + k1, x);
         x = x * k1 + fetch64(s);
 
         // Decrease len to the nearest multiple of 64, and operate on 64-byte chunks.

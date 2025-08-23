@@ -4,6 +4,7 @@
 #include <random>
 #include "../api.hpp"
 #include "../scalars.hpp"
+#include "../simd/simd.hpp"
 
 namespace acul
 {
@@ -22,17 +23,14 @@ namespace acul
     // @ref https://github.com/google/cityhash
     APPLIB_API u64 cityhash64(const char *s, size_t len);
 
-    APPLIB_API u32 crc32(u32 crc, const char *buf, size_t len);
-} // namespace acul
+    inline u32 crc32(u32 crc, const char *buf, size_t len) { return internal::g_simd_ctx.crc32(crc, buf, len); }
 
-namespace std
-{
-    template <class T>
+        template <class T>
     inline void hash_combine(std::size_t &seed, const T &v)
     {
         std::hash<T> hasher;
         seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
-} // namespace std
+} // namespace acul
 
 #endif

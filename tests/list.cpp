@@ -54,7 +54,7 @@ void test_list_foreach()
 {
     acul::list<uint32_t> u0(10, 5);
     int counter = 0;
-    for (uint32_t v : u0) ++counter;
+    for (uint32_t _ : u0) ++counter;
     assert(counter == 10);
 }
 

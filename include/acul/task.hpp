@@ -6,6 +6,7 @@
 #include <oneapi/tbb/task.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/task_group.h>
+#include "memory/smart_ptr.hpp"
 #include "vector.hpp"
 
 #ifdef _WIN32

@@ -132,7 +132,7 @@ namespace acul
         i32 data_align;
         u8 ra_reg;
         u8 ptr_encoding;  // DW_EH_PE_*
-        u8 lsda_encoding; // LSDA-pointer в FDE
+        u8 lsda_encoding; // LSDA-pointer to FDE
         u8 personality_encoding;
         uintptr_t personality;
         bool is_signal_frame;
@@ -262,7 +262,7 @@ namespace acul
                     case 'R': // FDE initial_location/range encoding
                         cie.ptr_encoding = *p++;
                         break;
-                    case 'S': // сигнальный фрейм
+                    case 'S': // Signal Frame
                         cie.is_signal_frame = true;
                         break;
                     default:

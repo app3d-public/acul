@@ -1,8 +1,9 @@
 #pragma once
 
-#include <acul/list.hpp>
 #include <oneapi/tbb/concurrent_queue.h>
 #include "api.hpp"
+#include "list.hpp"
+#include "memory/smart_ptr.hpp"
 
 namespace acul
 {
@@ -32,10 +33,7 @@ namespace acul
 
         void push(const mem_data &data) { _queue.push(data); }
 
-        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr)
-        {
-            _queue.push({{cache}, onWait});
-        }
+        void push(mem_cache *cache, const std::function<void()> &onWait = nullptr) { _queue.push({{cache}, onWait}); }
 
         void flush();
 

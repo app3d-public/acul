@@ -14,4 +14,10 @@
 #else
     #define APPLIB_API API_IMPORT
 #endif
+
+#define ACUL_LIKELY(x)   __builtin_expect(!!(x), 1)
+#define ACUL_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define ACUL_HOT         __attribute__((hot))
+#define ACUL_COLD        __attribute__((cold))
+#define ACUL_FORCEINLINE __attribute__((always_inline)) inline
 #endif // APPLIB_API_H

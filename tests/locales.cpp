@@ -1,4 +1,4 @@
-#include <acul/locales.hpp>
+#include <acul/locales/locales.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
 

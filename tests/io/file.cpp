@@ -63,6 +63,8 @@ void test_file()
     assert(remove_file(copy_file2.str().c_str()) == op_state::success);
     assert(!exists(copy_file2.str().c_str()));
 
+#ifdef ACUL_ZSTD_ENABLE
+
     // --- compress / decompress
     vector<char> compressed;
     vector<char> decompressed;
@@ -75,6 +77,7 @@ void test_file()
     assert(decompress_ok);
     assert(decompressed.size() == buffer.size());
     assert(memcmp(buffer.data(), decompressed.data(), buffer.size()) == 0);
+#endif
 
     // Create directory
     auto dp = data / "test_dir";

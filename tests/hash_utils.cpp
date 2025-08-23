@@ -50,15 +50,15 @@ void test_hash_combine()
 {
     std::size_t seed = 0;
     acul::string s = "example";
-    std::hash_combine(seed, s);
+    acul::hash_combine(seed, s);
     assert(seed != 0);
 
     std::size_t seed2 = seed;
-    std::hash_combine(seed2, 42);
+    acul::hash_combine(seed2, 42);
     assert(seed != seed2);
 }
 
-void test_hash()
+void test_hash_utils()
 {
     test_id_gen();
     test_crc32();

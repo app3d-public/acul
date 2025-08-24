@@ -1,7 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
-#include "../../scalars.hpp"
+#include "../../../scalars.hpp"
 #include "hl_hashmap.hpp"
 
 namespace acul

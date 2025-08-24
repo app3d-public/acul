@@ -8,22 +8,85 @@ The library does not attempt to reimplement the standard library wholesale.
 Only components that exhibit practical limitations in real-world usage are reimplemented.
 Everything else is expected to be used as-is from the surrounding ecosystem.
 
-## Limitations:
- -  If you use exception/signal stack trace tools on Microsoft Windows, you need to call `destroy_exception_context()` due to compatibility with remote memory access.
- - Assigning a `char[]` to an `acul::string` may result in UB due to RDATA optimization.
- 
-    **_NOTE:_** Use `(const char*)` `buf` to force SBO/heap copy
- - acul STL containers are not compatible with std allocators.
- - `acul::shared_ptr` and `acul::weak_ptr` are not thread-safe
+## Major Components
 
-## Dependencies
-### Required Dependencies
-- [OneAPI TBB](https://github.com/oneapi-src/oneTBB)
-### Optional Dependencies
-| Feature                         | Dependency                                    | Description                                                  |
-|----------------------------------|-----------------------------------------------|--------------------------------------------------------------|
-| Compression support             | [zstd](https://github.com/facebook/zstd)      | Enables compressed buffers and caching in `jatc` storage     |
-| Localization (i18n)             | [gettext (intl)](https://www.gnu.org/software/gettext/) | Enables locale-aware messages and internationalization |
+### Strings
+- Custom string type based on the SSO-23 model (small-string optimization).  
+- One bit of the size field is reserved to mark `.rodata` mode:  
+  in this mode the string directly references string literals from the read-only segment instead of copying them to stack or heap.  
+- Utilities are provided for working with strings (views, pools, in-memory string streams).
+
+> [!WARNING]
+> Construction directly from `char[]` temporarily buffers is undefined behavior – use `(const char*)buf` to force a heap/SSO copy.
+
+### Exceptions
+- Exception system with captured stack trace on throw.
+
+> [!NOTE]
+> On Microsoft Windows, you must call `destroy_exception_context()` at program shutdown for compatibility with remote memory access.  
+> On Linux, remote stack capture requires enabling `ptrace` API to allow tracing the process.
+
+### Hash Maps / Sets
+- Hash containers in `acul` are designed with a focus on fast `emplace` operations and efficient miss lookups.
+- Two families are provided:
+  - `acul::hashmap` / `acul::hashset`: chain-based implementation, well-suited for small tables.  
+  - `acul::hl_hashmap` / `acul::hl_hashset`: open-addressing implementation with SIMD acceleration, optimized for large tables.
+
+### Smart Pointers
+- Custom `shared_ptr`, `weak_ptr`, and `unique_ptr`.  
+- Optimized for single-threaded performance.
+
+> [!WARNING] Acul smart pointers are not thread-safe.
+
+### Containers
+- Custom `vector`, `list`, `forward_list`  
+- Designed for integration with App3D’s memory model.
+
+> [!NOTE]
+> Acul containers are not compatible with std allocators.
+
+### Memory
+- Memory utilities and allocation adapters.
+
+### Concurrency & Utilities
+- Task management subsystem.
+- Task sheduler subsystem.
+- Logging subsystem.
+- Deferred destruction queue.
+- Atomic/Futex based synchronization `shared_mutex` implementation.
+- Locale-related helpers.
+
+### IO
+- Basic file utilities for cross-platform file operations.  
+
+> [!NOTE]
+> To enable SIMD-accelerated IO functions, call `enable_simd_module()` at program startup.
+
+#### Paths
+- Unified path abstraction for both local and virtual schemes.  
+- Internally all paths are stored as UTF-8, independent of host OS encoding.
+
+#### JATC (Journalable Asynchronous Temporary Cache)
+JATC is an asynchronous caching subsystem built around a journaled file format.  
+Its purpose is to provide safe, concurrent access to temporary data with guaranteed integrity.  
+
+Design overview:  
+Data is organized into **entrygroups**, which register one or more **entrypoints**.  
+Each entrypoint represents a journal file and manages synchronization for concurrent operations.  
+Client code interacts with JATC through request/response pairs.  
+Each response resolves to an **index entry**, which contains the metadata locating data inside the entrypoint journal.
+
+### External packages
+These are system libraries that must be available at build time:
+
+- [OneAPI TBB](https://github.com/oneapi-src/oneTBB) — required
+- [zstd](https://github.com/facebook/zstd) — optional, enables compressed buffers and caching in JATC
+- [gettext (intl)](https://www.gnu.org/software/gettext/) — optional, enables locale-aware messages and internationalization
+
+### Bundled submodules
+The following dependencies are included as git submodules and must be checked out when cloning:
+
+- [acbt](https://git.homedatasrv.ru/app3d/acbt) - App3D Cmake Build Tools
 
 ## Building
 
@@ -40,6 +103,9 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 - `ACUL_SIMD_ENABLE`: Enable SIMD support
 - `ACUL_INTL_ENABLE`: Enable intl support
 - `ACUL_ZSTD_ENABLE`: Enable zstd support
+- `USE_ASAN`: Enable address sanitizer
+- `BUILD_TESTS`: Enable testing
+- `ENABLE_COVERAGE`: Enable code coverage
 
 ## Benchmarks
 <details>
@@ -516,3 +582,9 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 
 </details>
 </details>
+
+## License
+This project is licensed under the [MIT License](LICENSE).
+
+## Contacts
+For any questions or feedback, you can reach out via [email](mailto:wusikijeronii@gmail.com) or open a new issue.

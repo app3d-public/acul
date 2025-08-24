@@ -1,10 +1,11 @@
 #pragma once
 
-#include <oneapi/tbb/scalable_allocator.h>
-#include <unordered_set>
+#include "internal/raw_hash_table.hpp"
+#include "internal/set_traits.hpp"
 
 namespace acul
 {
-    template <typename T>
-    using hashset = std::unordered_set<T, std::hash<T>, std::equal_to<T>, oneapi::tbb::scalable_allocator<T>>;
+    template <typename K, typename Allocator = mem_allocator<std::byte>, typename H = std::hash<K>,
+              typename Eq = std::equal_to<K>>
+    using hashset = internal::raw_hashtable<Allocator, internal::set_traits<K, H, Eq>>;
 }

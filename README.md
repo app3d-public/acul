@@ -71,7 +71,7 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 JATC is an asynchronous caching subsystem built around a journaled file format.  
 Its purpose is to provide safe, concurrent access to temporary data with guaranteed integrity.  
 
-Design overview:  
+**Design overview:**\
 Data is organized into **entrygroups**, which register one or more **entrypoints**.  
 Each entrypoint represents a journal file and manages synchronization for concurrent operations.  
 Client code interacts with JATC through request/response pairs.  

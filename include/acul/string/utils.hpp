@@ -36,7 +36,6 @@ namespace acul
      * @brief Converts the integer to the C-style string
      * @param value Source value
      * @param buffer Destination buffer
-     * @param bufferSize Buffer size
      * @return The number of characters written
      */
     template <typename T>
@@ -104,7 +103,7 @@ namespace acul
      * @brief Converts the float to the C-style string
      * @param value Source value
      * @param buffer Destination buffer
-     * @param bufferSize Buffer size
+     * @param buffer_size Buffer size
      * @param precision Precision
      * @return The number of characters written
      **/

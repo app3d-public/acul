@@ -100,13 +100,3 @@ endif()
 if(ENABLE_SIMD)
     add_subdirectory(simd)
 endif()
-
-add_executable(benchmark_string benchmark/string.cpp)
-target_link_libraries(benchmark_string PRIVATE acul benchmark)
-
-set_target_properties(benchmark_string
-    PROPERTIES
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS YES
-)

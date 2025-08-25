@@ -642,6 +642,8 @@ namespace acul
 
             size_type count(const key_type &key) const noexcept { return bucket(key) != _num_buckets ? 1 : 0; }
 
+            bool contains(const key_type &key) const noexcept { return bucket(key) != _num_buckets; }
+
             template <typename U>
             size_type count(const U &key) const noexcept
             {

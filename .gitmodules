@@ -1,0 +1,3 @@
+[submodule "cmake"]
+	path = cmake
+	url = git@git.dev.lan:app3d/acbt.git

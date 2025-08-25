@@ -1,4 +1,3 @@
-// main.cpp
 #include <acul/vector.hpp>
 #include <benchmark/benchmark.h>
 #include <cfloat>

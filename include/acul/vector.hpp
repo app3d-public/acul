@@ -2,6 +2,7 @@
 #define APP_ACUL_STD_VECTOR_H
 
 #include "exception/exception.hpp"
+#include "iterator.hpp"
 #include "memory/alloc.hpp"
 #include "type_traits.hpp"
 
@@ -18,20 +19,20 @@ namespace acul
         using const_pointer = typename Allocator::const_pointer;
         using size_type = typename Allocator::size_type;
 
-        class iterator;
-        using const_iterator = const iterator;
+        using iterator = pointer_iterator<pointer>;
+        using const_iterator = pointer_iterator<const_pointer>;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = const std::reverse_iterator<iterator>;
 
         vector() noexcept : _size(0), _capacity(0), _data(nullptr) {}
 
-        explicit vector(size_type size) noexcept : _size(size), _capacity(size), _data(Allocator::allocate(size))
+        inline explicit vector(size_type size) noexcept : _size(size), _capacity(size), _data(Allocator::allocate(size))
         {
             if constexpr (!std::is_trivially_constructible_v<value_type>)
                 for (size_type i = 0; i < _size; ++i) Allocator::construct(_data + i);
         }
 
-        vector(size_type size, const_reference value) noexcept
+        inline vector(size_type size, const_reference value) noexcept
             : _size(size), _capacity(size), _data(Allocator::allocate(size))
         {
             for (size_type i = 0; i < _size; ++i)
@@ -42,7 +43,7 @@ namespace acul
         }
 
         template <typename InputIt, std::enable_if_t<is_input_iterator<InputIt>::value, int> = 0>
-        vector(InputIt first, InputIt last) : _size(0), _capacity(0), _data(nullptr)
+        inline vector(InputIt first, InputIt last) : _size(0), _capacity(0), _data(nullptr)
         {
             for (; first != last; ++first) emplace_back(*first);
         }
@@ -70,20 +71,20 @@ namespace acul
             _data = nullptr;
         }
 
-        vector(const vector &other) noexcept
+        inline vector(const vector &other) noexcept
             : _size(other._size), _capacity(other._size), _data(Allocator::allocate(_capacity))
         {
             if (_size > 0) copy_construct(other._data, other._data + _size, _data);
         }
 
-        vector(vector &&other) noexcept : _size(other._size), _capacity(other._capacity), _data(other._data)
+        inline vector(vector &&other) noexcept : _size(other._size), _capacity(other._capacity), _data(other._data)
         {
             other._data = nullptr;
             other._size = 0;
             other._capacity = 0;
         }
 
-        vector(std::initializer_list<value_type> ilist) : _size(ilist.size()), _capacity(ilist.size())
+        inline vector(std::initializer_list<value_type> ilist) : _size(ilist.size()), _capacity(ilist.size())
         {
             _data = Allocator::allocate(_size);
             std::uninitialized_copy(ilist.begin(), ilist.end(), _data);
@@ -137,9 +138,9 @@ namespace acul
             return *this;
         }
 
-        reference operator[](size_type index) { return _data[index]; }
+        ACUL_FORCEINLINE reference operator[](size_type index) noexcept { return _data[index]; }
 
-        const_reference operator[](size_type index) const { return _data[index]; }
+        ACUL_FORCEINLINE const_reference operator[](size_type index) const noexcept { return _data[index]; }
 
         bool operator==(const vector &other) const
         {
@@ -149,60 +150,60 @@ namespace acul
             return true;
         }
 
-        reference at(size_type index)
+        ACUL_FORCEINLINE reference at(size_type index)
         {
             if (index >= _size) throw out_of_range(_size, index);
             return _data[index];
         }
 
-        const_reference at(size_type index) const
+        ACUL_FORCEINLINE const_reference at(size_type index) const
         {
             if (index >= _size) throw out_of_range(_size, index);
             return _data[index];
         }
 
-        reference front() { return *_data; }
+        ACUL_FORCEINLINE reference front() noexcept { return *_data; }
 
-        const_reference front() const { return *_data; }
+        ACUL_FORCEINLINE const_reference front() const noexcept { return *_data; }
 
-        reference back() { return _data[_size - 1]; }
+        ACUL_FORCEINLINE reference back() { return _data[_size - 1]; }
 
-        const_reference back() const { return _data[_size - 1]; }
+        ACUL_FORCEINLINE const_reference back() const noexcept { return _data[_size - 1]; }
 
-        iterator begin() noexcept { return iterator(_data); }
+        ACUL_FORCEINLINE iterator begin() noexcept { return iterator(_data); }
 
-        const_iterator begin() const noexcept { return iterator(_data); }
+        ACUL_FORCEINLINE const_iterator begin() const noexcept { return iterator(_data); }
 
-        const_iterator cbegin() const noexcept { return iterator(_data); }
+        ACUL_FORCEINLINE const_iterator cbegin() const noexcept { return const_iterator(_data); }
 
-        reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+        ACUL_FORCEINLINE reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
 
-        const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+        ACUL_FORCEINLINE const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
 
-        const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
+        ACUL_FORCEINLINE const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
 
-        iterator end() noexcept { return iterator(_data + _size); }
+        ACUL_FORCEINLINE iterator end() noexcept { return iterator(_data + _size); }
 
-        const_iterator end() const noexcept { return iterator(_data + _size); }
+        ACUL_FORCEINLINE const_iterator end() const noexcept { return const_iterator(_data + _size); }
 
-        const_iterator cend() const noexcept { return iterator(_data + _size); }
+        ACUL_FORCEINLINE const_iterator cend() const noexcept { return const_iterator(_data + _size); }
 
-        reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+        ACUL_FORCEINLINE reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
 
-        const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+        ACUL_FORCEINLINE const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
 
-        bool empty() const noexcept { return _size == 0; }
+        ACUL_FORCEINLINE bool empty() const noexcept { return _size == 0; }
 
-        size_type size() const noexcept { return _size; }
+        ACUL_FORCEINLINE size_type size() const noexcept { return _size; }
 
-        size_type max_size() const noexcept { return Allocator::max_size(); }
+        ACUL_FORCEINLINE size_type max_size() const noexcept { return Allocator::max_size(); }
 
-        size_type capacity() const { return _capacity; }
+        ACUL_FORCEINLINE size_type capacity() const noexcept { return _capacity; }
 
-        const_pointer data() const { return _data; }
-        pointer data() { return _data; }
+        ACUL_FORCEINLINE const_pointer data() const noexcept { return _data; }
+        ACUL_FORCEINLINE pointer data() noexcept { return _data; }
 
-        void reserve(size_type new_capacity)
+        inline void reserve(size_type new_capacity)
         {
             if (new_capacity <= _capacity) return;
             _capacity = new_capacity;
@@ -252,7 +253,7 @@ namespace acul
          *
          * @return A pointer to the data that was managed by the vector.
          */
-        pointer release() noexcept
+        inline pointer release() noexcept
         {
             pointer result = _data;
             _data = nullptr;
@@ -261,29 +262,29 @@ namespace acul
             return result;
         }
 
-        void push_back(const_reference value) noexcept
+        inline void push_back(const_reference value) noexcept
         {
             if (_size == _capacity) reallocate();
             if constexpr (std::is_trivially_copyable_v<value_type>)
                 _data[_size] = value;
             else
-                Allocator::construct(_data + _size, value);
-            ++_size;
+                Allocator::construct(_data_end, value);
+            _data_end = _data + ++_size;
         }
 
         template <typename U>
-        void push_back(U &&value)
+        inline void push_back(U &&value)
         {
             if (_size == _capacity) reallocate();
             if constexpr (std::is_trivially_move_assignable_v<value_type>)
-                _data[_size] = std::forward<U>(value);
+                *_data_end = std::forward<U>(value);
             else
-                Allocator::construct(_data + _size, std::forward<U>(value));
-            ++_size;
+                Allocator::construct(_data_end, std::forward<U>(value));
+            _data_end = _data + ++_size;
         }
 
         template <typename... Args>
-        void emplace_back(Args &&...args)
+        ACUL_FORCEINLINE void emplace_back(Args &&...args)
         {
             if (_size == _capacity) reallocate();
             if constexpr (!std::is_trivially_constructible_v<value_type> || has_args<Args...>())
@@ -291,7 +292,7 @@ namespace acul
             ++_size;
         }
 
-        void pop_back() noexcept
+        ACUL_FORCEINLINE void pop_back() noexcept
         {
             if (_size == 0) return;
             Allocator::destroy(_data + _size - 1);
@@ -355,10 +356,11 @@ namespace acul
         size_type _size;
         size_type _capacity;
         pointer _data;
+        pointer _data_end;
 
-        void reallocate(bool adjustCapacity = true)
+        void reallocate(bool adjust_capacity = true)
         {
-            if (adjustCapacity) _capacity = get_growth_size(_capacity, _capacity + 1);
+            if (adjust_capacity) _capacity = get_growth_size(_capacity, _capacity + 1);
             pointer new_data;
             if constexpr (std::is_trivially_copyable_v<T>)
             {
@@ -377,6 +379,7 @@ namespace acul
                 Allocator::deallocate(_data, _capacity);
             }
             _data = new_data;
+            _data_end = _data + _size;
         }
 
         template <typename Iter, typename Dest>
@@ -419,76 +422,6 @@ namespace acul
             else
                 while (end != start) Allocator::construct(--destEnd, std::move(*--end));
         }
-    };
-
-    template <typename T, typename Allocator>
-    class vector<T, Allocator>::iterator
-    {
-    public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = T;
-        using difference_type = std::ptrdiff_t;
-        using pointer = vector::pointer;
-        using reference = T &;
-        using const_reference = const T &;
-
-        iterator(pointer ptr = nullptr) : _ptr(ptr) {}
-
-        reference operator*() { return *_ptr; }
-        reference operator*() const { return *_ptr; }
-        pointer operator->() { return _ptr; }
-        pointer operator->() const { return _ptr; }
-
-        iterator &operator++()
-        {
-            ++_ptr;
-            return *this;
-        }
-        iterator operator++(int)
-        {
-            iterator temp = *this;
-            ++(*this);
-            return temp;
-        }
-        iterator &operator--()
-        {
-            --_ptr;
-            return *this;
-        }
-        iterator operator--(int)
-        {
-            iterator temp = *this;
-            --(*this);
-            return temp;
-        }
-
-        friend bool operator==(const iterator &a, const iterator &b) { return a._ptr == b._ptr; }
-        friend bool operator!=(const iterator &a, const iterator &b) { return a._ptr != b._ptr; }
-
-        iterator &operator+=(difference_type movement)
-        {
-            _ptr += movement;
-            return *this;
-        }
-        iterator &operator-=(difference_type movement)
-        {
-            _ptr -= movement;
-            return *this;
-        }
-        iterator operator+(difference_type movement) const { return iterator(_ptr + movement); }
-        iterator operator-(difference_type movement) const { return iterator(_ptr - movement); }
-
-        difference_type operator-(const iterator &other) const { return _ptr - other._ptr; }
-
-        friend bool operator<(const iterator &a, const iterator &b) { return a._ptr < b._ptr; }
-        friend bool operator>(const iterator &a, const iterator &b) { return a._ptr > b._ptr; }
-        friend bool operator<=(const iterator &a, const iterator &b) { return a._ptr <= b._ptr; }
-        friend bool operator>=(const iterator &a, const iterator &b) { return a._ptr >= b._ptr; }
-
-        reference operator[](difference_type offset) const { return *(*this + offset); }
-
-    private:
-        pointer _ptr;
     };
 
     template <typename T, typename Allocator>

@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.17)
+if (NOT DEFINED ACBT_LOADED)
+    include(cmake/utils.cmake)
+endif()
+if (WIN32)
+    include(cmake/manifest.cmake)
+endif()
+
 project(acul
     VERSION 0.0.1
     LANGUAGES CXX C
@@ -93,3 +100,13 @@ endif()
 if(ENABLE_SIMD)
     add_subdirectory(simd)
 endif()
+
+add_executable(benchmark_string benchmark/string.cpp)
+target_link_libraries(benchmark_string PRIVATE acul benchmark)
+
+set_target_properties(benchmark_string
+    PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS YES
+)

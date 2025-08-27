@@ -48,7 +48,7 @@ namespace acul
         }
 
         inline reference operator*() noexcept { return *_ptr; }
-        inline const_reference operator*() const noexcept { return *_ptr; }
+        inline reference operator*() const noexcept { return *_ptr; }
         inline pointer operator->() noexcept { return _ptr; }
         inline pointer operator->() const noexcept { return _ptr; }
 
@@ -98,7 +98,7 @@ namespace acul
         friend bool operator<=(const pointer_iterator &a, const pointer_iterator &b) { return a._ptr <= b._ptr; }
         friend bool operator>=(const pointer_iterator &a, const pointer_iterator &b) { return a._ptr >= b._ptr; }
 
-        const_reference operator[](difference_type offset) const { return *(*this + offset); }
+        reference operator[](difference_type offset) const { return *(*this + offset); }
 
         pointer base() const noexcept { return _ptr; }
 

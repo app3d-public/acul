@@ -25,7 +25,7 @@ namespace acul
 
     inline u32 crc32(u32 crc, const char *buf, size_t len) { return internal::g_simd_ctx.crc32(crc, buf, len); }
 
-        template <class T>
+    template <class T>
     inline void hash_combine(std::size_t &seed, const T &v)
     {
         std::hash<T> hasher;

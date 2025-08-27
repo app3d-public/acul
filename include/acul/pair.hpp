@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <type_traits>
 #include "scalars.hpp"
 
@@ -104,5 +105,12 @@ namespace acul
     {
         T begin;
         T end;
+    };    
+
+    template <typename T>
+    struct min_max
+    {
+        T min = std::numeric_limits<T>::min();
+        T max = std::numeric_limits<T>::max();
     };
 } // namespace acul

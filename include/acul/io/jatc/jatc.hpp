@@ -4,7 +4,7 @@
 #include <fstream>
 #include <oneapi/tbb/flow_graph.h>
 #include "../../shared_mutex.hpp"
-#include "../../stream.hpp"
+#include "../../bin_stream.hpp"
 #include "../../string/utils.hpp"
 #include "../../task.hpp"
 #include "../file.hpp"

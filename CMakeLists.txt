@@ -15,23 +15,24 @@ endif()
 
 option(ACUL_LOG_ENABLE "Enable log support" ON)
 option(ACUL_SIMD_ENABLE "Enable SIMD support" ON)
-option(ACUL_INTL_ENABLE "Enable intl support" OFF)
-option(ACUL_ZSTD_ENABLE "Enable zstd support" OFF)
+option(ACUL_INTL_ENABLE "Enable intl support" ON)
+option(ACUL_ZSTD_ENABLE "Enable zstd support" ON)
 
 add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/hash")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exception")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
 add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
+
 if (ACUL_SIMD_ENABLE)
     add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/simd")
 endif()
 
-
-if(ACUL_ENABLE_INTL)
-    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/intl")
+if(ACUL_INTL_ENABLE)
+    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/locales")
 endif()
-if (ACUL_ENABLE_ZSTD)
+
+if (ACUL_ZSTD_ENABLE)
     add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc")
 endif()
 
@@ -49,16 +50,22 @@ target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 find_package(TBB REQUIRED)
 set(ACUL_PUBLIC_LIBS TBB::tbb TBB::tbbmalloc)
 
-if(ACUL_ENABLE_ZSTD)
+if(ACUL_ZSTD_ENABLE)
     set(ACUL_PRIVATE_LIBS zstd)
 endif()
 
-if(WIN32 AND ACUL_ENABLE_INTL)
+if(WIN32 AND ACUL_INTL_ENABLE)
     list(APPEND ACUL_PUBLIC_LIBS intl)
 endif()
 
-if(ENABLE_LOG)
+if(ACUL_LOG_ENABLE)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_LOG_ENABLE)
+endif()
+if(ACUL_INTL_ENABLE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_INTL_ENABLE)
+endif()
+if(ACUL_ZSTD_ENABLE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_ZSTD_ENABLE)
 endif()
 
 if(WIN32)

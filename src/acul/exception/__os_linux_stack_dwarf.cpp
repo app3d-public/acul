@@ -587,7 +587,7 @@ namespace acul
             uintptr_t pc = cur.regs[REG_RIP];
 
             auto mod_it = get_module_by_table(pc, mods);
-            if (mod_it == mods.end() || !mod_it->is_exec) break;
+            if (mod_it == mods.cend() || !mod_it->is_exec) break;
             out.push_back(reinterpret_cast<void *>(pc));
             eh_frame eh;
             if (!map_eh_frame_remote(pid, mod_it->path, mod_it->load_bias, eh)) break;

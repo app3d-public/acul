@@ -86,7 +86,7 @@ namespace acul
     {
         exec_table module_table;
         build_exec_table(info.pid, module_table);
-        vector<exec_module>::iterator main_module_it = module_table.end();
+        vector<exec_module>::const_iterator main_module_it = module_table.cend();
         char main_module_path[PATH_MAX];
         if (io::get_executable_path(main_module_path, PATH_MAX))
         {
@@ -95,7 +95,7 @@ namespace acul
                                           [&str](const exec_module &module) { return module.path == str; });
         }
         out << "Stack trace:\n";
-        hashmap<exec_module *, elf_module> module_load_cache;
+        hashmap<const exec_module *, elf_module> module_load_cache;
         module_load_cache.reserve(module_table.size());
         for (size_t i = 0; i < info.addresses_count; ++i)
         {
@@ -104,7 +104,7 @@ namespace acul
             out << msg;
             auto module_it = get_module_by_table(ip, module_table);
             bool is_error = false;
-            if (module_it != module_table.end())
+            if (module_it != module_table.cend())
             {
                 if (module_it->is_exec)
                 {

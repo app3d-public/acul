@@ -1,5 +1,6 @@
+#include <acul/bin_stream.hpp>
 #include <acul/io/file.hpp>
-#include <acul/stream.hpp>
+#include <acul/memory/smart_ptr.hpp>
 #include <acul/string/utils.hpp>
 #include <dirent.h>
 #include <elf.h>
@@ -214,15 +215,15 @@ namespace acul
     {
         size_t phnum = pv.segs.size() + 1;
         size_t eh_ph =
-            round_up(sizeof(Elf64_Ehdr), ELF_HDR_ALIGN) + round_up(sizeof(Elf64_Phdr) * phnum, ELF_HDR_ALIGN);
+            align_up(sizeof(Elf64_Ehdr), ELF_HDR_ALIGN) + align_up(sizeof(Elf64_Phdr) * phnum, ELF_HDR_ALIGN);
         Elf64_Phdr note{};
         note.p_type = PT_NOTE;
-        note.p_offset = round_up(eh_ph, ELF_HDR_ALIGN);
+        note.p_offset = align_up(eh_ph, ELF_HDR_ALIGN);
         note.p_filesz = note_sz;
         note.p_memsz = note_sz;
         note.p_align = 1;
         w.write(note);
-        size_t cur = round_up(note.p_offset + note_sz, pv.page);
+        size_t cur = align_up(note.p_offset + note_sz, pv.page);
         for (auto &s : pv.segs)
         {
             s.file_off = cur;
@@ -248,7 +249,7 @@ namespace acul
         h.n_descsz = static_cast<u32>(sz);
         w.write(h).write(name.data(), name.size()).write("\0", 1);
 
-        size_t name_pad = round_up(h.n_namesz, ELF_NOTE_ALIGN) - h.n_namesz;
+        size_t name_pad = align_up(h.n_namesz, ELF_NOTE_ALIGN) - h.n_namesz;
         w.write_pad(name_pad).write((char *)d, sz).write_align(ELF_NOTE_ALIGN);
     }
 

@@ -42,13 +42,13 @@ namespace acul
 
         pointer_iterator(pointer ptr = nullptr) : _ptr(ptr) {}
 
-        template <typename P2>
+        template <typename P2, typename = std::enable_if_t<std::is_convertible_v<P2, P>>>
         pointer_iterator(const pointer_iterator<P2> &other) : _ptr(other._ptr)
         {
         }
 
         inline reference operator*() noexcept { return *_ptr; }
-        inline reference operator*() const noexcept { return *_ptr; }
+        inline const_reference operator*() const noexcept { return *_ptr; }
         inline pointer operator->() noexcept { return _ptr; }
         inline pointer operator->() const noexcept { return _ptr; }
 
@@ -98,7 +98,9 @@ namespace acul
         friend bool operator<=(const pointer_iterator &a, const pointer_iterator &b) { return a._ptr <= b._ptr; }
         friend bool operator>=(const pointer_iterator &a, const pointer_iterator &b) { return a._ptr >= b._ptr; }
 
-        reference operator[](difference_type offset) const { return *(*this + offset); }
+        const_reference operator[](difference_type offset) const { return *(*this + offset); }
+
+        pointer base() const noexcept { return _ptr; }
 
     private:
         pointer _ptr;
@@ -106,4 +108,32 @@ namespace acul
         template <class>
         friend class pointer_iterator;
     };
+
+    template <typename P1, typename P2>
+    constexpr bool is_same_pointee =
+        std::is_same_v<std::remove_cv_t<std::remove_pointer_t<P1>>, std::remove_cv_t<std::remove_pointer_t<P2>>>;
+
+    template <typename P1, typename P2, typename = std::enable_if_t<is_same_pointee<P1, P2>>>
+    inline bool operator==(const pointer_iterator<P1> &a, const pointer_iterator<P2> &b)
+    {
+        return a.base() == b.base();
+    }
+    template <typename P1, typename P2, typename = std::enable_if_t<is_same_pointee<P1, P2>>>
+    inline bool operator!=(const pointer_iterator<P1> &a, const pointer_iterator<P2> &b)
+    {
+        return !(a == b);
+    }
+
+    template <typename P1, typename P2, typename = std::enable_if_t<is_same_pointee<P1, P2>>>
+    inline auto operator-(const pointer_iterator<P1> &a, const pointer_iterator<P2> &b) ->
+        typename pointer_iterator<P1>::difference_type
+    {
+        return a.base() - b.base();
+    }
+
+    template <typename P1, typename P2, typename = std::enable_if_t<is_same_pointee<P1, P2>>>
+    inline bool operator<(const pointer_iterator<P1> &a, const pointer_iterator<P2> &b)
+    {
+        return a.base() < b.base();
+    }
 } // namespace acul

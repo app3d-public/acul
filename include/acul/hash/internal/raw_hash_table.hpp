@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 #include <iterator>
 #include <optional>
 #include "../../api.hpp"

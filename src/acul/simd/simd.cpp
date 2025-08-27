@@ -41,7 +41,7 @@ namespace acul
 
     void init_simd_module()
     {
-        internal::g_simd_ctx.flags = simd_flag_bits::Initialized;
+        internal::g_simd_ctx.flags = simd_flag_bits::initialized;
 #ifdef _WIN32
         internal::g_simd_ctx.handle = LoadLibraryA("libacul-simd.dll");
 #else
@@ -63,7 +63,7 @@ namespace acul
         if (internal::g_simd_ctx.handle)
         {
 #ifndef _WIN32
-            dlclose(g_simd_ctx.handle);
+            dlclose(internal::g_simd_ctx.handle);
 #else
             FreeLibrary((HMODULE)internal::g_simd_ctx.handle);
 #endif

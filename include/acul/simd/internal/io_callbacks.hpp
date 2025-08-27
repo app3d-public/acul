@@ -12,5 +12,5 @@ namespace acul
 } // namespace acul
 
 #define ACUL_SIMD_IO_MEMBERS \
-    PFN_crc32 crc32;    \
+    PFN_crc32 crc32;         \
     PFN_fill_line_buffer fill_line_buffer;

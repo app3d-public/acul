@@ -21,7 +21,7 @@ namespace acul
             char path_buf[PATH_MAX] = {};
             if (sscanf(line, "%lx-%lx %4s %lx %*s %*s %s", &lo, &hi, perms, &file_offset, path_buf) <= 3) continue;
             string path = (const char *)path_buf;
-            auto [it, inserted] = path_map.try_emplace(path, out.size());
+            auto [it, inserted] = path_map.emplace(path, out.size());
             exec_module *m = NULL;
             if (inserted)
             {

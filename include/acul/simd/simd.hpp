@@ -12,13 +12,13 @@ namespace acul
     {
         enum enum_type : u16
         {
-            None = 0x0000,
-            Avx512 = 0x0001,
-            Avx2 = 0x0002,
-            Avx = 0x0004,
-            Sse42 = 0x0008,
-            Pclmul = 0x00010,
-            Initialized = 0x00020
+            none = 0x0000,
+            avx512 = 0x0001,
+            avx2 = 0x0002,
+            avx = 0x0004,
+            sse42 = 0x0008,
+            pclmul = 0x00010,
+            initialized = 0x00020
         };
         using flag_bitmask = std::true_type;
     };
@@ -46,7 +46,7 @@ namespace acul
 
     inline simd_flags get_simd_flags()
     {
-        assert(internal::g_simd_ctx.flags & simd_flag_bits::Initialized);
+        assert(internal::g_simd_ctx.flags & simd_flag_bits::initialized);
         return internal::g_simd_ctx.flags;
     }
 } // namespace acul

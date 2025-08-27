@@ -46,7 +46,7 @@ void test_event()
 
     bool called2 = false;
 
-    disp.add_listener<event>(0x1CE4F151413C7BE9, [&called2](event &e) {
+    disp.add_listener<event>(owner, 0x1CE4F151413C7BE9, [&called2](event &e) {
         auto &ev = static_cast<data_event<int> &>(e);
         assert(ev.data == 777);
         called2 = true;

@@ -77,18 +77,6 @@ Each entrypoint represents a journal file and manages synchronization for concur
 Client code interacts with JATC through request/response pairs.  
 Each response resolves to an **index entry**, which contains the metadata locating data inside the entrypoint journal.
 
-### External packages
-These are system libraries that must be available at build time:
-
-- [OneAPI TBB](https://github.com/oneapi-src/oneTBB) — required
-- [zstd](https://github.com/facebook/zstd) — optional, enables compressed buffers and caching in JATC
-- [gettext (intl)](https://www.gnu.org/software/gettext/) — optional, enables locale-aware messages and internationalization
-
-### Bundled submodules
-The following dependencies are included as git submodules and must be checked out when cloning:
-
-- [acbt](https://git.homedatasrv.ru/app3d/acbt) - App3D Cmake Build Tools
-
 ## Building
 
 ### Supported compilers:
@@ -107,6 +95,18 @@ The following dependencies are included as git submodules and must be checked ou
 - `USE_ASAN`: Enable address sanitizer
 - `BUILD_TESTS`: Enable testing
 - `ENABLE_COVERAGE`: Enable code coverage
+
+### External packages
+These are system libraries that must be available at build time:
+
+- [OneAPI TBB](https://github.com/oneapi-src/oneTBB) — required
+- [zstd](https://github.com/facebook/zstd) — optional, enables compressed buffers and caching in JATC
+- [gettext (intl)](https://www.gnu.org/software/gettext/) — optional, enables locale-aware messages and internationalization
+
+### Bundled submodules
+The following dependencies are included as git submodules and must be checked out when cloning:
+
+- [acbt](https://git.homedatasrv.ru/app3d/acbt) - App3D Cmake Build Tools
 
 ## Benchmarks
 <details>

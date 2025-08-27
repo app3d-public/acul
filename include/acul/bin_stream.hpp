@@ -1,5 +1,4 @@
-#ifndef APP_ACUL_STD_STREAM_H
-#define APP_ACUL_STD_STREAM_H
+#pragma once
 
 #include "api.hpp"
 #include "list.hpp"
@@ -238,5 +237,3 @@ namespace acul
         size_type _pos;
     };
 } // namespace acul
-
-#endif

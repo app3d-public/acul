@@ -5,7 +5,6 @@
 #include <functional>
 #include "api.hpp"
 #include "hash/hashmap.hpp"
-#include "map.hpp"
 #include "scalars.hpp"
 #include "type_traits.hpp"
 #include "vector.hpp"
@@ -74,155 +73,311 @@ namespace acul
             u64 id;
         };
 
-        // Manages event listeners and dispatches events to them.
+        struct event_node
+        {
+            void *owner;
+            void (*call)(void *, event &); // thunk<E>
+            void *ctx;                     // listener<E>*
+            int prio;
+        };
+
+        template <class E>
+        static void thunk(void *ctx, event &ev)
+        {
+            auto &e = static_cast<E &>(ev);
+            reinterpret_cast<listener<E> *>(ctx)->invoke(e);
+        }
+
+        class event_group
+        {
+        public:
+            using iterator = vector<event_node>::iterator;
+            using const_iterator = vector<event_node>::const_iterator;
+
+            iterator begin() { return _nodes.begin(); }
+            iterator end() { return _nodes.end(); }
+            const_iterator begin() const { return _nodes.begin(); }
+            const_iterator end() const { return _nodes.end(); }
+
+            template <class E>
+            void add(void *owner, listener<E> *L, int prio)
+            {
+                remove_by_owner(owner);                          // гарантируем уникальность owner на это событие
+                event_node n{owner, &thunk<E>, (void *)L, prio}; // порядок полей: owner, call, ctx, prio
+                auto r = equal_range_desc(prio);
+                _nodes.insert(_nodes.begin() + r.second,
+                              n); // в конец диапазона равных prio (сохраняем порядок регистрации)
+            }
+
+            void remove_by_ptr(void *ctx, int prio, bool prio_known = true)
+            {
+                if (prio_known)
+                {
+                    auto r = equal_range_desc(prio);
+                    for (int i = r.first; i < r.second; ++i)
+                        if (_nodes[i].ctx == ctx)
+                        {
+                            erase_at(i);
+                            return;
+                        }
+                }
+                else
+                {
+                    for (int i = 0; i < (int)_nodes.size(); ++i)
+                        if (_nodes[i].ctx == ctx)
+                        {
+                            erase_at(i);
+                            return;
+                        }
+                }
+            }
+
+            bool remove_by_owner(void *owner)
+            {
+                for (int i = 0; i < (int)_nodes.size(); ++i)
+                    if (_nodes[i].owner == owner)
+                    {
+                        erase_at(i);
+                        return true;
+                    }
+                return false;
+            }
+
+            bool find_owner_ptr_prio(void *owner, listener_base *&out_ptr, int &out_prio) const
+            {
+                for (const auto &n : _nodes)
+                {
+                    if (n.owner == owner)
+                    {
+                        out_ptr = reinterpret_cast<listener_base *>(n.ctx);
+                        out_prio = n.prio;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            template <class E>
+            void dispatch(E &e)
+            {
+                for (auto &n : _nodes) n.call(n.ctx, e);
+            }
+
+            bool empty() const { return _nodes.empty(); }
+
+            void clear_release_all()
+            {
+                for (auto &n : _nodes) acul::release(reinterpret_cast<listener_base *>(n.ctx));
+                _nodes.clear();
+            }
+
+        private:
+            int lower_bound_desc(int p) const
+            {
+                int l = 0, r = (int)_nodes.size();
+                while (l < r)
+                {
+                    int m = (l + r) >> 1;
+                    (_nodes[m].prio > p) ? l = m + 1 : r = m;
+                }
+                return l;
+            }
+            int upper_bound_desc(int p) const
+            {
+                int l = 0, r = (int)_nodes.size();
+                while (l < r)
+                {
+                    int m = (l + r) >> 1;
+                    (_nodes[m].prio >= p) ? l = m + 1 : r = m;
+                }
+                return l;
+            }
+            pair<int, int> equal_range_desc(int p) const { return {lower_bound_desc(p), upper_bound_desc(p)}; }
+
+            void erase_at(int i)
+            {
+                for (int j = i + 1; j < (int)_nodes.size(); ++j) _nodes[j - 1] = _nodes[j];
+                _nodes.pop_back();
+            }
+
+            vector<event_node> _nodes;
+        };
+
+        template <class E, typename = std::enable_if_t<std::is_base_of_v<event, E>>, typename... Args>
+        inline void dispatch_event_group(event_group *eg, E &e)
+        {
+            if (!eg) return;
+            eg->template dispatch<E>(e);
+        }
+
+        template <class E, class... Args>
+        inline void dispatch_event_group(event_group *eg, Args &&...args)
+        {
+            if (!eg) return;
+            E e(std::forward<Args>(args)...);
+            eg->template dispatch<E>(e);
+        }
+
         class APPLIB_API dispatcher
         {
         public:
-            using iterator = acul::multimap<int, listener_base *>::iterator;
-            acul::hashmap<void *, vector<listener_info>> pointers;
-
-            // Adds a listener for a specific type of event and returns an iterator to it.
-            template <typename E>
-            iterator add_listener(u64 event, std::function<void(E &)> listener, int priority = 5)
+            struct iterator
             {
-                static_assert(std::is_base_of<acul::events::event, E>::value, "E must inherit from event");
-                auto event_listener = acul::alloc<acul::events::listener<E>>(listener);
-                return _listeners[event].emplace(priority, event_listener);
+                u64 id;
+                int prio;
+                listener_base *ptr;
+            };
+
+            template <class E>
+            iterator add_listener(void *owner, u64 id, std::function<void(E &)> &&fn, int priority = 5)
+            {
+                static_assert(std::is_base_of_v<event, E>, "E must inherit event");
+                auto *L = alloc<listener<E>>(std::move(fn));
+                auto *eg = ensure(id);
+                eg->template add<E>(owner, L, priority);
+                return iterator{id, priority, L};
             }
 
-            // Checks if any listener exists for a specific event.
-            bool exist(u64 id) const { return _listeners.count(id) > 0; }
-
-            // Removes a listener using its iterator.
-            void remove_listener(listener_base *listener, u64 event)
+            template <typename Listener>
+            void bind_event(void *owner, u64 id, Listener &&fn, int priority = 5)
             {
-                auto it = _listeners.find(event);
-                if (it != _listeners.end())
-                {
-                    auto &listeners = it->second;
-                    for (auto iter = listeners.begin(); iter != listeners.end();)
-                    {
-                        if (iter->second == listener)
-                        {
-                            acul::release(iter->second);
-                            iter = listeners.erase(iter);
-                        }
-                        else
-                            ++iter;
-                    }
-
-                    if (listeners.empty()) _listeners.erase(it);
-                }
+                using arg_t = typename acul::lambda_arg_traits<Listener>::argument_type;
+                using E = std::remove_reference_t<arg_t>;
+                static_assert(std::is_base_of<event, E>::value, "event type must inherit from event");
+                (void)add_listener<E>(owner, id, std::function<void(E &)>(std::forward<Listener>(fn)), priority);
             }
 
-            // Dispatchs an event, invoking all listeners subscribed to this event.
-            template <typename E, typename = std::enable_if_t<std::is_base_of_v<event, E>>>
-            void dispatch(E &event)
+            template <typename Listener>
+            inline void bind_event(void *owner, std::initializer_list<u64> ids, Listener &&fn, int priority = 5)
             {
-                auto it = _listeners.find(event.id);
-                if (it != _listeners.end())
-                {
-                    for (auto iter = it->second.begin(); iter != it->second.end();)
-                    {
-                        auto listener = static_cast<acul::events::listener<E> *>(iter->second);
-                        listener->invoke(event);
-                        ++iter;
-                    }
-                }
+                for (auto id : ids) bind_event(owner, id, std::forward<Listener>(fn), priority);
             }
 
-            // Dispatches an event by name, creating an event instance with the provided arguments.
+            bool exist(u64 id) const
+            {
+                auto it = _slots.find(id);
+                return it != _slots.end() && it->second && !it->second->empty();
+            }
+
+            event_group *get_event_group(u64 id)
+            {
+                auto it = _slots.find(id);
+                return (it != _slots.end()) ? it->second : nullptr;
+            }
+            const event_group *get_event_group(u64 id) const
+            {
+                auto it = _slots.find(id);
+                return (it != _slots.end()) ? it->second : nullptr;
+            }
+
+            template <class E, std::enable_if_t<std::is_base_of_v<event, E>, int> = 0>
+            void dispatch(E &e)
+            {
+                auto it = _slots.find(e.id);
+                if (it != _slots.end() && it->second) it->second->template dispatch<E>(e);
+            }
+
             inline void dispatch(u64 id)
             {
-                event event{id};
-                dispatch(event);
+                event e{id};
+                dispatch(e);
             }
-
             template <typename T>
             inline void dispatch(u64 id, T &&data)
             {
-                using data_type = std::decay_t<T>;
-                auto event = data_event<data_type>(id, std::forward<T>(data));
-                dispatch(event);
+                data_event<std::decay_t<T>> e{id, std::forward<T>(data)};
+                dispatch(e);
             }
-
             template <typename E, typename = std::enable_if_t<std::is_base_of_v<event, E>>, typename... Args>
             inline void dispatch(Args &&...args)
             {
-                E event(std::forward<Args>(args)...);
-                dispatch(event);
+                E e(std::forward<Args>(args)...);
+                dispatch(e);
             }
 
-            // Retrieves a list of all listeners registered for a specific event.
-            // Returns a dynamic array of pointers to listeners for the event.
-            template <typename E>
-            vector<listener<E> *> get_listeners(u64 event)
+            void unbind_listener(void *owner, u64 id)
             {
-                vector<listener<E> *> result;
-                auto it = _listeners.find(event);
-                if (it != _listeners.end())
+                auto it = _slots.find(id);
+                if (it == _slots.end() || !it->second) return;
+
+                auto *eg = it->second;
+                listener_base *to_free = nullptr;
+                int prio = 0;
+                if (eg->find_owner_ptr_prio(owner, to_free, prio))
                 {
-                    for (const auto &pair : it->second)
-                    {
-                        auto listener = static_cast<acul::events::listener<E> *>(pair.second);
-                        result.push_back(listener);
-                    }
+                    eg->remove_by_owner(owner);
+                    release(to_free);
                 }
-                return result;
+
+                if (eg->empty())
+                {
+                    release(eg);
+                    _slots.erase(it);
+                }
             }
 
-            /**
-             ** Unbinds all listeners managed by this registry from the event manager.
-             ** \param owner The owner of the listeners.
-             */
             void unbind_listeners(void *owner)
             {
-                auto it = pointers.find(owner);
-                if (it != pointers.end())
+                for (auto it = _slots.begin(); it != _slots.end();)
                 {
-                    for (auto &info : it->second) remove_listener(info.listener, info.id);
-                    pointers.erase(owner);
+                    auto *eg = it->second;
+                    if (!eg)
+                    {
+                        it = _slots.erase(it);
+                        continue;
+                    }
+
+                    listener_base *ptr = nullptr;
+                    int prio = 0;
+                    if (eg->find_owner_ptr_prio(owner, ptr, prio))
+                    {
+                        eg->remove_by_owner(owner);
+                        release(ptr);
+                    }
+
+                    if (eg->empty())
+                    {
+                        release(eg);
+                        it = _slots.erase(it);
+                    }
+                    else
+                        ++it;
                 }
             }
 
-            // Binds a listener to an event of a specific type.
-            template <typename Listener>
-            void bind_event(void *owner, u64 event, Listener &&listener, int priority = 5)
-            {
-                using arg_type = typename acul::lambda_arg_traits<Listener>::argument_type;
-                using event_type = typename std::remove_reference<arg_type>::type;
-                static_assert(std::is_base_of<acul::events::event, event_type>::value,
-                              "EventType must inherit from event");
-                auto id = add_listener<event_type>(event, std::forward<Listener>(listener), priority);
-                pointers[owner].emplace_back(id->second, event);
-            }
-
-            // Binds a listener to a list of events of a specific type.
-            template <typename Listener>
-            inline void bind_event(void *owner, std::initializer_list<u64> events, Listener &&listener,
-                                   int priority = 5)
-            {
-                for (const auto &event : events) bind_event(owner, event, std::forward<Listener>(listener), priority);
-            }
-
-            // Clears all registered listeners from the manager, ensuring all memory is properly freed.
             void clear()
             {
-                for (auto &event_pair : _listeners)
+                for (auto &kv : _slots)
                 {
-                    auto &listeners = event_pair.second;
-                    for (auto &listener_pair : listeners) acul::release(listener_pair.second);
-                    listeners.clear();
+                    if (kv.second)
+                    {
+                        kv.second->clear_release_all();
+                        acul::release(kv.second);
+                    }
                 }
-                _listeners.clear();
-                pointers.clear();
+                _slots.clear();
             }
 
             ~dispatcher() { clear(); }
 
         private:
-            acul::hashmap<u64, acul::multimap<int, listener_base *>> _listeners;
+            hashmap<u64, event_group *> _slots;
+
+            event_group *ensure(u64 id)
+            {
+                auto it = _slots.find(id);
+                if (it != _slots.end() && it->second) return it->second;
+                auto *eg = alloc<event_group>();
+                _slots[id] = eg;
+                return eg;
+            }
         };
+
+        inline void cache_event_group(u64 id, event_group *&dst, dispatcher *d)
+        {
+            auto *eg = d->get_event_group(id);
+            if (eg && !eg->empty()) dst = eg;
+        }
     } // namespace events
 } // namespace acul
 

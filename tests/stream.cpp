@@ -1,5 +1,5 @@
+#include <acul/bin_stream.hpp>
 #include <acul/list.hpp>
-#include <acul/stream.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
 #include <cstring> // memcpy

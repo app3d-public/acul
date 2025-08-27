@@ -268,8 +268,8 @@ namespace acul
             if constexpr (std::is_trivially_copyable_v<value_type>)
                 _data[_size] = value;
             else
-                Allocator::construct(_data_end, value);
-            _data_end = _data + ++_size;
+                Allocator::construct(_data + _size, value);
+            ++_size;
         }
 
         template <typename U>
@@ -277,10 +277,10 @@ namespace acul
         {
             if (_size == _capacity) reallocate();
             if constexpr (std::is_trivially_move_assignable_v<value_type>)
-                *_data_end = std::forward<U>(value);
+                _data[_size] = std::forward<U>(value);
             else
-                Allocator::construct(_data_end, std::forward<U>(value));
-            _data_end = _data + ++_size;
+                Allocator::construct(_data + _size, std::forward<U>(value));
+            ++_size;
         }
 
         template <typename... Args>
@@ -356,7 +356,6 @@ namespace acul
         size_type _size;
         size_type _capacity;
         pointer _data;
-        pointer _data_end;
 
         void reallocate(bool adjust_capacity = true)
         {
@@ -379,7 +378,6 @@ namespace acul
                 Allocator::deallocate(_data, _capacity);
             }
             _data = new_data;
-            _data_end = _data + _size;
         }
 
         template <typename Iter, typename Dest>

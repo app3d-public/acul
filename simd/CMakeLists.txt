@@ -28,5 +28,5 @@ set_target_properties(${PROJECT_NAME}
 
 if (WIN32)
     # Manifest
-    gen_manifest_lib(${PROJECT_NAME} ${PROJECT_VERSION})
+    gen_manifest_lib(lib${PROJECT_NAME} ${PROJECT_VERSION})
 endif()

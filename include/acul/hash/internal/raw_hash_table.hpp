@@ -6,6 +6,7 @@
 #include <iterator>
 #include <optional>
 #include "../../api.hpp"
+#include "../../exception/exception.hpp"
 #include "../../memory/alloc.hpp"
 #include "../../pair.hpp"
 

@@ -86,12 +86,12 @@ if(WIN32)
     endif()
 
     if(BUILD_EXTERNAL_MANIFEST)
-        gen_manifest_lib("tbb12" ${TBB_VERSION})
-        gen_manifest_lib(tbbmalloc ${TBB_VERSION})
-        set(TBB_MANIFEST_DEPS tbb12:${TBB_VERSION} tbbmalloc:${TBB_VERSION} PARENT_SCOPE)
+        gen_manifest_lib(libtbb12 ${TBB_VERSION})
+        gen_manifest_lib(libtbbmalloc ${TBB_VERSION})
+        set(TBB_MANIFEST_DEPS libtbb12:${TBB_VERSION} libtbbmalloc:${TBB_VERSION} PARENT_SCOPE)
     endif()
 
-    gen_manifest_lib(${PROJECT_NAME} ${PROJECT_VERSION})
+    gen_manifest_lib(lib${PROJECT_NAME} ${PROJECT_VERSION})
 endif()
 
 set_target_properties(${PROJECT_NAME}

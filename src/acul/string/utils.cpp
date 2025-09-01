@@ -64,12 +64,12 @@ namespace acul
         return result;
     }
 
-    u16string trim(const u16string &input_str, size_t max)
+    string strip_controls(const string &input_str, size_t max)
     {
-        u16string output;
+        string output;
         int from = -1;
         int length = -1;
-        for (c16 v : input_str)
+        for (auto v : input_str)
         {
             if (v != '\f' && v != '\n' && v != '\r' && v != '\t' && v != '\v')
             {
@@ -81,16 +81,10 @@ namespace acul
                 }
             }
         }
-        if (from == -1 || length == -1) return u"";
+        if (from == -1 || length == -1) return {};
         size_t to = length - from + 1;
         if (to > max) to = max;
         return output.substr(from, to);
-    }
-
-    string trim(const string &input_str, size_t max)
-    {
-        u16string u16string = trim(utf8_to_utf16(input_str), max);
-        return utf16_to_utf8(u16string);
     }
 
 #if defined(__clang__)
@@ -387,7 +381,7 @@ namespace acul
         return true;
     }
 
-    string str_range(const char *&str)
+    string read_word(const char *&str)
     {
         const char *begin = str;
         while (isspace(*begin)) ++begin;
@@ -395,13 +389,5 @@ namespace acul
         while (*end && !isspace(*end)) ++end;
         str = end;
         return string(begin, end);
-    }
-
-    string trim_end(const char *str)
-    {
-        if (!str) return "";
-        const char *end = str + null_terminated_length(str);
-        while (end != str && isspace(*(end - 1))) --end;
-        return string(str, end);
     }
 } // namespace acul

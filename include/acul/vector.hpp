@@ -352,6 +352,13 @@ namespace acul
             _size = count;
         }
 
+        void swap(vector &other) noexcept
+        {
+            std::swap(_data, other._data);
+            std::swap(_size, other._size);
+            std::swap(_capacity, other._capacity);
+        }
+
     private:
         size_type _size;
         size_type _capacity;

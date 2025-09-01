@@ -491,6 +491,9 @@ namespace acul
             return _salloc.size.alloc_flags == ALLOC_STACK ? _salloc.data : _lalloc.ptr;
         }
 
+        const_pointer data() const noexcept { return c_str(); }
+        pointer data() noexcept { return _salloc.size.alloc_flags == ALLOC_STACK ? _salloc.data : _lalloc.ptr; }
+
         void clear() noexcept
         {
             if (_salloc.size.alloc_flags == ALLOC_HEAP) Allocator::deallocate(_lalloc.ptr);
@@ -521,6 +524,60 @@ namespace acul
             const_pointer start = c_str() + pos;
             const_pointer p = strstr(start, str.c_str());
             return p ? static_cast<size_type>(p - c_str()) : npos;
+        }
+
+        inline size_type rfind(value_type ch, size_type pos = npos) const noexcept
+        {
+            if (empty()) return npos;
+            size_type i = (pos == npos) ? (size() - 1) : (pos >= size() ? size() - 1 : pos);
+            const_pointer base = c_str();
+            for (;;)
+            {
+                if (base[i] == ch) return i;
+                if (i == 0) break;
+                --i;
+            }
+            return npos;
+        }
+
+        inline size_type rfind(const_pointer s, size_type pos, size_type count) const noexcept
+        {
+            if (count == 0)
+            {
+                if (size() == 0) return 0;
+                if (pos == npos) return size();
+                return (pos > size()) ? size() : pos;
+            }
+            if (count > size()) return npos;
+
+            size_type start;
+            if (pos == npos || pos + 1 < count)
+                start = size() - count;
+            else
+                start = (pos >= size() ? size() - count : pos - count + 1);
+
+            const_pointer base = c_str();
+            for (;;)
+            {
+                if (memcmp(base + start, s, count) == 0) return start;
+                if (start == 0) break;
+                --start;
+            }
+            return npos;
+        }
+
+        inline size_type rfind(const_pointer s, size_type pos = npos) const noexcept
+        {
+            const size_type n = s ? static_cast<size_type>(null_terminated_length(s)) : 0;
+            return rfind(s, pos, n);
+        }
+
+        template <typename S,
+                  std::enable_if_t<is_string_like_v<value_type, S> && !std::is_convertible_v<const S &, const_pointer>,
+                                   int> = 0>
+        inline size_type rfind(const S &needle, size_type pos = npos) const noexcept
+        {
+            return rfind(needle.data(), pos, static_cast<size_type>(needle.size()));
         }
 
         basic_string &replace(size_type pos, size_type len, const basic_string &str) noexcept

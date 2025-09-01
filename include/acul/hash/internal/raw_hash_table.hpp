@@ -933,6 +933,15 @@ namespace acul
                 return place_kv_at(sel.pos, sel.link_from, std::move(kv));
             }
 
+            template <class Kx, class... Args>
+            ACUL_FORCEINLINE pair<iterator, bool> insert_kv(Kx &&key, Args &&...margs)
+            {
+                const auto sel = find_slot(key);
+                if (sel.existed) return {iterator(this, sel.pos), false};
+                mapped_type val(std::forward<Args>(margs)...);
+                return place_kv_at(sel.pos, sel.link_from, std::forward<Kx>(key), std::move(val));
+            }
+
             static ACUL_FORCEINLINE bool is_empty(size_type w) noexcept { return w == AHM_INACTIVE; }
 
             inline size_type find_empty_bucket(size_type from, size_type chain_len_hint = 1) noexcept

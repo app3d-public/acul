@@ -3,54 +3,77 @@
 
 extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
 {
-    const char *data_end = data + size;
+    const char *const data_end = data + size;
 
-    __m128i newline = _mm_set1_epi8('\n');
-    __m128i return_carriage = _mm_set1_epi8('\r');
+    const __m128i ch_nl = _mm_set1_epi8('\n');
+    const __m128i ch_cr = _mm_set1_epi8('\r');
+
     const char *line_start = data;
-
     const char *p = data;
-    while (p < data_end)
+    bool prev_chunk_ended_with_cr = false;
+
+    while ((p + 16) <= data_end)
     {
-        const char *next_p = (p + 16 <= data_end) ? p + 16 : data_end;
         __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
+        int mask_nl = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, ch_nl));
+        int mask_cr = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, ch_cr));
 
-        int mask_nl = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, newline));
-        int mask_cr = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, return_carriage));
-        int mask = mask_nl | mask_cr;
-
-        if (mask == 0)
+        if (prev_chunk_ended_with_cr && p[0] == '\n')
         {
-            p = next_p;
-            continue;
+            mask_nl &= ~1;
+            if (line_start == p) line_start = p + 1;
         }
 
-        int i = 0;
-        while (mask != 0 && p < next_p)
-        {
-            int index = __builtin_ctz(mask);
-            const char *new_line_pos = p + index;
+        int mask_cr_solo = mask_cr & ~(mask_nl >> 1);
 
-            if (new_line_pos > line_start)
+        unsigned mask = static_cast<unsigned>(mask_nl | mask_cr_solo);
+
+        while (mask != 0)
+        {
+            int index = __builtin_ctz(mask); // 0..15
+            const char *sep_pos = p + index;
+
+            size_t line_len = static_cast<size_t>(sep_pos - line_start);
+            if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+
+            dst.push(line_start, line_len);
+
+            line_start = sep_pos + 1;
+            mask &= (mask - 1);
+        }
+
+        prev_chunk_ended_with_cr = (p[15] == '\r');
+        p += 16;
+    }
+
+    if (p < data_end)
+    {
+        if (prev_chunk_ended_with_cr && *p == '\n') ++p;
+
+        const char *s = p;
+        while (s < data_end)
+        {
+            char c = *s;
+            if (c == '\n' || c == '\r')
             {
-                size_t line_len = new_line_pos - line_start;
-                if (line_len > 0 && line_start[line_len - 1] == '\r') line_len--;
+                bool is_crlf = (c == '\r' && (s + 1) < data_end && s[1] == '\n');
+
+                size_t line_len = static_cast<size_t>(s - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+
                 dst.push(line_start, line_len);
+
+                if (is_crlf) ++s;
+                line_start = s + 1;
             }
-
-            line_start = new_line_pos + 1;
-            p = new_line_pos + 1;
-            mask >>= (index + 1);
-            i++;
+            ++s;
         }
-
-        if (i < 16) p = next_p;
     }
 
     if (line_start < data_end)
     {
-        size_t line_len = data_end - line_start;
-        if (line_len > 0 && line_start[line_len - 1] == '\r') line_len--;
+        size_t line_len = static_cast<size_t>(data_end - line_start);
+        if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
         dst.push(line_start, line_len);
     }
 }

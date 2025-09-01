@@ -15,7 +15,7 @@ namespace acul
 
                 while (p < end)
                 {
-                    if (*p == '\n' || *p == '\r')
+                    if (*p == '\n')
                     {
                         size_t line_len = p - line_start;
                         if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
@@ -23,11 +23,9 @@ namespace acul
                         ++p;
                         line_start = p;
                     }
-                    else
-                        ++p;
+                    else { ++p; }
                 }
 
-                // trailing line without newline
                 if (line_start < end)
                 {
                     size_t line_len = end - line_start;

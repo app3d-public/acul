@@ -75,6 +75,53 @@ namespace acul
             return p ? static_cast<size_type>(p - _data) : SIZE_MAX;
         }
 
+        constexpr size_type rfind(value_type ch, size_type pos = SIZE_MAX) const noexcept
+        {
+            if (_size == 0) return SIZE_MAX;
+            size_type i = (pos == SIZE_MAX) ? (_size - 1) : (pos >= _size ? _size - 1 : pos);
+
+            for (;;)
+            {
+                if (_data[i] == ch) return i;
+                if (i == 0) break;
+                --i;
+            }
+            return SIZE_MAX;
+        }
+
+        constexpr size_type rfind(basic_string_view str, size_type pos = SIZE_MAX) const noexcept
+        {
+            const size_type n = str.size();
+
+            if (n == 0)
+            {
+                if (_size == 0) return 0;
+                if (pos == SIZE_MAX) return _size;
+                return (pos > _size) ? _size : pos;
+            }
+
+            if (n > _size) return SIZE_MAX;
+            size_type start;
+            if (pos == SIZE_MAX || pos + 1 < n)
+                start = _size - n;
+            else
+                start = (pos >= _size ? _size - n : pos - n + 1);
+
+            for (;;)
+            {
+                if (memcmp(_data + start, str.data(), n) == 0) return start;
+
+                if (start == 0) break;
+                --start;
+            }
+            return SIZE_MAX;
+        }
+
+        constexpr size_type rfind(const_pointer s, size_type pos = SIZE_MAX) const noexcept
+        {
+            return rfind(basic_string_view{s}, pos);
+        }
+
     private:
         pointer _data;
         size_type _size;

@@ -12,10 +12,6 @@ namespace acul
     /// @param src String in UTF-16 encoding
     APPLIB_API string utf16_to_utf8(const u16string &src);
 
-    APPLIB_API u16string trim(const u16string &input_str, size_t max = std::numeric_limits<size_t>::max());
-
-    APPLIB_API string trim(const string &input_str, size_t max = std::numeric_limits<size_t>::max());
-
     /**
      * @brief Formats a string using a format string and arguments.
      * @param format The format string.
@@ -156,10 +152,126 @@ namespace acul
      **/
     APPLIB_API bool stof(const char *&str, f32 &value);
 
-    /**
-     * @brief Extracts a substring from the input string, from the first space character to the last one.
-     */
-    APPLIB_API string str_range(const char *&str);
+    /// Removes control whitespace characters (\f, \n, \r, \t, \v) from the input string,
+    /// trims leading and trailing spaces, and optionally truncates the result to `max` length.
+    /// Internal spaces (' ') are preserved.
+    /// Example:
+    ///   strip_controls("   hello  \t\r world \n\t") -> "hello   world"
+    APPLIB_API string strip_controls(const string &input_str, size_t max = std::numeric_limits<size_t>::max());
 
-    APPLIB_API string trim_end(const char *str);
+    /// Reads the next word (sequence of non-space characters) from a C-string,
+    /// skipping leading spaces. Advances the input pointer to the end of the word.
+    /// Example:
+    ///   const char* s = "   hello world";
+    ///   read_word(s) -> "hello", s points to " world"
+    APPLIB_API string read_word(const char *&str);
+
+    /// Removes leading and trailing whitespace characters from the given string-like object.
+    // Internal whitespace is preserved. Accepts any type `S` that provides `.size()` and `.substr()`.
+    ///
+    /// Example:
+    ///   trim("   hello  \t world \n") -> "hello  \t world"
+    template <typename S>
+    inline string trim(const S &s)
+    {
+        size_t a = 0;
+        while (a < s.size() && isspace((unsigned char)s[a])) ++a;
+        size_t b = s.size();
+        while (b > a && isspace((unsigned char)s[b - 1])) --b;
+        return string(s.substr(a, b - a));
+    }
+
+    /// Removes leading spaces and control whitespace characters (\f, \n, \r, \t, \v)
+    /// from the given C-string. Trailing spaces are preserved.
+    /// Example:
+    ///   trim_start("   \t\nhello  ") -> "hello  "
+    inline string trim_start(const char *str, size_t len)
+    {
+        if (!str) return "";
+        const char *begin = str, *end = str + len;
+        while (begin < end && isspace((unsigned char)*begin)) ++begin;
+        return string(begin, end - begin);
+    }
+
+    /// Removes leading spaces and control whitespace characters (\f, \n, \r, \t, \v)
+    /// from the given C-string. Trailing spaces are preserved.
+    /// Example:
+    ///   trim_start("   \t\nhello  ") -> "hello  "
+    template <typename S>
+    inline string trim_start(const S &s)
+    {
+        return trim_start(s.data(), s.size());
+    }
+
+    /// Returns a copy of the input C-string with trailing spaces removed.
+    /// Leading spaces are preserved.
+    /// Example:
+    ///   trim_end("   hello   ") -> "   hello"
+    inline string trim_end(const char *str, size_t len)
+    {
+        if (!str) return "";
+        const char *end = str + len;
+        while (end != str && isspace(*(end - 1))) --end;
+        return string(str, end);
+    }
+
+    /// Returns a copy of the input C-string with trailing spaces removed.
+    /// Leading spaces are preserved.
+    /// Example:
+    ///   trim_end("   hello   ") -> "   hello"
+    template <typename S>
+    inline string trim_end(const S &s)
+    {
+        return trim_end(s.data(), s.size());
+    }
+
+    /// Checks if the given C-string `str` starts with the specified `prefix`.
+    /// Returns false if either pointer is null.
+    /// Example:
+    ///   starts_with("foobar", "foo") -> true
+    ///   starts_with("foobar", "bar") -> false
+    inline bool starts_with(const char *str, const char *prefix) noexcept
+    {
+        if (!str || !prefix) return false;
+        const size_t n = null_terminated_length(prefix);
+        if (n == 0) return true;
+        return strncmp(str, prefix, n) == 0;
+    }
+
+    /// Checks if the given string `str` starts with the specified `prefix`.
+    /// Uses the string length for a fast memcmp comparison.
+    /// Example:
+    ///   starts_with(string("hello"), "he") -> true
+    ///   starts_with(string("hello"), "lo") -> false
+    inline bool starts_with(const string &str, const char *prefix) noexcept
+    {
+        if (!prefix) return false;
+        const size_t n = null_terminated_length(prefix);
+        if (str.size() < n) return false;
+        return memcmp(str.data(), prefix, n) == 0;
+    }
+
+    /// Checks if the given C-string `str` of known length `len` ends with the specified `suffix`.
+    /// Returns false if either pointer is null, or if the suffix is longer than the string.
+    /// Example:
+    ///   ends_with("foobar", "bar", 6) -> true
+    ///   ends_with("foobar", "foo", 6) -> false
+    inline bool ends_with(const char *str, const char *suffix, size_t len) noexcept
+    {
+        if (!str || !suffix) return false;
+        const size_t lq = null_terminated_length(suffix);
+        if (lq == 0) return true;
+        if (lq > len) return false;
+        return memcmp(str + (len - lq), suffix, lq) == 0;
+    }
+
+    /// Checks if the given string `str` ends with the specified `suffix`.
+    /// Uses the string length directly and delegates to the char* overload.
+    /// Example:
+    ///   ends_with(string("hello"), "lo") -> true
+    ///   ends_with(string("hello"), "he") -> false
+    inline bool ends_with(const string &str, const char *suffix) noexcept
+    {
+        return ends_with(str.c_str(), suffix, str.size());
+    }
 } // namespace acul

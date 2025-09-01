@@ -4,6 +4,7 @@
 #include <acul/string/sstream.hpp>
 #include <acul/string/utils.hpp>
 #include <acul/vector.hpp>
+#include <algorithm>
 #include <dbghelp.h>
 #include <fstream>
 #include <psapi.h>

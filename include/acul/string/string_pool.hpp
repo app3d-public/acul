@@ -34,11 +34,10 @@ namespace acul
         using const_pointer = const T *;
         using size_type = size_t;
 
-        class Iterator;
-        using iterator = Iterator;
-        using const_iterator = const Iterator;
-        using reverse_iterator = std::reverse_iterator<Iterator>;
-        using const_reverse_iterator = std::reverse_iterator<Iterator>;
+        class iterator;
+        using const_iterator = iterator;
+        using reverse_iterator = std::reverse_iterator<iterator>;
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         explicit string_pool(size_type pool_size)
             : _pool_size(pool_size), _data(Allocator::allocate(pool_size)), _pos(0)
@@ -105,7 +104,7 @@ namespace acul
 
         pointer at(size_type index) { return _data + _lines[index]; }
 
-        const_pointer at(size_type index) const { return _data[_lines[index]]; }
+        const_pointer at(size_type index) const { return _data + _lines[index]; }
 
         pointer front() { return _data; }
 
@@ -115,17 +114,17 @@ namespace acul
 
         const_pointer back() const { return _data + _pos - 1; }
 
-        iterator begin() { return iterator(_lines, _data); }
+        iterator begin() { return iterator(_lines.data(), _data); }
 
-        const_iterator begin() const { return iterator(_lines, _data); }
+        const_iterator begin() const { return const_iterator(_lines.data(), _data); }
 
-        const_iterator cbegin() const { return iterator(_lines, _data); }
+        const_iterator cbegin() const { return iterator(_lines.data(), _data); }
 
-        iterator end() { return iterator(_lines, _data, _lines.size()); }
+        iterator end() { return iterator(_lines.data(), _data, _lines.size()); }
 
-        const_iterator end() const { return iterator(_lines, _data, _lines.size()); }
+        const_iterator end() const { return const_iterator(_lines.data(), _data, _lines.size()); }
 
-        const_iterator cend() const { return iterator(_lines, _data, _lines.size()); }
+        const_iterator cend() const { return iterator(_lines.data(), _data, _lines.size()); }
 
         reverse_iterator rbegin() { return reverse_iterator(end()); }
 
@@ -186,63 +185,93 @@ namespace acul
     };
 
     template <typename T, typename Allocator>
-    class string_pool<T, Allocator>::Iterator
+    class string_pool<T, Allocator>::iterator
     {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using value_type = T;
+        using value_type = const T *;
         using difference_type = std::ptrdiff_t;
-        using pointer = T *;
-        using const_pointer = const T *;
-        using reference = T &;
-        using const_reference = const T &;
+        using pointer = const T *;
+        using reference = const T *;
+        using size_type = typename string_pool::size_type;
 
-        Iterator(vector<size_t> &lines, pointer ptr = nullptr, size_t pos = 0) : _ptr(ptr), _lines(lines), _pos(pos) {}
+        iterator(const size_type *lines, pointer base, size_type pos = 0) noexcept
+            : _lines(lines), _base(base), _pos(pos)
+        {
+        }
 
-        pointer operator*() { return _ptr + _lines[_pos]; }
-        pointer operator->() { return _ptr + _lines[_pos]; }
-        pointer operator->() const { return _ptr + _lines[_pos]; }
+        reference operator*() const noexcept { return _base + _lines[_pos]; }
+        pointer operator->() const noexcept { return _base + _lines[_pos]; }
 
-        Iterator &operator++()
+        iterator &operator++() noexcept
         {
             ++_pos;
             return *this;
         }
-
-        Iterator operator++(int)
+        iterator operator++(int) noexcept
         {
-            Iterator temp = *this;
+            iterator tmp = *this;
             ++(*this);
-            return temp;
+            return tmp;
         }
-
-        Iterator &operator--()
+        iterator &operator--() noexcept
         {
             --_pos;
             return *this;
         }
-
-        Iterator operator--(int)
+        iterator operator--(int) noexcept
         {
-            Iterator temp = *this;
+            iterator tmp = *this;
             --(*this);
-            return temp;
+            return tmp;
         }
 
-        friend bool operator==(const Iterator &a, const Iterator &b) { return a._ptr == b._ptr && a._pos == b._pos; }
-        friend bool operator!=(const Iterator &a, const Iterator &b) { return a._ptr != b._ptr || a._pos != b._pos; }
+        iterator &operator+=(difference_type n) noexcept
+        {
+            _pos += static_cast<size_type>(n);
+            return *this;
+        }
+        iterator &operator-=(difference_type n) noexcept
+        {
+            _pos -= static_cast<size_type>(n);
+            return *this;
+        }
+        friend iterator operator+(iterator it, difference_type n) noexcept
+        {
+            it += n;
+            return it;
+        }
+        friend iterator operator+(difference_type n, iterator it) noexcept
+        {
+            it += n;
+            return it;
+        }
+        friend iterator operator-(iterator it, difference_type n) noexcept
+        {
+            it -= n;
+            return it;
+        }
+        friend difference_type operator-(const iterator &a, const iterator &b) noexcept
+        {
+            return static_cast<difference_type>(a._pos) - static_cast<difference_type>(b._pos);
+        }
 
-        friend bool operator<(const Iterator &a, const Iterator &b) { return a._ptr < b._ptr || a._pos < b._pos; }
-        friend bool operator>(const Iterator &a, const Iterator &b) { return a._ptr > b._ptr || a._pos > b._pos; }
-        friend bool operator<=(const Iterator &a, const Iterator &b) { return a._ptr <= b._ptr || a._pos > b._pos; }
-        friend bool operator>=(const Iterator &a, const Iterator &b) { return a._ptr >= b._ptr || a._pos > b._pos; }
+        reference operator[](difference_type off) const noexcept { return _base + _lines[_pos + off]; }
 
-        reference operator[](difference_type offset) const { return *(*this + offset); }
+        friend bool operator==(const iterator &a, const iterator &b) noexcept
+        {
+            return a._base == b._base && a._lines == b._lines && a._pos == b._pos;
+        }
+        friend bool operator!=(const iterator &a, const iterator &b) noexcept { return !(a == b); }
+        friend bool operator<(const iterator &a, const iterator &b) noexcept { return a._pos < b._pos; }
+        friend bool operator>(const iterator &a, const iterator &b) noexcept { return a._pos > b._pos; }
+        friend bool operator<=(const iterator &a, const iterator &b) noexcept { return a._pos <= b._pos; }
+        friend bool operator>=(const iterator &a, const iterator &b) noexcept { return a._pos >= b._pos; }
 
     private:
-        pointer _ptr;
-        vector<size_t> _lines;
-        size_t _pos;
+        const size_type *_lines;
+        pointer _base;
+        size_type _pos;
     };
 
 } // namespace acul

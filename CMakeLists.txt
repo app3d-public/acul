@@ -106,6 +106,6 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-if(ENABLE_SIMD)
+if(ACUL_SIMD_ENABLE)
     add_subdirectory(simd)
 endif()

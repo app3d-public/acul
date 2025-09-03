@@ -76,7 +76,51 @@ namespace acul
 
             string filename() const { return _nodes.back(); }
 
+            bool has_filename() const { return !_nodes.empty(); }
+
+            void remove_filename()
+            {
+                if (!_nodes.empty())
+                {
+                    _nodes.pop_back();
+                    _path.clear();
+                }
+            }
+
             string scheme() const { return _scheme; }
+
+            string extension() const
+            {
+                if (_nodes.empty()) return {};
+                const string &fname = _nodes.back();
+                if (fname.empty()) return {};
+
+                size_t pos = fname.rfind('.');
+                if (pos == string::npos || pos == 0) return {};
+                return fname.substr(pos);
+            }
+
+            bool has_extension() const { return !extension().empty(); }
+
+            inline path replace_extension(const string &new_extension) const
+            {
+                path result = *this;
+                result._path.clear();
+                result._nodes.back() = stem() + new_extension;
+                return result;
+            }
+
+            string stem() const
+            {
+                if (_nodes.empty()) return {};
+
+                const string &fname = _nodes.back();
+                if (fname.empty()) return {};
+
+                size_t pos = fname.rfind('.');
+                if (pos == string::npos || pos == 0) return fname;
+                return fname.substr(0, pos);
+            }
 
             bool operator==(const path &other) const { return str() == other.str(); }
             bool operator!=(const path &other) const { return str() != other.str(); }

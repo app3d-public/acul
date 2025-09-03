@@ -933,7 +933,7 @@ namespace acul
                 return place_kv_at(sel.pos, sel.link_from, std::move(kv));
             }
 
-            template <class Kx, class... Args>
+            template <class Kx, class... Args, std::enable_if_t<(sizeof...(Args) > 0), int> = 0>
             ACUL_FORCEINLINE pair<iterator, bool> insert_kv(Kx &&key, Args &&...margs)
             {
                 const auto sel = find_slot(key);

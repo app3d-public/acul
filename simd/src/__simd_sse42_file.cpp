@@ -1,5 +1,6 @@
 #include <acul/api.hpp>
 #include <acul/string/string_pool.hpp>
+#include <emmintrin.h>
 
 extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
 {
@@ -18,37 +19,71 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
         int mask_nl = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, ch_nl));
         int mask_cr = _mm_movemask_epi8(_mm_cmpeq_epi8(chunk, ch_cr));
 
-        if (prev_chunk_ended_with_cr && p[0] == '\n')
+        if (prev_chunk_ended_with_cr)
         {
-            mask_nl &= ~1;
-            if (line_start == p) line_start = p + 1;
+            if (p[0] == '\n')
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = p + 1;
+                mask_nl &= ~1;
+            }
+            else
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = p;
+            }
+            prev_chunk_ended_with_cr = false;
         }
 
-        int mask_cr_solo = mask_cr & ~(mask_nl >> 1);
+        bool ends_with_cr = (p[15] == '\r');
+        if (ends_with_cr) { mask_cr &= ~(1u << 15); }
 
-        unsigned mask = static_cast<unsigned>(mask_nl | mask_cr_solo);
+        mask_cr &= ~(mask_nl >> 1);
+
+        unsigned mask = static_cast<unsigned>(mask_nl | mask_cr);
 
         while (mask != 0)
         {
-            int index = __builtin_ctz(mask); // 0..15
+            int index = __builtin_ctz(mask);
             const char *sep_pos = p + index;
 
             size_t line_len = static_cast<size_t>(sep_pos - line_start);
             if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
 
             dst.push(line_start, line_len);
-
             line_start = sep_pos + 1;
+
             mask &= (mask - 1);
         }
 
-        prev_chunk_ended_with_cr = (p[15] == '\r');
+        prev_chunk_ended_with_cr = ends_with_cr;
         p += 16;
     }
 
     if (p < data_end)
     {
-        if (prev_chunk_ended_with_cr && *p == '\n') ++p;
+        if (prev_chunk_ended_with_cr)
+        {
+            if (*p == '\n')
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = ++p;
+            }
+            else
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = p;
+            }
+            prev_chunk_ended_with_cr = false;
+        }
 
         const char *s = p;
         while (s < data_end)
@@ -62,7 +97,6 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
                 if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
 
                 dst.push(line_start, line_len);
-
                 if (is_crlf) ++s;
                 line_start = s + 1;
             }

@@ -515,7 +515,7 @@ namespace acul
             if (pos >= size()) return npos;
             const_pointer start = c_str() + pos;
             const_pointer p = strchr(start, ch);
-            return p ? static_cast<size_type>(p - c_str()) : npos;
+            return p ? static_cast<size_type>(p - start) + pos : npos;
         }
 
         inline size_type find(const basic_string &str, size_type pos = 0) const noexcept
@@ -528,16 +528,8 @@ namespace acul
 
         inline size_type rfind(value_type ch, size_type pos = npos) const noexcept
         {
-            if (empty()) return npos;
-            size_type i = (pos == npos) ? (size() - 1) : (pos >= size() ? size() - 1 : pos);
-            const_pointer base = c_str();
-            for (;;)
-            {
-                if (base[i] == ch) return i;
-                if (i == 0) break;
-                --i;
-            }
-            return npos;
+            size_type len = size();
+            return find_last_of(c_str(), pos >= len ? pos + 1 : len , ch);
         }
 
         inline size_type rfind(const_pointer s, size_type pos, size_type count) const noexcept

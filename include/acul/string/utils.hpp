@@ -1,4 +1,6 @@
 #pragma once
+
+#include "../vector.hpp"
 #include "string.hpp"
 
 namespace acul
@@ -172,13 +174,13 @@ namespace acul
     /// Example:
     ///   trim("   hello  \t world \n") -> "hello  \t world"
     template <typename S>
-    inline string trim(const S &s)
+    inline S trim(const S &s)
     {
         size_t a = 0;
         while (a < s.size() && isspace((unsigned char)s[a])) ++a;
         size_t b = s.size();
         while (b > a && isspace((unsigned char)s[b - 1])) --b;
-        return string(s.substr(a, b - a));
+        return s.substr(a, b - a);
     }
 
     /// Removes leading spaces and control whitespace characters (\f, \n, \r, \t, \v)
@@ -273,5 +275,29 @@ namespace acul
     inline bool ends_with(const string &str, const char *suffix) noexcept
     {
         return ends_with(str.c_str(), suffix, str.size());
+    }
+
+    /// Splits the given string `str` into substrings using the specified delimiter `delim`.
+    /// Each substring between occurrences of `delim` is added to the result vector.
+    /// The delimiter characters themselves are not included in the output.
+    /// Example:
+    ///   split(string("a,b,c"), ',') -> {"a", "b", "c"}
+    ///   split(string("one:two:three"), ':') -> {"one", "two", "three"}
+    inline vector<string> split(const string &str, char delim)
+    {
+        vector<string> result;
+        size_t pos = 0;
+        while (true)
+        {
+            size_t found = str.find(delim, pos);
+            if (found == string::npos)
+            {
+                if (pos != str.size()) result.push_back(str.substr(pos));
+                break;
+            }
+            result.push_back(str.substr(pos, found - pos));
+            pos = found + 1;
+        }
+        return result;
     }
 } // namespace acul

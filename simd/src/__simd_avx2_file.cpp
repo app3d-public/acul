@@ -11,6 +11,7 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
 
     const char *line_start = data;
     const char *p = data;
+
     bool prev_chunk_ended_with_cr = false;
 
     while ((p + 32) <= data_end)
@@ -19,16 +20,35 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
         int mask_nl = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, ch_nl));
         int mask_cr = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, ch_cr));
 
-        if (prev_chunk_ended_with_cr && p[0] == '\n')
+        if (prev_chunk_ended_with_cr)
         {
-            mask_nl &= ~1;
-            if (line_start == p) line_start = p + 1;
+            if (p[0] == '\n')
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+
+                line_start = p + 1;
+                mask_nl &= ~1;
+            }
+            else
+            {
+                // Одиночный CR на границе: разделитель на p (до текущего первого байта)
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = p;
+            }
+            prev_chunk_ended_with_cr = false;
         }
-        int mask_cr_solo = mask_cr & ~(mask_nl >> 1);
 
-        unsigned mask = static_cast<unsigned>(mask_nl | mask_cr_solo);
+        bool ends_with_cr = (p[31] == '\r');
+        if (ends_with_cr) { mask_cr &= ~(1u << 31); }
 
-        while (mask != 0)
+        mask_cr &= ~(mask_nl >> 1);
+        unsigned mask = static_cast<unsigned>(mask_nl | mask_cr);
+
+        while (mask)
         {
             int index = __builtin_ctz(mask);
             const char *sep_pos = p + index;
@@ -38,16 +58,35 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
 
             dst.push(line_start, line_len);
             line_start = sep_pos + 1;
+
             mask &= (mask - 1);
         }
 
-        prev_chunk_ended_with_cr = (p[31] == '\r');
+        prev_chunk_ended_with_cr = ends_with_cr;
         p += 32;
     }
 
     if (p < data_end)
     {
-        if (prev_chunk_ended_with_cr && *p == '\n') ++p;
+        if (prev_chunk_ended_with_cr)
+        {
+            if (*p == '\n')
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                ++p;
+                line_start = p;
+            }
+            else
+            {
+                size_t line_len = static_cast<size_t>((p - 1) - line_start);
+                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                dst.push(line_start, line_len);
+                line_start = p;
+            }
+            prev_chunk_ended_with_cr = false;
+        }
 
         const char *s = p;
         while (s < data_end)

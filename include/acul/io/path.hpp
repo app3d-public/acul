@@ -94,16 +94,6 @@ namespace acul
             string build_path() const;
         };
 
-        inline size_t find_last_of(const char *str, size_t len, char ch) noexcept
-        {
-#if defined(__linux__)
-            const char *pos = static_cast<const char *>(memrchr(str, ch, len));
-#else
-            const char *pos = strrchr(str, ch);
-#endif
-            return pos ? static_cast<size_t>(pos - str) : acul::string::npos;
-        }
-
         inline string get_extension(const string &path)
         {
             const char *p = path.c_str();

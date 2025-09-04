@@ -529,7 +529,7 @@ namespace acul
         inline size_type rfind(value_type ch, size_type pos = npos) const noexcept
         {
             size_type len = size();
-            return find_last_of(c_str(), pos >= len ? pos + 1 : len , ch);
+            return find_last_of(data(), pos >= len ? len : pos + 1, ch);
         }
 
         inline size_type rfind(const_pointer s, size_type pos, size_type count) const noexcept

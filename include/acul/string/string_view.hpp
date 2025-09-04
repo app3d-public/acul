@@ -80,7 +80,7 @@ namespace acul
         constexpr size_type rfind(value_type ch, size_type pos = npos) const noexcept
         {
             size_type len = size();
-            return find_last_of(data(), pos >= len ? pos + 1 : len, ch);
+            return find_last_of(data(), pos >= len ? len : pos + 1, ch);
         }
 
         constexpr size_type rfind(basic_string_view str, size_type pos = npos) const noexcept

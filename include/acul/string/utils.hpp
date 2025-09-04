@@ -221,7 +221,7 @@ namespace acul
     /// Leading spaces are preserved.
     /// Example:
     ///   trim_end("   hello   ") -> "   hello"
-    template <typename S>
+    template <typename S, typename = std::enable_if_t<is_string_like_v<char, S>>>
     inline string trim_end(const S &s)
     {
         return trim_end(s.data(), s.size());

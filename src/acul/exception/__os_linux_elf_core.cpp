@@ -258,7 +258,7 @@ namespace acul
         string path = format("/proc/%d/comm", pid);
         vector<char> buf;
         if (io::file::read_virtual(path, buf) != io::file::op_state::success) return "unknown";
-        return trim_end(buf.data());
+        return trim_end(buf.data(), buf.size());
     }
 
     static inline string get_cmdline(pid_t pid)

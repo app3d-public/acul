@@ -36,7 +36,7 @@ if (ACUL_ZSTD_ENABLE)
     add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc")
 endif()
 
-add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+add_library(${PROJECT_NAME} SHARED ${ACUL_SRC})
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
 
 if(USE_ASAN)

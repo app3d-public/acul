@@ -4,10 +4,9 @@ project(acul-simd
     LANGUAGES CXX C
     DESCRIPTION "ACUL Simd Module")
 
-set(SOURCE_FILES "")
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+add_library(${PROJECT_NAME} SHARED ${ACUL_SIMD_SRC})
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
 target_link_libraries(${PROJECT_NAME} PUBLIC acul)
 

@@ -89,6 +89,8 @@ namespace acul
 
         void clear() noexcept { _data.clear(); }
 
+        void reserve(size_type n) { _data.reserve(n); }
+
     private:
         basic_string<T, Allocator> _data;
     };

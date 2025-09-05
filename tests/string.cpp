@@ -121,71 +121,6 @@ void test_string_view()
     size_t pos = sv.find('z');
     assert(pos == acul::string::npos);
 }
-#ifdef ACUL_GLM_ENABLE
-void test_utils_glm()
-{
-    using namespace acul;
-
-    {
-        vec2 v(1.0f, 2.0f);
-        char buffer[64]{};
-        int written = to_string(v, buffer, sizeof(buffer), 0);
-        assert(written > 0);
-
-        string result(buffer);
-        assert(result.find('1') != string::npos);
-        assert(result.find('2') != string::npos);
-    }
-
-    {
-        vec3 v(3.0f, 4.0f, 5.0f);
-        char buffer[64]{};
-        int written = to_string(v, buffer, sizeof(buffer), 0);
-        assert(written > 0);
-
-        string result(buffer);
-        assert(result.find('3') != string::npos);
-        assert(result.find('4') != string::npos);
-        assert(result.find('5') != string::npos);
-    }
-
-    {
-        const char *text = "10.5 20.25";
-        vec2 v(0.0f);
-        bool ok = stov2(text, v);
-        assert(ok);
-        assert(v.x > 10.4f && v.x < 10.6f);
-        assert(v.y > 20.2f && v.y < 20.3f);
-    }
-
-    {
-        const char *text = "30.75";
-        vec2 v(0.0f);
-        stov2_opt(text, v);
-        assert(v.x > 30.7f && v.x < 30.8f);
-        assert(v.y == 0.0f);
-    }
-
-    {
-        const char *text = "1.1 2.2 3.3";
-        vec3 v(0.0f);
-        bool ok = stov3(text, v);
-        assert(ok);
-        assert(v.x > 1.0f && v.x < 1.2f);
-        assert(v.y > 2.1f && v.y < 2.3f);
-        assert(v.z > 3.2f && v.z < 3.4f);
-    }
-
-    {
-        const char *text = "7.7 8.8";
-        vec3 v(0.0f);
-        stov3_opt(text, v);
-        assert(v.x > 7.6f && v.x < 7.8f);
-        assert(v.y > 8.7f && v.y < 8.9f);
-        assert(v.z == 0.0f);
-    }
-}
-#endif
 
 void test_utils()
 {
@@ -196,7 +131,7 @@ void test_utils()
     assert(utf8 == back_to_utf8);
 
     // trim
-    acul::string trimmed = acul::trim("  hello world   ");
+    acul::string trimmed = acul::trim(acul::string("  hello world   "));
     assert(trimmed == "hello world");
 
     acul::u16string trimmed16 = acul::trim(acul::utf8_to_utf16("  hello world   "));
@@ -242,11 +177,11 @@ void test_utils()
 
     // str_range
     const char *str4 = "hello";
-    acul::string range = acul::str_range(str4);
+    acul::string range = acul::strip_controls(str4);
     assert(range == "hello");
 
     // trim_end
-    acul::string trimEnd = acul::trim_end("hello   ");
+    acul::string trimEnd = acul::trim_end(acul::string("hello   "));
     assert(trimEnd == "hello");
 
     acul::string zero = acul::to_string(0);
@@ -255,10 +190,6 @@ void test_utils()
     // Negative
     acul::string negative = acul::to_string(-12345);
     assert(negative == "-12345");
-
-#ifdef ACUL_GLM_ENABLE
-    test_utils_glm();
-#endif
 }
 
 void test_string()

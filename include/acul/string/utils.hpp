@@ -3,6 +3,14 @@
 #include "../vector.hpp"
 #include "string.hpp"
 
+#ifdef _WIN32
+    #define ACUL_C_STR(S)    L##S
+    #define ACUL_NATIVE_CHAR wchar_t
+#else
+    #define ACUL_C_STR(S)    S
+    #define ACUL_NATIVE_CHAR char
+#endif
+
 namespace acul
 {
 
@@ -195,6 +203,55 @@ namespace acul
         return string(begin, end - begin);
     }
 
+    inline size_t find_insensitive_case(const char *str, size_t len, const char *find)
+    {
+        if (!str || !find) return (size_t)-1;
+
+#ifdef _WIN32
+        size_t n = len;
+        size_t m = null_terminated_length(find);
+        if (m == 0 || m > n) return (size_t)-1;
+
+        auto lower = [](unsigned char c) -> unsigned char { return (c >= 'A' && c <= 'Z') ? c + 32 : c; };
+
+        for (size_t i = 0; i + m <= n; ++i)
+        {
+            size_t j = 0;
+            for (; j < m; ++j)
+            {
+                if (lower((unsigned char)str[i + j]) != lower((unsigned char)find[j])) { break; }
+            }
+            if (j == m) return i;
+        }
+        return (size_t)-1;
+
+#else
+        const char *p = strcasestr(str, find);
+        return p ? static_cast<size_t>(p - str) : (size_t)-1;
+#endif
+    }
+
+    inline size_t find_insensitive_case(const string &str, const char *find)
+    {
+        return find_insensitive_case(str.c_str(), str.size(), find);
+    }
+
+    /// Replaces all occurrences of `old_char` in the given C-string with `new_char`.
+    inline string replace(const char *str, size_t len, char old_char, char new_char)
+    {
+        string result;
+        result.resize(len);
+        for (size_t i = 0; i < len; ++i) result[i] = str[i] == old_char ? new_char : str[i];
+        return result;
+    }
+
+    /// Replaces all occurrences of `old_char` in the given string with `new_char`.
+    template <typename S, typename = std::enable_if_t<is_string_like_v<char, S>>>
+    inline string replace(const S &str, char old_char, char new_char)
+    {
+        return replace(str.data(), str.size(), old_char, new_char);
+    }
+
     /// Removes leading spaces and control whitespace characters (\f, \n, \r, \t, \v)
     /// from the given C-string. Trailing spaces are preserved.
     /// Example:
@@ -299,5 +356,21 @@ namespace acul
             pos = found + 1;
         }
         return result;
+    }
+
+    inline string to_lower(const string &s)
+    {
+        string out;
+        out.resize(s.size());
+        for (size_t i = 0; i < s.size(); ++i) { out[i] = tolower(s[i]); }
+        return out;
+    }
+
+    inline string to_upper(const string &s)
+    {
+        string out;
+        out.resize(s.size());
+        for (size_t i = 0; i < s.size(); ++i) { out[i] = toupper(s[i]); }
+        return out;
     }
 } // namespace acul

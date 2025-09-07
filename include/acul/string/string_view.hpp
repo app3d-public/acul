@@ -135,7 +135,7 @@ namespace std
     {
         size_t operator()(const acul::basic_string_view<T> &s) const noexcept
         {
-            return acul::cityhash64(s.data(), s.size());
+            return acul::cityhash64((const char *) s.data(), s.size());
         }
     };
 } // namespace std

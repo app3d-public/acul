@@ -27,10 +27,10 @@ namespace acul
         using iterator = vector<char>::iterator;
         using const_iterator = vector<char>::const_iterator;
 
-        /**
-         * @brief Default constructor. Initializes the stream position to 0.
-         */
+
         bin_stream() : _pos(0) {}
+
+        bin_stream(const_pointer data, size_type len) : _data(data, data + len), _pos(0) {}
 
         /**
          * @brief Constructor that initializes the stream with provided data.

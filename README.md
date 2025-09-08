@@ -106,7 +106,7 @@ These are system libraries that must be available at build time:
 ### Bundled submodules
 The following dependencies are included as git submodules and must be checked out when cloning:
 
-- [acbt](https://git.homedatasrv.ru/app3d/acbt) - App3D Cmake Build Tools
+- [acbt](https://github.com/app3d-public/acbt) - App3D Cmake Build Tools
 
 ## Benchmarks
 <details>

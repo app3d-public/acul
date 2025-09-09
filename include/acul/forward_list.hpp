@@ -566,7 +566,7 @@ namespace acul
     };
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
                                                                                   const_reference value)
     {
         pointer node = pos._ptr;
@@ -581,7 +581,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, T &&value)
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, T &&value)
     {
         pointer node = pos._ptr;
         pointer new_node = node_allocator::allocate(1);
@@ -595,7 +595,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, size_type count,
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, size_type count,
                                                                                   const_reference value)
     {
         pointer node = pos._ptr;
@@ -616,7 +616,7 @@ namespace acul
 
     template <typename T, typename Allocator>
     template <class InputIt>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, InputIt first,
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos, InputIt first,
                                                                                   InputIt last)
     {
         pointer node = pos._ptr;
@@ -636,7 +636,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::insert_after(const_iterator pos,
                                                                                   std::initializer_list<T> ilist)
     {
         pointer node = pos._ptr;
@@ -656,7 +656,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::erase_after(const_iterator pos)
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::erase_after(const_iterator pos)
     {
         pointer current = pos._ptr;
         if (current && current->next)
@@ -670,7 +670,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    forward_list<T, Allocator>::iterator forward_list<T, Allocator>::erase_after(const_iterator first,
+    typename forward_list<T, Allocator>::iterator forward_list<T, Allocator>::erase_after(const_iterator first,
                                                                                  const_iterator last)
     {
         pointer current = first._ptr;

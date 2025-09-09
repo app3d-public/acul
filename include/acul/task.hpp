@@ -218,7 +218,7 @@ namespace acul
             template <typename F>
             void add_task(F &&task, std::chrono::steady_clock::time_point time)
             {
-                _tasks.emplace(acul::task::add_task(std::forward<F>(task)), time);
+                _tasks.push({acul::task::add_task(std::forward<F>(task)), time});
                 notify();
             }
 

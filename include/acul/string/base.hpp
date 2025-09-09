@@ -7,7 +7,6 @@
 
 namespace acul
 {
-
     template <typename T>
     constexpr static inline size_t null_terminated_length(const T *s) noexcept
     {
@@ -15,6 +14,9 @@ namespace acul
         while (*p) ++p;
         return p - s;
     }
+
+    constexpr inline size_t null_terminated_length(const char *s) noexcept { return (size_t)__builtin_strlen(s); }
+    constexpr inline size_t null_terminated_length(const wchar_t *s) noexcept { return (size_t)__builtin_wcslen(s); }
 
     template <typename T, typename U, typename = void>
     struct is_string_like : std::false_type

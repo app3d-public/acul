@@ -63,9 +63,16 @@ namespace acul
     }
 
     template <typename T>
-    using is_char = std::integral_constant<bool, std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
-                                                     std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> ||
-                                                     std::is_same_v<T, char32_t>>;
+    struct is_char : std::bool_constant<std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
+#if defined(__cpp_char8_t) && __cpp_char8_t >= 201811
+                                        std::is_same_v<T, char8_t> ||
+#endif
+                                        std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>>
+    {
+    };
+
+    template<typename T>
+    inline constexpr bool is_char_v = is_char<T>::value;
 
     template <typename T>
     using is_nonchar_integer = std::integral_constant<bool, std::is_integral_v<T> && !is_char<T>::value>;

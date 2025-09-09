@@ -80,7 +80,7 @@ namespace acul
                     }
                     group->entrypoints.erase(it);
                     ++_op_count;
-                    _dispatch.dispatch([=, this, path = this->path(entrypoint, group)]() mutable {
+                    _dispatch.dispatch([this, entrypoint, path = this->path(entrypoint, group)]() mutable {
                         {
                             acul::exclusive_lock entrypoint_lock(entrypoint->lock);
                             entrypoint->cv.wait(entrypoint_lock, [&]() { return entrypoint->op_count.load() == 0; });

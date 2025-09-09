@@ -685,7 +685,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    list<T, Allocator>::iterator list<T, Allocator>::erase(iterator first, iterator last)
+    typename list<T, Allocator>::iterator list<T, Allocator>::erase(iterator first, iterator last)
     {
         while (first != last) first = erase(first);
         return last;

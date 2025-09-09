@@ -24,7 +24,7 @@ add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exceptio
 add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
 add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
 
-if (ACUL_SIMD_ENABLE)
+if(ACUL_SIMD_ENABLE)
     add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/simd")
 endif()
 
@@ -32,7 +32,7 @@ if(ACUL_INTL_ENABLE)
     add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/locales")
 endif()
 
-if (ACUL_ZSTD_ENABLE)
+if(ACUL_ZSTD_ENABLE)
     add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc")
 endif()
 
@@ -61,9 +61,11 @@ endif()
 if(ACUL_LOG_ENABLE)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_LOG_ENABLE)
 endif()
+
 if(ACUL_INTL_ENABLE)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_INTL_ENABLE)
 endif()
+
 if(ACUL_ZSTD_ENABLE)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_ZSTD_ENABLE)
 endif()
@@ -96,8 +98,6 @@ endif()
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS YES
 )
 

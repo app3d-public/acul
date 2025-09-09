@@ -521,7 +521,8 @@ namespace acul
                 return {it, next};
             }
 
-            template <class K = key_type, class std::enable_if<std::is_same_v<pair<key_type, mapped_type>, value_type>>>
+            template <class K = key_type,
+                      typename = std::enable_if<std::is_same_v<pair<key_type, mapped_type>, value_type>>>
             mapped_type &at(const K &key)
             {
                 size_type idx = bucket(key);
@@ -893,7 +894,7 @@ namespace acul
                       class = std::enable_if<std::is_same_v<pair<key_type, mapped_type>, value_type>>>
             inline pair<iterator, bool> place_kv_at(size_type pos, size_type link_from, Kx &&k, Vx &&v)
             {
-                ::new ((void *)&_values[pos]) value_type(std::forward<Kx>(k), std::forward<Vx>(v));
+                ::new ((void *)&_values[pos]) value_type{std::forward<Kx>(k), std::forward<Vx>(v)};
 
                 if (link_from == AHM_INACTIVE)
                 {

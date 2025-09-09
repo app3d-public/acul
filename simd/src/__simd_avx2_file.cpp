@@ -1,8 +1,8 @@
 #include <acul/api.hpp>
-#include <acul/string/string_pool.hpp>
+#include <acul/string/string_view_pool.hpp>
 #include <immintrin.h>
 
-extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, acul::string_pool<char> &dst)
+extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, acul::string_view_pool<char> &dst)
 {
     const char *const data_end = data + size;
 

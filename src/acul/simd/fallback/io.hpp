@@ -1,7 +1,7 @@
 #pragma once
 
 #include <acul/api.hpp>
-#include <acul/fwd/string_pool.hpp>
+#include <acul/fwd/string_view_pool.hpp>
 #include <acul/scalars.hpp>
 
 namespace acul
@@ -12,7 +12,7 @@ namespace acul
 
         namespace io
         {
-            APPLIB_API void fill_line_buffer(const char *data, size_t size, string_pool<char> &dst);
+            APPLIB_API void fill_line_buffer(const char *data, size_t size, string_view_pool<char> &dst);
         }
     } // namespace nosimd
 } // namespace acul

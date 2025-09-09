@@ -27,7 +27,7 @@ namespace acul
         {
         }
 
-        constexpr basic_string_view(const pointer str, size_type len) noexcept : _data(str), _size(len) {}
+        constexpr basic_string_view(const_pointer str, size_type len) noexcept : _data(str), _size(len) {}
 
         constexpr basic_string_view(const basic_string_view &other) noexcept = default;
         constexpr basic_string_view &operator=(const basic_string_view &other) noexcept = default;
@@ -95,12 +95,7 @@ namespace acul
             }
 
             if (n > _size) return npos;
-            size_type start;
-            if (pos == npos || pos + 1 < n)
-                start = _size - n;
-            else
-                start = (pos >= _size ? _size - n : pos - n + 1);
-
+            size_type start = (pos == npos || pos + 1 < n) ? _size - n : (pos >= _size) ? _size - n : pos - n + 1;
             for (;;)
             {
                 if (memcmp(_data + start, str.data(), n) == 0) return start;
@@ -121,11 +116,14 @@ namespace acul
         size_type _size;
     };
 
+#if defined(__cpp_impl_three_way_comparison) && __cpp_impl_three_way_comparison >= 201907
     template <typename T>
     constexpr auto operator<=>(const basic_string_view<T> &a, const basic_string_view<T> &b)
     {
         return compare_string(a.begin(), a.size(), b.begin(), b.size());
     }
+#endif
+
 } // namespace acul
 
 namespace std
@@ -135,7 +133,7 @@ namespace std
     {
         size_t operator()(const acul::basic_string_view<T> &s) const noexcept
         {
-            return acul::cityhash64((const char *) s.data(), s.size());
+            return acul::cityhash64((const char *)s.data(), s.size());
         }
     };
 } // namespace std

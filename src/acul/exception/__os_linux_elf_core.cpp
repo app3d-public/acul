@@ -126,7 +126,7 @@ namespace acul
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
         if (io::file::read_virtual(maps_file, content) != io::file::op_state::success) return false;
-        acul::string_pool<char> lines(content.size());
+        acul::string_view_pool<char> lines(content.size());
         io::file::fill_line_buffer(content.data(), content.size(), lines);
 
         constexpr size_t ELF_SMALL_ANON = 128 * 1024;

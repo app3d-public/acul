@@ -112,9 +112,9 @@ namespace acul
             {
                 if constexpr (!std::is_trivially_destructible_v<value_type>)
                     for (size_type i = 0; i < _size; ++i) Allocator::destroy(_data + i);
-                const size_type oldCapacity = _capacity;
+                const size_type old_capacity = _capacity;
                 _capacity = other._capacity;
-                if (oldCapacity < other._capacity) reallocate(false);
+                if (old_capacity < other._capacity) reallocate(false);
                 _size = other._size;
                 copy_construct(other._data, other._data + _size, _data);
             }
@@ -430,7 +430,7 @@ namespace acul
     };
 
     template <typename T, typename Allocator>
-    vector<T, Allocator>::iterator vector<T, Allocator>::erase(iterator pos)
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::erase(iterator pos)
     {
         if (pos >= begin() && pos < end())
         {
@@ -444,7 +444,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    vector<T, Allocator>::iterator vector<T, Allocator>::erase(iterator first, iterator last)
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::erase(iterator first, iterator last)
     {
         if (first >= begin() && last <= end() && first < last)
         {
@@ -460,7 +460,7 @@ namespace acul
     }
 
     template <typename T, typename Allocator>
-    vector<T, Allocator>::iterator vector<T, Allocator>::insert(iterator pos, const_reference value)
+    typename vector<T, Allocator>::iterator vector<T, Allocator>::insert(iterator pos, const_reference value)
     {
         if (pos < begin() || pos > end()) return end();
         std::ptrdiff_t index = pos - begin();

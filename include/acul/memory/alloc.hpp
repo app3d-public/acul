@@ -41,7 +41,10 @@ namespace acul
         template <typename U, typename... Args>
         static inline void construct(U *p, Args &&...args)
         {
-            ::new ((void *)p) U(std::forward<Args>(args)...);
+            if constexpr (__is_aggregate(U))
+                ::new ((void *)p) U{static_cast<Args &&>(args)...};
+            else
+                ::new ((void *)p) U(std::forward<Args>(args)...);
         }
 
         template <typename U>

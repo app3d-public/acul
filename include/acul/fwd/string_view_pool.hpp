@@ -5,5 +5,5 @@
 namespace acul
 {
     template <typename T, typename Allocator = mem_allocator<T>>
-    class string_pool;
+    class string_view_pool;
 }

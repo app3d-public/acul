@@ -145,7 +145,8 @@ namespace acul
             va_list args;
             va_start(args, message);
             _count.fetch_add(1, std::memory_order_relaxed);
-            _queue.emplace(logger, acul::format_va_list(ss.str().c_str(), args));
+            string parsed = ss.str();
+            _queue.emplace(logger, acul::format_va_list(parsed.c_str(), args));
             va_end(args);
             notify();
         }

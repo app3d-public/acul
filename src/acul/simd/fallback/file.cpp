@@ -1,5 +1,5 @@
 #include <acul/api.hpp>
-#include <acul/string/string_pool.hpp>
+#include <acul/string/string_view_pool.hpp>
 
 namespace acul
 {
@@ -7,7 +7,7 @@ namespace acul
     {
         namespace io
         {
-            APPLIB_API void fill_line_buffer(const char *data, size_t size, string_pool<char> &dst)
+            APPLIB_API void fill_line_buffer(const char *data, size_t size, string_view_pool<char> &dst)
             {
                 const char *p = data;
                 const char *end = data + size;

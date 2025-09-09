@@ -6,6 +6,18 @@ namespace acul
 {
     namespace detail
     {
+        template <class, class, class = void>
+        struct has_accept_owner : std::false_type
+        {
+        };
+
+        template <class T, class SP>
+        struct has_accept_owner<
+            T, SP, decltype((void)std::declval<T *>()->_internal_accept_owner(std::declval<const SP &>()), void())>
+            : std::true_type
+        {
+        };
+
         struct mem_control_block
         {
             size_t ref_counts;
@@ -42,7 +54,7 @@ namespace acul
         template <class T, class SP>
         inline void accept_owner(T *p, const SP &sp)
         {
-            if constexpr (requires { p->_internal_accept_owner(sp); }) p->_internal_accept_owner(sp);
+            if constexpr (has_accept_owner<T, SP>::value) { p->_internal_accept_owner(sp); }
         }
     } // namespace detail
 

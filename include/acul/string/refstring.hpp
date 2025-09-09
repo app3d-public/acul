@@ -12,7 +12,7 @@ namespace acul
     private:
         struct Rep
         {
-            std::atomic<int> count;
+            std::atomic<size_t> count;
             size_t len;
             size_t cap;
             char data[];

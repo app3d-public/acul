@@ -1,10 +1,11 @@
 #include <acul/string/refstring.hpp>
 #include <acul/string/sstream.hpp>
 #include <acul/string/string.hpp>
-#include <acul/string/string_pool.hpp>
 #include <acul/string/string_view.hpp>
+#include <acul/string/string_view_pool.hpp>
 #include <acul/string/utils.hpp>
 #include <cassert>
+
 
 void test_basic_string()
 {
@@ -66,10 +67,10 @@ void test_sstream()
     }
 }
 
-void test_string_pool()
+void test_string_view_pool()
 {
     {
-        acul::string_pool<char> pool(32);
+        acul::string_view_pool<char> pool(32);
         assert(pool.empty());
 
         pool.push("hello", 5);
@@ -84,15 +85,15 @@ void test_string_pool()
     }
     {
 
-        acul::string_pool<char> pool(5);
+        acul::string_view_pool<char> pool(5);
         pool.push("abc", 3);
         assert(pool.size() == 1);
-        assert(strcmp(pool[0], "abc") == 0);
+        assert(strcmp(pool[0].data(), "abc") == 0);
 
         pool.push("defg", 4);
         assert(pool.size() == 2);
-        assert(std::strcmp(pool[1], "defg") == 0);
-        assert(std::strcmp(pool[0], "abc") == 0);
+        assert(strcmp(pool[1].data(), "defg") == 0);
+        assert(strcmp(pool[0].data(), "abc") == 0);
     }
 }
 
@@ -197,7 +198,7 @@ void test_string()
     test_refstring();
     test_basic_string();
     test_sstream();
-    test_string_pool();
+    test_string_view_pool();
     test_string_view();
     test_utils();
 }

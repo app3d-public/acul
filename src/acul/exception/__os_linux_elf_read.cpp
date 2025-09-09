@@ -11,15 +11,18 @@ namespace acul
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
         if (io::file::read_virtual(maps_file, content) != io::file::op_state::success) return false;
-        string_pool<char> lines(content.size());
+        string_view_pool<char> lines;
+        lines.reserve(content.size() / 40);
         io::file::fill_line_buffer(content.data(), content.size(), lines);
         hashmap<string, int> path_map;
-        for (const auto &line : lines)
+        for (const auto line : lines)
         {
             uintptr_t lo = 0, hi = 0, file_offset = 0;
             char perms[5] = {};
             char path_buf[PATH_MAX] = {};
-            if (sscanf(line, "%lx-%lx %4s %lx %*s %*s %s", &lo, &hi, perms, &file_offset, path_buf) <= 3) continue;
+            acul::string null_line{line.data(), line.size()};
+            if (sscanf(null_line.c_str(), "%lx-%lx %4s %lx %*s %*s %s", &lo, &hi, perms, &file_offset, path_buf) <= 3)
+                continue;
             string path = (const char *)path_buf;
             auto [it, inserted] = path_map.emplace(path, out.size());
             exec_module *m = NULL;

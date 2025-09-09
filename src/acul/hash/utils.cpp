@@ -4,7 +4,6 @@
 #include <cstring>
 #include <utility>
 
-
 typedef acul::pair<u64, u64> u128;
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
     #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -136,7 +135,7 @@ namespace acul
         return b;
     }
 
-    static u64 hash16(u64 u, u64 v) { return hash128_64(u128(u, v)); }
+    static u64 hash16(u64 u, u64 v) { return hash128_64(u128{u, v}); }
 
     static u64 hash0_16(const char *s, size_t len)
     {

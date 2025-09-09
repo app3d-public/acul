@@ -29,7 +29,7 @@ void test_file()
     assert(strncmp(buffer.data(), text, buffer.size()) == 0);
 
     // --- fill_line_buffer
-    string_pool<char> pool(256);
+    string_view_pool<char> pool(256);
     fill_line_buffer(buffer.data(), buffer.size(), pool);
     assert(pool.size() == 3);
 

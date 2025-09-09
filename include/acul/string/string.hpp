@@ -905,6 +905,7 @@ namespace acul
         return basic_string<T, Allocator>(lhs) + rhs;
     }
 
+#if defined(__cpp_impl_three_way_comparison) && __cpp_impl_three_way_comparison >= 201907
     template <typename T, typename Allocator>
     constexpr auto operator<=>(const basic_string<T, Allocator> &lhs, const basic_string<T, Allocator> &rhs) noexcept
     {
@@ -922,6 +923,7 @@ namespace acul
     {
         return compare_string(lhs.data(), lhs.size(), rhs.c_str(), rhs.size());
     }
+#endif
 } // namespace acul
 
 namespace std

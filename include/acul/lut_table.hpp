@@ -1,6 +1,8 @@
 #pragma once
+
 #include <array>
 #include <cstddef>
+#include "api.hpp"
 
 namespace acul
 {
@@ -11,7 +13,7 @@ namespace acul
         using enum_type = typename Traits::enum_type;
         using array_type = std::array<enum_type, N>;
 
-        static consteval array_type load_lut_table()
+        static ACUL_CONSTEVAL array_type load_lut_table()
         {
             array_type a{};
             for (auto &x : a) x = Traits::unknown;
@@ -19,7 +21,7 @@ namespace acul
             return a;
         }
 
-        inline static constexpr array_type data = load_lut_table();
+        inline static ACUL_CONSTINIT array_type data = load_lut_table();
 
         static constexpr enum_type find(value_type v) noexcept
         {

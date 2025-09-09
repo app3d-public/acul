@@ -524,10 +524,23 @@ namespace acul
             pair<iterator, bool> emplace(KK &&k, Args &&...args)
             {
                 const key_type &key = k;
+#if __cplusplus >= 202002L
                 auto kk = std::forward<KK>(k);
                 return emplace_impl(key, [this, kk = std::move(kk), ... aa = std::forward<Args>(args)](u32 i) mutable {
-                    ::new ((void *)&_values[i]) value_type(std::move(kk), mapped_type(std::move(aa)...));
+                    ::new ((void *)&_values[i]) value_type{std::move(kk), mapped_type(std::move(aa)...)};
                 });
+#else
+                auto kk = std::forward<KK>(k);
+                auto tup = std::forward_as_tuple(std::forward<Args>(args)...);
+                return emplace_impl(key, [this, kk = std::move(kk), tup = std::move(tup)](u32 i) mutable {
+                    std::apply(
+                        [&](auto &&...aa) {
+                            ::new ((void *)&_values[i])
+                                value_type{std::move(kk), mapped_type(std::forward<decltype(aa)>(aa)...)};
+                        },
+                        std::move(tup));
+                });
+#endif
             }
 
             size_type erase(const key_type &key) noexcept

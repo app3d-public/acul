@@ -20,4 +20,17 @@
 #define ACUL_HOT         __attribute__((hot))
 #define ACUL_COLD        __attribute__((cold))
 #define ACUL_FORCEINLINE __attribute__((always_inline)) inline
+
+#if defined(__cpp_consteval) && __cpp_consteval >= 201811
+    #define ACUL_CONSTEVAL consteval
+#else
+    #define ACUL_CONSTEVAL constexpr
+#endif
+
+#if defined(__cpp_constinit) && __cpp_constinit >= 201907
+    #define ACUL_CONSTINIT constinit
+#else
+    #define ACUL_CONSTINIT constexpr
+#endif
+
 #endif // APPLIB_API_H

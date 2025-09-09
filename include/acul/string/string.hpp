@@ -923,6 +923,102 @@ namespace acul
     {
         return compare_string(lhs.data(), lhs.size(), rhs.c_str(), rhs.size());
     }
+#else
+    // basic_string  vs basic_string
+    template <typename T, typename A>
+    constexpr bool operator==(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return compare_string(lhs.c_str(), lhs.size(), rhs.c_str(), rhs.size()) == 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator!=(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(lhs == rhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator<(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return compare_string(lhs.c_str(), lhs.size(), rhs.c_str(), rhs.size()) < 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator>(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return rhs < lhs;
+    }
+    template <typename T, typename A>
+    constexpr bool operator<=(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(rhs < lhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator>=(const basic_string<T, A> &lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(lhs < rhs);
+    }
+
+    // basic_string  vs string_view
+    template <typename T, typename A>
+    constexpr bool operator==(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return compare_string(lhs.c_str(), lhs.size(), rhs.data(), rhs.size()) == 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator!=(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return !(lhs == rhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator<(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return compare_string(lhs.c_str(), lhs.size(), rhs.data(), rhs.size()) < 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator>(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return rhs < lhs;
+    }
+    template <typename T, typename A>
+    constexpr bool operator<=(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return !(rhs < lhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator>=(const basic_string<T, A> &lhs, basic_string_view<T> rhs) noexcept
+    {
+        return !(lhs < rhs);
+    }
+
+    // string_view  vs basic_string
+    template <typename T, typename A>
+    constexpr bool operator==(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return compare_string(lhs.data(), lhs.size(), rhs.c_str(), rhs.size()) == 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator!=(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(lhs == rhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator<(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return compare_string(lhs.data(), lhs.size(), rhs.c_str(), rhs.size()) < 0;
+    }
+    template <typename T, typename A>
+    constexpr bool operator>(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return rhs < lhs;
+    }
+    template <typename T, typename A>
+    constexpr bool operator<=(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(rhs < lhs);
+    }
+    template <typename T, typename A>
+    constexpr bool operator>=(basic_string_view<T> lhs, const basic_string<T, A> &rhs) noexcept
+    {
+        return !(lhs < rhs);
+    }
 #endif
 } // namespace acul
 

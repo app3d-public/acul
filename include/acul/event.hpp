@@ -102,11 +102,10 @@ namespace acul
             template <class E>
             void add(void *owner, listener<E> *L, int prio)
             {
-                remove_by_owner(owner);                          // гарантируем уникальность owner на это событие
-                event_node n{owner, &thunk<E>, (void *)L, prio}; // порядок полей: owner, call, ctx, prio
+                remove_by_owner(owner);
+                event_node n{owner, &thunk<E>, (void *)L, prio};
                 auto r = equal_range_desc(prio);
-                _nodes.insert(_nodes.begin() + r.second,
-                              n); // в конец диапазона равных prio (сохраняем порядок регистрации)
+                _nodes.insert(_nodes.begin() + r.second, n);
             }
 
             void remove_by_ptr(void *ctx, int prio, bool prio_known = true)
@@ -178,7 +177,7 @@ namespace acul
                 while (l < r)
                 {
                     int m = (l + r) >> 1;
-                    (_nodes[m].prio > p) ? l = m + 1 : r = m;
+                    (_nodes[m].prio < p) ? l = m + 1 : r = m;
                 }
                 return l;
             }
@@ -188,10 +187,11 @@ namespace acul
                 while (l < r)
                 {
                     int m = (l + r) >> 1;
-                    (_nodes[m].prio >= p) ? l = m + 1 : r = m;
+                    (_nodes[m].prio <= p) ? l = m + 1 : r = m;
                 }
                 return l;
             }
+
             pair<int, int> equal_range_desc(int p) const { return {lower_bound_desc(p), upper_bound_desc(p)}; }
 
             void erase_at(int i)

@@ -66,7 +66,6 @@ namespace acul
         {
             const uint32_t BLK = 16;
 
-            // дойти до границы блока
             while (idx < cap && (idx & (BLK - 1u)))
             {
                 if (ctrl[idx] < 0x7F) return idx;

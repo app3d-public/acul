@@ -33,7 +33,6 @@ extern "C" APPLIB_API void acul_fill_line_buffer(const char *data, size_t size, 
             }
             else
             {
-                // Одиночный CR на границе: разделитель на p (до текущего первого байта)
                 size_t line_len = static_cast<size_t>((p - 1) - line_start);
                 if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
                 dst.push(line_start, line_len);

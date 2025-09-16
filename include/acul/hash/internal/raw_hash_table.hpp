@@ -890,8 +890,8 @@ namespace acul
                 return {iterator(this, pos), true};
             }
 
-            template <class Kx, class Vx,
-                      class = std::enable_if<std::is_same_v<pair<key_type, mapped_type>, value_type>>>
+            template <class Kx, class Vx, class M = mapped_type,
+                      std::enable_if_t<!std::is_same_v<M, std::false_type>, int> = 0>
             inline pair<iterator, bool> place_kv_at(size_type pos, size_type link_from, Kx &&k, Vx &&v)
             {
                 ::new ((void *)&_values[pos]) value_type{std::forward<Kx>(k), std::forward<Vx>(v)};
@@ -911,8 +911,8 @@ namespace acul
                 return {iterator(this, pos), true};
             }
 
-            template <class Kx, class Vx,
-                      class = std::enable_if<std::is_same_v<pair<key_type, mapped_type>, value_type>>>
+            template <class Kx, class Vx, class M = mapped_type,
+                      std::enable_if_t<!std::is_same_v<M, std::false_type>, int> = 0>
             ACUL_FORCEINLINE pair<iterator, bool> insert_kv(Kx &&key, Vx &&val)
             {
                 const auto sel = find_slot(key);
@@ -934,13 +934,23 @@ namespace acul
                 return place_kv_at(sel.pos, sel.link_from, std::move(kv));
             }
 
-            template <class Kx, class... Args, std::enable_if_t<(sizeof...(Args) > 0), int> = 0>
+            template <class Kx, class... Args>
             ACUL_FORCEINLINE pair<iterator, bool> insert_kv(Kx &&key, Args &&...margs)
             {
-                const auto sel = find_slot(key);
-                if (sel.existed) return {iterator(this, sel.pos), false};
-                mapped_type val(std::forward<Args>(margs)...);
-                return place_kv_at(sel.pos, sel.link_from, std::forward<Kx>(key), std::move(val));
+                if constexpr (std::is_same_v<mapped_type, std::false_type>)
+                {
+                    value_type val(std::forward<Kx>(key), std::forward<Args>(margs)...);
+                    const auto sel = find_slot(val);
+                    if (sel.existed) return {iterator(this, sel.pos), false};
+                    return place_kv_at(sel.pos, sel.link_from, std::move(val));
+                }
+                else
+                {
+                    const auto sel = find_slot(key);
+                    if (sel.existed) return {iterator(this, sel.pos), false};
+                    mapped_type val(std::forward<Args>(margs)...);
+                    return place_kv_at(sel.pos, sel.link_from, std::forward<Kx>(key), std::move(val));
+                }
             }
 
             static ACUL_FORCEINLINE bool is_empty(size_type w) noexcept { return w == AHM_INACTIVE; }

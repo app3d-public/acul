@@ -282,8 +282,7 @@ namespace acul
                     size_type n = (size_type)std::distance(first, last);
                     reserve(n > bucket_count ? n : bucket_count);
                 }
-                else
-                    reserve(bucket_count);
+                else reserve(bucket_count);
 
                 for (; first != last; ++first) emplace(*first);
             }
@@ -452,10 +451,8 @@ namespace acul
                         if (c == AHM_HL_CTRL_EMPTY) continue;
 
                         value_type kv;
-                        if constexpr (std::is_trivially_copyable_v<value_type>)
-                            kv = old_values[i];
-                        else
-                            kv = std::move(old_values[i]);
+                        if constexpr (std::is_trivially_copyable_v<value_type>) kv = old_values[i];
+                        else kv = std::move(old_values[i]);
 
                         const u64 hphi = hash_mixed(Traits::get_key(kv));
                         const u8 h2 = h2_from(hphi);
@@ -471,10 +468,8 @@ namespace acul
                             const u32 off = ctz32(m);
                             free_masks[g] &= ~(1u << off);
                             const u32 j = (g << GSHIFT) | off;
-                            if constexpr (std::is_trivially_copyable_v<value_type>)
-                                _values[j] = kv;
-                            else
-                                ::new ((void *)&_values[j]) value_type(std::move(kv));
+                            if constexpr (std::is_trivially_copyable_v<value_type>) _values[j] = kv;
+                            else ::new ((void *)&_values[j]) value_type(std::move(kv));
                             set_ctrl(j, h2);
                             ++inserted;
                             continue;
@@ -489,10 +484,8 @@ namespace acul
                                 const u32 off = ctz32(mm);
                                 free_masks[gg] = (mm & (mm - 1u));
                                 const u32 j = (gg << GSHIFT) | off;
-                                if constexpr (std::is_trivially_copyable_v<value_type>)
-                                    _values[j] = kv;
-                                else
-                                    ::new ((void *)&_values[j]) value_type(std::move(kv));
+                                if constexpr (std::is_trivially_copyable_v<value_type>) _values[j] = kv;
+                                else ::new ((void *)&_values[j]) value_type(std::move(kv));
                                 set_ctrl(j, h2);
                                 ++inserted;
                                 break;
@@ -519,28 +512,57 @@ namespace acul
                 });
             }
 
-            template <class KK, class... Args, class U = value_type,
-                      std::enable_if_t<std::is_same_v<U, pair<key_type, mapped_type>>, int> = 0>
+            template <class KK, class... Args>
             pair<iterator, bool> emplace(KK &&k, Args &&...args)
             {
-                const key_type &key = k;
+                if constexpr (std::is_same_v<mapped_type, std::false_type>)
+                {
 #if __cplusplus >= 202002L
-                auto kk = std::forward<KK>(k);
-                return emplace_impl(key, [this, kk = std::move(kk), ... aa = std::forward<Args>(args)](u32 i) mutable {
-                    ::new ((void *)&_values[i]) value_type{std::move(kk), mapped_type(std::move(aa)...)};
-                });
+                    value_type val{std::forward<KK>(k), std::forward<Args>(args)...};
+                    const auto key = Traits::get_key(val);
+                    return emplace_impl(key, [this, v = std::move(val)](u32 i) mutable {
+                        ::new ((void *)&_values[i]) value_type(std::move(v));
+                    });
 #else
-                auto kk = std::forward<KK>(k);
-                auto tup = std::forward_as_tuple(std::forward<Args>(args)...);
-                return emplace_impl(key, [this, kk = std::move(kk), tup = std::move(tup)](u32 i) mutable {
-                    std::apply(
-                        [&](auto &&...aa) {
-                            ::new ((void *)&_values[i])
-                                value_type{std::move(kk), mapped_type(std::forward<decltype(aa)>(aa)...)};
-                        },
-                        std::move(tup));
-                });
+                    auto kk = std::forward<KK>(k);
+                    auto tup = std::forward_as_tuple(std::forward<Args>(args)...);
+
+                    value_type val_tmp = [&] {
+                        value_type v{};
+                        std::apply(
+                            [&](auto &&...aa) { v = value_type{std::move(kk), std::forward<decltype(aa)>(aa)...}; },
+                            tup);
+                        return v;
+                    }();
+
+                    const auto key = Traits::get_key(val_tmp);
+                    return emplace_impl(key, [this, v = std::move(val_tmp)](u32 i) mutable {
+                        ::new ((void *)&_values[i]) value_type(std::move(v));
+                    });
 #endif
+                }
+                else
+                {
+                    const key_type &key = k;
+#if __cplusplus >= 202002L
+                    auto kk = std::forward<KK>(k);
+                    return emplace_impl(
+                        key, [this, kk = std::move(kk), ... aa = std::forward<Args>(args)](u32 i) mutable {
+                            ::new ((void *)&_values[i]) value_type{std::move(kk), mapped_type(std::move(aa)...)};
+                        });
+#else
+                    auto kk = std::forward<KK>(k);
+                    auto tup = std::forward_as_tuple(std::forward<Args>(args)...);
+                    return emplace_impl(key, [this, kk = std::move(kk), tup = std::move(tup)](u32 i) mutable {
+                        std::apply(
+                            [&](auto &&...aa) {
+                                ::new ((void *)&_values[i])
+                                    value_type{std::move(kk), mapped_type(std::forward<decltype(aa)>(aa)...)};
+                            },
+                            std::move(tup));
+                    });
+#endif
+                }
             }
 
             size_type erase(const key_type &key) noexcept
@@ -819,10 +841,8 @@ namespace acul
                 if (i0 >= _num_buckets) return std::nullopt;
 
                 std::optional<value_type> out;
-                if constexpr (std::is_trivially_copyable_v<value_type>)
-                    out.emplace(_values[i0]);
-                else
-                    out.emplace(std::move(_values[i0]));
+                if constexpr (std::is_trivially_copyable_v<value_type>) out.emplace(_values[i0]);
+                else out.emplace(std::move(_values[i0]));
 
                 if constexpr (!std::is_trivially_destructible_v<value_type>) _values[i0].~value_type();
 

@@ -87,6 +87,11 @@ Each response resolves to an **index entry**, which contains the metadata locati
 - Linux
 - Microsoft Windows
 
+
+### C++ Requirements:
+- C++17 or newer
+- CXX GNU Extensions
+
 ### Cmake options:
 - `ACUL_LOG_ENABLE`: Enable log support
 - `ACUL_SIMD_ENABLE`: Enable SIMD support

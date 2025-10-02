@@ -110,7 +110,7 @@ namespace acul
     template <typename T>
     struct min_max
     {
-        T min = std::numeric_limits<T>::min();
-        T max = std::numeric_limits<T>::max();
+        T min = std::numeric_limits<T>::max();
+        T max = std::numeric_limits<T>::min();
     };
 } // namespace acul

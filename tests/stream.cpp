@@ -52,7 +52,7 @@ void test_bin_stream_raw_data()
 
     char out[sizeof(raw)] = {};
     s.read(out, sizeof(out));
-    assert(std::memcmp(raw, out, sizeof(raw)) == 0);
+    assert(memcmp(raw, out, sizeof(raw)) == 0);
 }
 
 void test_bin_stream_positioning()

@@ -114,7 +114,7 @@ namespace acul
                     return;
                 }
                 allocate_blocks(rhs._num_buckets);
-                std::memcpy(_next, rhs._next, sizeof(uint32_t) * _num_buckets);
+                memcpy(_next, rhs._next, sizeof(uint32_t) * _num_buckets);
                 for (size_type i = 0; i < _num_buckets; ++i)
                     if (_next[i] != AHM_INACTIVE) ::new ((void *)&_values[i]) value_type(rhs._values[i]);
                 _num_filled = rhs._num_filled;
@@ -152,7 +152,7 @@ namespace acul
 
                 raw_hashtable tmp;
                 tmp.allocate_blocks(rhs._num_buckets);
-                std::memcpy(tmp._next, rhs._next, sizeof(uint32_t) * rhs._num_buckets);
+                memcpy(tmp._next, rhs._next, sizeof(uint32_t) * rhs._num_buckets);
                 for (size_type i = 0; i < rhs._num_buckets; ++i)
                     if (tmp._next[i] != AHM_INACTIVE) ::new ((void *)&tmp._values[i]) value_type(rhs._values[i]);
                 tmp._num_filled = rhs._num_filled;
@@ -744,7 +744,7 @@ namespace acul
             ACUL_FORCEINLINE void place_move(value_type &src, value_type *dst)
             {
                 if constexpr (std::is_trivially_copyable_v<value_type>)
-                    std::memcpy((void *)dst, (void *)&src, sizeof(value_type));
+                    memcpy((void *)dst, (void *)&src, sizeof(value_type));
                 else
                     ::new ((void *)dst) value_type(std::move(src));
                 if constexpr (!std::is_trivially_destructible_v<value_type>) src.~value_type();

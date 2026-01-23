@@ -34,7 +34,7 @@ namespace acul
         static inline uint64_t load_u64(const void *p)
         {
             uint64_t v;
-            std::memcpy(&v, p, sizeof(v));
+            memcpy(&v, p, sizeof(v));
             return v;
         }
 

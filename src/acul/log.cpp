@@ -2,7 +2,6 @@
 #include <acul/string/utils.hpp>
 #include <cstdarg>
 #include <ctime>
-#include <regex>
 
 namespace acul
 {
@@ -87,53 +86,55 @@ namespace acul
 
         void logger_base::set_pattern(const string &pattern)
         {
+            static acul::hashmap<string, shared_ptr<token_handler_base>> token_handlers = {
+                {"ascii_time", make_shared<time_handler>()},  {"level_name", make_shared<level_name_handler>()},
+                {"thread", make_shared<thread_id_handler>()}, {"message", make_shared<message_handler>()},
+                {"color_auto", make_shared<color_handler>()}, {"color_off", make_shared<decolor_handler>()}};
+
             _tokens->clear();
-            std::regex token_regex("%\\((.*?)\\)");
-            const char *begin = pattern.begin();
-            const char *end = pattern.begin() + pattern.size();
-            std::cregex_iterator it(begin, end, token_regex);
-            std::cregex_iterator regex_end;
 
-            size_t last_pos = 0;
-            for (; it != regex_end; ++it)
+            const char *p = pattern.data();
+            const char *end = p + pattern.size();
+            const char *begin = p;
+            while (p < end)
             {
-                std::size_t pos = it->position();
-                if (pos != last_pos)
+                if (p + 1 < end && p[0] == '%' && p[1] == '(')
                 {
-                    string text = pattern.substr(last_pos, pos - last_pos);
-                    _tokens->push_back(make_shared<text_handler>(text));
+                    if (p > begin) _tokens->push_back(make_shared<text_handler>(string(begin, size_t(p - begin))));
+                    const char *tok_begin = p + 2;
+                    const void *close_v = memchr(tok_begin, ')', size_t(end - tok_begin));
+                    if (!close_v)
+                    {
+                        p += 2;
+                        begin = p - 2;
+                        continue;
+                    }
+
+                    const char *tok_end = static_cast<const char *>(close_v);
+                    string token = strip_controls(string(tok_begin, size_t(tok_end - tok_begin)));
+                    auto it = token_handlers.find(token);
+                    if (it != token_handlers.end()) _tokens->push_back(it->second);
+                    p = tok_end + 1;
+                    begin = p;
+                    continue;
                 }
-
-                acul::hashmap<string, shared_ptr<token_handler_base>> tokenHandlers = {
-                    {"ascii_time", make_shared<time_handler>()},  {"level_name", make_shared<level_name_handler>()},
-                    {"thread", make_shared<thread_id_handler>()}, {"message", make_shared<message_handler>()},
-                    {"color_auto", make_shared<color_handler>()}, {"color_off", make_shared<decolor_handler>()}};
-
-                string token = it->str(1).c_str();
-                auto handlerIter = tokenHandlers.find(token);
-                if (handlerIter != tokenHandlers.end()) _tokens->push_back(handlerIter->second);
-
-                last_pos = pos + it->length();
+                ++p;
             }
-            if (last_pos != pattern.size())
-            {
-                string text = pattern.substr(last_pos);
-                _tokens->push_back(make_shared<text_handler>(text));
-            }
+
+            if (begin < end) _tokens->push_back(make_shared<text_handler>(string(begin, size_t(end - begin))));
         }
 
         std::chrono::steady_clock::time_point log_service::dispatch()
         {
             while (true)
             {
-                std::pair<logger_base *, string> pair;
+                pair<logger_base *, string> pair;
                 if (_queue.try_pop(pair))
                 {
                     pair.first->write(pair.second);
                     _count.fetch_sub(1, std::memory_order_relaxed);
                 }
-                else
-                    return std::chrono::steady_clock::time_point::max();
+                else return std::chrono::steady_clock::time_point::max();
             }
         }
 

@@ -20,7 +20,7 @@ namespace acul
                     return false;
                 }
 
-                size_t buffer_size = std::strlen(buffer);
+                size_t buffer_size = null_terminated_length(buffer);
                 size_t num_blocks = (buffer_size + block_size - 1) / block_size;
 
                 for (size_t block_index = 0; block_index < num_blocks; ++block_index)

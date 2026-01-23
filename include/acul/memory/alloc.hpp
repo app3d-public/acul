@@ -41,10 +41,8 @@ namespace acul
         template <typename U, typename... Args>
         static inline void construct(U *p, Args &&...args)
         {
-            if constexpr (__is_aggregate(U))
-                ::new ((void *)p) U{static_cast<Args &&>(args)...};
-            else
-                ::new ((void *)p) U(std::forward<Args>(args)...);
+            if constexpr (__is_aggregate(U)) ::new ((void *)p) U{static_cast<Args &&>(args)...};
+            else ::new ((void *)p) U(std::forward<Args>(args)...);
         }
 
         template <typename U>
@@ -152,71 +150,5 @@ namespace acul
         v = align_up(v, a);
         return reinterpret_cast<T *>(v);
     }
-
-    template <typename T>
-    class proxy
-    {
-    public:
-        proxy(T *ptr = nullptr) : _ptr(ptr) {}
-
-        T *operator->() { return _ptr; }
-        T &operator*() { return *_ptr; }
-
-        operator bool() const { return _ptr != nullptr; }
-
-        void set(T *ptr) { _ptr = ptr; }
-
-        T *get() { return _ptr; }
-
-        void reset() { _ptr = nullptr; }
-
-        void operator=(T *ptr) { _ptr = ptr; }
-        bool operator==(T *ptr) { return _ptr == ptr; }
-        bool operator!=(T *ptr) { return _ptr != ptr; }
-
-        proxy &operator++()
-        {
-            ++_ptr;
-            return *this;
-        }
-
-        proxy operator++(int)
-        {
-            proxy temp = *this;
-            ++_ptr;
-            return temp;
-        }
-
-        proxy &operator--()
-        {
-            --_ptr;
-            return *this;
-        }
-
-        proxy operator--(int)
-        {
-            proxy temp = *this;
-            --_ptr;
-            return temp;
-        }
-
-    private:
-        T *_ptr;
-    };
-
-    template <typename... Args>
-    struct destructible_data
-    {
-        using PFN_destruct = void (*)(Args...);
-        PFN_destruct destruct = nullptr;
-    };
-
-    template <typename T, typename... Args>
-    struct destructible_value : destructible_data<Args...>
-    {
-        T value;
-
-        destructible_value(const T &v) : destructible_data<Args...>{}, value(v) {}
-    };
 } // namespace acul
 #endif

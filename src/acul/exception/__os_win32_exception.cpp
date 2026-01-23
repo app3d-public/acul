@@ -139,8 +139,7 @@ namespace acul
             DWORD offset = symbol.Name.offset;
             return string_table + offset;
         }
-        else
-            return string(symbol.short_name, strnlen(symbol.short_name, 8));
+        else return string(symbol.short_name, strnlen(symbol.short_name, 8));
     }
 
     string find_symbol_from_table(DWORD64 address, const map<DWORD64, symbol_info> &symbol_map)
@@ -216,8 +215,7 @@ namespace acul
 
         for (size_t i = 0; i < symbol_list_tmp.size(); ++i)
         {
-            if (i + 1 < symbol_list_tmp.size())
-                symbol_list_tmp[i].end_address = symbol_list_tmp[i + 1].start_address;
+            if (i + 1 < symbol_list_tmp.size()) symbol_list_tmp[i].end_address = symbol_list_tmp[i + 1].start_address;
             else
             {
                 auto section =
@@ -235,7 +233,7 @@ namespace acul
         }
     }
 
-    using hmodule_symbol_map = hashmap<DWORD64, std::pair<string, map<DWORD64, symbol_info>>>;
+    using hmodule_symbol_map = hashmap<DWORD64, pair<string, map<DWORD64, symbol_info>>>;
 
     hmodule_symbol_map::iterator find_symbol_map(hmodule_symbol_map &hmodule_symbol_map, HANDLE hProcess,
                                                  DWORD64 module_base, string &module_name)
@@ -250,20 +248,18 @@ namespace acul
                 module_name = (const char *)module_name_tmp;
             }
             std::ifstream fd(module_name.c_str(), std::ios::binary);
-            if (!fd)
-                return hmodule_symbol_map.end();
+            if (!fd) return hmodule_symbol_map.end();
             else
             {
                 auto file_data = vector<char>((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
                 fd.close();
                 auto [inserted_it, inserted] =
-                    hmodule_symbol_map.emplace(module_base, std::make_pair(module_name, map<DWORD64, symbol_info>()));
+                    hmodule_symbol_map.emplace(module_base, pair{module_name, map<DWORD64, symbol_info>()});
                 analyze_coff_symbols(file_data, module_base, inserted_it->second.second);
                 return inserted_it;
             }
         }
-        else
-            module_name = it->second.first;
+        else module_name = it->second.first;
         return it;
     }
 
@@ -314,8 +310,7 @@ namespace acul
             {
                 string name, module_name;
                 auto it = find_symbol_map(hmodule_symbol_map, except_info.hProcess, addr, module_name);
-                if (it == hmodule_symbol_map.end())
-                    name = "<unknown>";
+                if (it == hmodule_symbol_map.end()) name = "<unknown>";
                 else
                 {
                     const map<DWORD64, symbol_info> &symbol_map = it->second.second;
@@ -328,17 +323,14 @@ namespace acul
                         pSymbol->MaxNameLen = MAX_SYM_NAME;
                         if (SymFromAddr(except_info.hProcess, offset, &displacement_sym, pSymbol))
                             name = (const char *)pSymbol->Name;
-                        else
-                            name = "<unknown>";
+                        else name = "<unknown>";
                     }
-                    else
-                        name = find_symbol_from_table(offset, symbol_map);
+                    else name = find_symbol_from_table(offset, symbol_map);
                 }
                 stream << " in " << demangle(name.c_str()).c_str();
                 if (addr != (DWORD64)main_module && !module_name.empty()) stream << " at " << module_name.c_str();
             }
-            else
-                stream << " in <unknown>";
+            else stream << " in <unknown>";
 
             stream << '\n';
             frame_index++;

@@ -164,11 +164,11 @@ namespace acul
                 allocate_blocks(rhs._num_buckets);
                 _num_filled = rhs._num_filled;
 
-                std::memcpy(_ctrl, rhs._ctrl, size_t(_num_buckets + AHM_HL_CTRL_PAD) * sizeof(u8));
+                memcpy(_ctrl, rhs._ctrl, size_t(_num_buckets + AHM_HL_CTRL_PAD) * sizeof(u8));
 
                 // pairs
                 if constexpr (std::is_trivially_copyable_v<value_type>)
-                    std::memcpy(_values, rhs._values, size_t(_num_buckets) * sizeof(value_type));
+                    memcpy(_values, rhs._values, size_t(_num_buckets) * sizeof(value_type));
                 else
                     for (size_type i = 0; i < _num_buckets; ++i)
                         if (_ctrl[i] < AHM_HL_CTRL_EMPTY) ::new (_values + i) value_type(rhs._values[i]);
@@ -216,10 +216,10 @@ namespace acul
                 allocate_blocks(rhs._num_buckets);
                 _num_filled = rhs._num_filled;
 
-                std::memcpy(_ctrl, rhs._ctrl, size_t(_num_buckets + AHM_HL_CTRL_PAD) * sizeof(u8));
+                memcpy(_ctrl, rhs._ctrl, size_t(_num_buckets + AHM_HL_CTRL_PAD) * sizeof(u8));
 
                 if constexpr (std::is_trivially_copyable_v<value_type>)
-                    std::memcpy(_values, rhs._values, size_t(_num_buckets) * sizeof(value_type));
+                    memcpy(_values, rhs._values, size_t(_num_buckets) * sizeof(value_type));
                 else
                     for (size_type i = 0; i < _num_buckets; ++i)
                         if (_ctrl[i] < AHM_HL_CTRL_EMPTY) ::new (_values + i) value_type(rhs._values[i]);

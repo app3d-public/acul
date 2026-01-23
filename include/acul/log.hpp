@@ -229,7 +229,7 @@ namespace acul
 
         private:
             hashmap<string, logger_base *> _loggers;
-            oneapi::tbb::concurrent_queue<std::pair<logger_base *, string>> _queue;
+            oneapi::tbb::concurrent_queue<pair<logger_base *, string>> _queue;
             std::atomic<int> _count{0};
         };
 

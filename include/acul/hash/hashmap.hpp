@@ -2,9 +2,9 @@
 
 #include <cassert>
 #include <functional>
+#include "../internal/hash/map_traits.hpp"
+#include "../internal/hash/raw_hash_table.hpp"
 #include "../memory/alloc.hpp"
-#include "internal/map_traits.hpp"
-#include "internal/raw_hash_table.hpp"
 
 namespace acul
 {

@@ -3,8 +3,8 @@
 
 #include <random>
 #include "../api.hpp"
+#include "../internal/simd/context.hpp"
 #include "../scalars.hpp"
-#include "../simd/simd.hpp"
 
 namespace acul
 {

@@ -1,17 +1,7 @@
 #include <acul/io/path.hpp>
-#include <acul/simd/simd.hpp>
 #include <cassert>
+#include "crc32.hpp"
 #include "fallback/io.hpp"
-
-#ifndef _WIN32
-    #include <dlfcn.h>
-    #define LOAD_FUNCTION(name, handle) name = (PFN_##name)dlsym(handle, "acul_" #name)
-using module_t = void *;
-#else
-    #include <windows.h>
-    #define LOAD_FUNCTION(name, handle) name = (PFN_##name)GetProcAddress(handle, "acul_" #name)
-using module_t = HMODULE;
-#endif
 
 namespace acul
 {
@@ -32,10 +22,8 @@ namespace acul
 
         void simd_context::load_functions()
         {
-            // IO
-            LOAD_FUNCTION(get_simd_flags, (module_t)handle);
-            LOAD_FUNCTION(crc32, (module_t)handle);
-            LOAD_FUNCTION(fill_line_buffer, (module_t)handle);
+            crc32 = internal::load_crc32_fn(flags);
+            fill_line_buffer = internal::load_fill_line_buffer_fn(flags);
         }
     } // namespace internal
 
@@ -51,23 +39,9 @@ namespace acul
         internal::g_simd_ctx.load_functions();
         if (!internal::g_simd_ctx.get_simd_flags || !internal::check_io())
         {
-            terminate_simd_module();
             internal::g_simd_ctx = internal::get_default_ctx();
             return;
         }
         internal::g_simd_ctx.flags |= internal::g_simd_ctx.get_simd_flags();
-    }
-
-    void terminate_simd_module()
-    {
-        if (internal::g_simd_ctx.handle)
-        {
-#ifndef _WIN32
-            dlclose(internal::g_simd_ctx.handle);
-#else
-            FreeLibrary((HMODULE)internal::g_simd_ctx.handle);
-#endif
-            internal::g_simd_ctx.handle = nullptr;
-        }
     }
 } // namespace acul

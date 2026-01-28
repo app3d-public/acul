@@ -1,4 +1,5 @@
 #include <acul/shared_mutex.hpp>
+#include "shared_mutex.hint.cpp"
 #include <atomic>
 #include <linux/futex.h>
 #include <sys/syscall.h>

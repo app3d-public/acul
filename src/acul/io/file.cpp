@@ -10,10 +10,10 @@ namespace acul
     {
         namespace file
         {
-            op_state read_binary(const string &filename, vector<char> &buffer)
+            bool read_binary(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file) return op_state::error;
+                if (!file) return false;
 
                 fseek(file, 0, SEEK_END);
                 size_t file_size = ftell(file);
@@ -23,13 +23,13 @@ namespace acul
                 fread(buffer.data(), 1, file_size, file);
                 fclose(file);
 
-                return op_state::success;
+                return true;
             }
 
-            op_state read_virtual(const string &filename, vector<char> &buffer)
+            bool read_virtual(const string &filename, vector<char> &buffer)
             {
                 FILE *file = fopen(filename.c_str(), "rb");
-                if (!file) return op_state::error;
+                if (!file) return false;
 
                 char chunk[FILE_READ_STREAM_CHUNK_SIZE];
 
@@ -44,13 +44,13 @@ namespace acul
                         if (ferror(file))
                         {
                             fclose(file);
-                            return op_state::error;
+                            return false;
                         }
                     }
                 }
 
                 fclose(file);
-                return op_state::success;
+                return true;
             }
 
             bool write_binary(const string &filename, const char *buffer, size_t size)
@@ -64,33 +64,32 @@ namespace acul
             }
 
 #ifdef ACUL_ZSTD_ENABLE
-            bool compress(const char *data, size_t size, vector<char> &compressed, int quality)
+            op_result compress(const char *data, size_t size, vector<char> &compressed, int quality)
             {
-                size_t const maxCompressedSize = ZSTD_compressBound(size);
-                compressed.resize(maxCompressedSize);
+                size_t const max_compressed_size = ZSTD_compressBound(size);
+                compressed.resize(max_compressed_size);
 
-                size_t const compressedSize = ZSTD_compress(compressed.data(), maxCompressedSize, data, size, quality);
+                size_t const compressed_size =
+                    ZSTD_compress(compressed.data(), max_compressed_size, data, size, quality);
 
-                if (ZSTD_isError(compressedSize))
+                if (ZSTD_isError(compressed_size))
                 {
                     compressed.clear();
-                    LOG_ERROR("Failed to compress: %s", ZSTD_getErrorName(compressedSize));
-                    return false;
+                    return make_op_error(ACUL_OP_COMPRESS_ERROR, ZSTD_getErrorCode(compressed_size));
                 }
 
-                compressed.resize(compressedSize);
-                return true;
+                compressed.resize(compressed_size);
+                return make_op_success();
             }
 
-            bool decompress(const char *data, size_t size, vector<char> &decompressed)
+            op_result decompress(const char *data, size_t size, vector<char> &decompressed)
             {
                 size_t decompressed_size = ZSTD_getFrameContentSize(data, size);
-                if (decompressed_size == 0 || decompressed_size == ZSTD_CONTENTSIZE_ERROR ||
-                    decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN)
-                {
-                    LOG_ERROR("Cannot determine decompressed size.");
-                    return false;
-                }
+                if (decompressed_size == 0) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ZERO);
+                if (decompressed_size == ZSTD_CONTENTSIZE_ERROR)
+                    return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ERROR);
+                if (decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN)
+                    return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_UNKNOWN);
 
                 decompressed.resize(decompressed_size);
 
@@ -100,13 +99,48 @@ namespace acul
                 if (ZSTD_isError(actual_decompressed_size))
                 {
                     decompressed.clear();
-                    LOG_ERROR("Failed to decompress: %s", ZSTD_getErrorName(actual_decompressed_size));
-                    return false;
+                    return make_op_error(ACUL_OP_DECOMPRESS_ERROR, ZSTD_getErrorCode(actual_decompressed_size));
                 }
 
-                return true;
+                return make_op_success();
             }
 #endif
+
+            namespace internal
+            {
+                namespace nosimd
+                {
+                    APPLIB_API void fill_line_buffer(const char *data, size_t size, string_view_pool<char> &dst)
+                    {
+                        const char *p = data;
+                        const char *end = data + size;
+                        const char *line_start = p;
+
+                        while (p < end)
+                        {
+                            if (*p == '\n')
+                            {
+                                size_t line_len = p - line_start;
+                                if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                                dst.push(line_start, line_len);
+                                ++p;
+                                line_start = p;
+                            }
+                            else
+                            {
+                                ++p;
+                            }
+                        }
+
+                        if (line_start < end)
+                        {
+                            size_t line_len = end - line_start;
+                            if (line_len > 0 && line_start[line_len - 1] == '\r') --line_len;
+                            dst.push(line_start, line_len);
+                        }
+                    }
+                } // namespace nosimd
+            } // namespace internal
         } // namespace file
     } // namespace io
 } // namespace acul

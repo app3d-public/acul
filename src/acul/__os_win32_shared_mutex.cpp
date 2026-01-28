@@ -1,10 +1,9 @@
 #include <acul/shared_mutex.hpp>
 #include <windows.h>
+#include "shared_mutex_hint.cpp_"
 
 namespace acul
 {
-    std::atomic<size_t> g_idx_hint{0};
-
     void shared_mutex::lock_shared()
     {
         int cur_rw_lock;

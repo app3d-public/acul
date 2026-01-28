@@ -1,10 +1,9 @@
 #pragma once
 
 #include <functional>
+#include "../internal/hash/raw_hl_hashtable.hpp"
+#include "../internal/hash/set_traits.hpp"
 #include "../memory/alloc.hpp"
-#include "internal/raw_hl_hashtable.hpp"
-#include "internal/set_traits.hpp"
-
 
 namespace acul
 {

@@ -7,16 +7,6 @@ void test_jatc()
     using namespace acul;
     using namespace acul::io::file::jatc;
 
-    task::service_dispatch sd;
-    auto *service = acul::alloc<log::log_service>();
-    sd.register_service(service);
-    service->level = log::level::trace;
-
-    auto *console = service->add_logger<log::console_logger>("console");
-    service->default_logger = console;
-    console->set_pattern("%(message)\n");
-    assert(console->name() == "console");
-
     task::thread_dispatch dispatch;
 
     const char *output_dir = getenv("TEST_OUTPUT_DIR");
@@ -48,8 +38,8 @@ void test_jatc()
 
     // Read
     bin_stream read_stream;
-    io::file::op_state state = jatc.read(ep, &group, original, read_stream);
-    assert(state == io::file::op_state::success);
+    op_result state = jatc.read(ep, &group, original, read_stream);
+    assert(state.success());
 
     read_stream.pos(0);
     int read_value = 0;
@@ -64,7 +54,7 @@ void test_jatc()
 
     bin_stream filtered_stream;
     auto filtered_state = jatc.read(ep, &group, *index_entries[0], filtered_stream);
-    assert(filtered_state == io::file::op_state::success);
+    assert(filtered_state.success());
 
     filtered_stream.pos(0);
     int filtered_value = 0;

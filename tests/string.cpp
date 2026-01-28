@@ -70,7 +70,8 @@ void test_sstream()
 void test_string_view_pool()
 {
     {
-        acul::string_view_pool<char> pool(32);
+        acul::string_view_pool<char> pool;
+        pool.reserve(32);
         assert(pool.empty());
 
         pool.push("hello", 5);
@@ -85,7 +86,8 @@ void test_string_view_pool()
     }
     {
 
-        acul::string_view_pool<char> pool(5);
+        acul::string_view_pool<char> pool;
+        pool.reserve(5);
         pool.push("abc", 3);
         assert(pool.size() == 1);
         assert(strcmp(pool[0].data(), "abc") == 0);

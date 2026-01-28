@@ -1,7 +1,7 @@
 #pragma once
 
-#include "internal/raw_hash_table.hpp"
-#include "internal/set_traits.hpp"
+#include "../internal/hash/raw_hash_table.hpp"
+#include "../internal/hash/set_traits.hpp"
 
 namespace acul
 {

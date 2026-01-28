@@ -13,19 +13,6 @@
 
 namespace acul
 {
-    extern std::atomic<size_t> g_idx_hint;
-
-    inline size_t get_hint_idx(size_t num_threads)
-    {
-        return g_idx_hint.fetch_add(1, std::memory_order_relaxed) % num_threads;
-    }
-
-    inline size_t get_thread_idx()
-    {
-        const thread_local size_t idx = get_hint_idx(std::thread::hardware_concurrency());
-        return idx;
-    }
-
     class APPLIB_API shared_mutex
     {
         struct entry_lock

@@ -7,6 +7,11 @@ namespace acul
 {
     namespace log
     {
+        namespace internal
+        {
+            struct log_ctx g_log_ctx{nullptr, nullptr};
+        }
+
         void time_handler::handle(level level, const char *message, stringstream &ss) const
         {
             using namespace std::chrono;
@@ -156,10 +161,7 @@ namespace acul
         {
             for (auto &logger : _loggers) acul::release(logger.second);
             _loggers.clear();
-            g_log_service = nullptr;
-            default_logger = nullptr;
+            internal::g_log_ctx.log_service = nullptr;
         }
-
-        log_service *g_log_service = nullptr;
     } // namespace log
 } // namespace acul

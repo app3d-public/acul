@@ -23,44 +23,43 @@ void test_file()
 
     // --- read_binary
     vector<char> buffer;
-    op_state read_result = read_binary(filename, buffer);
-    assert(read_result == op_state::success);
+    assert(read_binary(filename, buffer));
     assert(!buffer.empty());
     assert(strncmp(buffer.data(), text, buffer.size()) == 0);
 
     // --- fill_line_buffer
-    string_view_pool<char> pool(256);
+    string_view_pool<char> pool;
+    pool.reserve(256);
     fill_line_buffer(buffer.data(), buffer.size(), pool);
     assert(pool.size() == 3);
 
     // --- read_by_block
     string dst;
     auto read_by_block_result = read_by_block(filename, [&dst](char *line, size_t size) { dst = line; });
-    assert(read_by_block_result == op_state::success);
+    assert(read_by_block_result.success());
     assert(!dst.empty());
 
     // --- write_by_block
 
-    string error;
     io::path copy_file = data / "copy_file.txt";
-    bool block_written = write_by_block(copy_file, buffer.data(), buffer.size(), error);
-    assert(block_written);
+    auto block_written = write_by_block(copy_file, buffer.data(), buffer.size());
+    assert(block_written.success());
     assert(exists(copy_file.str().c_str()));
 
     // --- copy
     io::path copy_file2 = data / "copy_file2.txt";
-    op_state copy_result = copy(copy_file.str().c_str(), copy_file2.str().c_str(), true);
-    assert(copy_result == op_state::success);
+    op_result copy_result = copy(copy_file.str().c_str(), copy_file2.str().c_str(), true);
+    assert(copy_result.success());
     assert(exists(copy_file2.str().c_str()));
 
     // --- list_files
     vector<string> files;
-    op_state list_result = list_files(".", files, false);
-    assert(list_result == op_state::success);
+    op_result list_result = list_files(".", files, false);
+    assert(list_result.success());
     assert(!files.empty());
 
     // --- remove_file
-    assert(remove_file(copy_file2.str().c_str()) == op_state::success);
+    assert(remove_file(copy_file2.str().c_str()).success());
     assert(!exists(copy_file2.str().c_str()));
 
 #ifdef ACUL_ZSTD_ENABLE
@@ -69,12 +68,12 @@ void test_file()
     vector<char> compressed;
     vector<char> decompressed;
 
-    bool compress_ok = compress(buffer.data(), buffer.size(), compressed, 3);
-    assert(compress_ok);
+    auto compress_ok = compress(buffer.data(), buffer.size(), compressed, 3);
+    assert(compress_ok.success());
     assert(!compressed.empty());
 
-    bool decompress_ok = decompress(compressed.data(), compressed.size(), decompressed);
-    assert(decompress_ok);
+    auto decompress_ok = decompress(compressed.data(), compressed.size(), decompressed);
+    assert(decompress_ok.success());
     assert(decompressed.size() == buffer.size());
     assert(memcmp(buffer.data(), decompressed.data(), buffer.size()) == 0);
 #endif
@@ -82,7 +81,7 @@ void test_file()
     // Create directory
     auto dp = data / "test_dir";
     auto state = create_directory(dp.str().c_str());
-    assert(state != op_state::error);
+    assert(state.success());
     assert(exists(dp.str().c_str()));
 
     // --- clean

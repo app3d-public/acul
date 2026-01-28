@@ -145,6 +145,24 @@ namespace acul
             std::ofstream _fs;
         };
 
+        class file_view_stream final : public logger_base
+        {
+        public:
+            file_view_stream(const string &name, std::ofstream &fs) : logger_base(name), _fs(fs) {}
+
+            ~file_view_stream() = default;
+
+            std::ostream &stream() override { return _fs; }
+
+            virtual void write(const string &message) override
+            {
+                if (_fs.is_open()) _fs << message.c_str();
+            }
+
+        private:
+            std::ofstream &_fs;
+        };
+
         class console_logger final : public logger_base
         {
         public:
@@ -154,9 +172,6 @@ namespace acul
 
             virtual void write(const string &message) override { std::cout << message.c_str(); }
         };
-
-        class log_service;
-        extern APPLIB_API log_service *g_log_service;
 
         /**
          * @class The Log Service
@@ -168,10 +183,9 @@ namespace acul
         class APPLIB_API log_service final : public task::service_base
         {
         public:
-            logger_base *default_logger;
             enum level level;
 
-            log_service() : default_logger(nullptr), level(level::error) { g_log_service = this; }
+            inline log_service();
             ~log_service();
 
             /**
@@ -212,8 +226,8 @@ namespace acul
                 _loggers.erase(it);
             }
 
-            __attribute__((format(printf, 4, 5))) APPLIB_API void log(logger_base *logger, enum level level,
-                                                                      const char *message, ...);
+            __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message,
+                                                           ...);
 
             virtual std::chrono::steady_clock::time_point dispatch() override;
 
@@ -233,31 +247,41 @@ namespace acul
             std::atomic<int> _count{0};
         };
 
-        inline logger_base *get_logger(const string &name) { return g_log_service->get_logger(name); }
+        namespace internal
+        {
+            extern APPLIB_API struct log_ctx
+            {
+                log_service *log_service;
+                logger_base *default_logger;
+            } g_log_ctx;
+        } // namespace internal
 
-        inline logger_base *get_default_logger() { return g_log_service->default_logger; }
+        inline log_service::log_service() { internal::g_log_ctx.log_service = this; }
+
+        inline logger_base *get_default_logger()
+        {
+            assert(internal::g_log_ctx.default_logger);
+            return internal::g_log_ctx.default_logger;
+        }
+
+        inline void set_default_logger(logger_base *logger) { internal::g_log_ctx.default_logger = logger; }
+
+        inline log_service *get_log_service() { return internal::g_log_ctx.log_service; }
+
+        inline logger_base *get_logger(const string &name)
+        {
+            if (!internal::g_log_ctx.log_service) return nullptr;
+            return get_log_service()->get_logger(name);
+        }
     } // namespace log
 } // namespace acul
 
-#if defined(ACUL_LOG_ENABLE) && !defined(PROCESS_UNITTEST)
-    #define LOG_INFO(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::info, __VA_ARGS__)
-    #define LOG_DEBUG(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::debug, __VA_ARGS__)
-    #define LOG_TRACE(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::trace, __VA_ARGS__)
-    #define LOG_WARN(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::warn, __VA_ARGS__)
-    #define LOG_ERROR(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::error, __VA_ARGS__)
-    #define LOG_FATAL(...) \
-        acul::log::g_log_service->log(acul::log::get_default_logger(), acul::log::level::fatal, __VA_ARGS__)
-#else
-    #define LOG_INFO(fmt, ...)  printf("[INFO] " fmt "\n", ##__VA_ARGS__)
-    #define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ##__VA_ARGS__)
-    #define LOG_TRACE(fmt, ...) printf("[TRACE] " fmt "\n", ##__VA_ARGS__)
-    #define LOG_WARN(fmt, ...)  printf("[WARN]  " fmt "\n", ##__VA_ARGS__)
-    #define LOG_ERROR(fmt, ...) printf("[ERROR] " fmt "\n", ##__VA_ARGS__)
-    #define LOG_FATAL(fmt, ...) printf("[FATAL] " fmt "\n", ##__VA_ARGS__)
-#endif
+// #define ACUL_LOG_DEFAULT(level, ...) \
+//     acul::log::get_log_service()->log(acul::log::get_default_logger(), level, __VA_ARGS__)
+// #define LOG_INFO(...)  ACUL_LOG_DEFAULT(acul::log::level::info, __VA_ARGS__)
+// #define LOG_DEBUG(...) ACUL_LOG_DEFAULT(acul::log::level::debug, __VA_ARGS__)
+// #define LOG_TRACE(...) ACUL_LOG_DEFAULT(acul::log::level::trace, __VA_ARGS__)
+// #define LOG_WARN(...)  ACUL_LOG_DEFAULT(acul::log::level::warn, __VA_ARGS__)
+// #define LOG_ERROR(...) ACUL_LOG_DEFAULT(acul::log::level::error, __VA_ARGS__)
+// #define LOG_FATAL(...) ACUL_LOG_DEFAULT(acul::log::level::fatal, __VA_ARGS__)
 #endif

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <immintrin.h>
-#include "../../../scalars.hpp"
-#include "hl_hashmap.hpp"
+#include "../../bit.hpp"
+#include "hl_hashmap_ctrl.hpp"
 
 namespace acul::detail
 {

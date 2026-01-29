@@ -4,11 +4,11 @@
 #include "../../memory/alloc.hpp"
 #include "../../pair.hpp"
 #if defined(__AVX2__)
-    #include "isa/hl_hashmap_avx2.hpp"
+    #include "hl_hashmap_avx2.hpp"
 #elif defined(__SSE2__)
-    #include "isa/hl_hashmap_sse2.hpp"
+    #include "hl_hashmap_sse2.hpp"
 #else
-    #include "isa/hl_hashmap_scalar.hpp"
+    #include "hl_hashmap_scalar.hpp"
 #endif
 
 #define AHM_HL_CTRL_EMPTY 0x7F

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../api.hpp"
-#include "../../hash/detail/crc32.hpp"
+#include "../../hash/detail/crc32_isa_fn.hpp"
 #include "../../string/detail/string_isa_fn.hpp"
 #include "flags.hpp"
 

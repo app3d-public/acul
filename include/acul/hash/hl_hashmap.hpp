@@ -1,12 +1,10 @@
 #pragma once
 
-#include <functional>
-#include "../internal/hash/map_traits.hpp"
-#include "../internal/hash/raw_hl_hashtable.hpp"
-#include "../memory/alloc.hpp"
+#include "detail/map_traits.hpp"
+#include "detail/raw_hl_hashtable.hpp"
 
 namespace acul
 {
     template <typename K, typename V, typename H = std::hash<K>, typename Eq = std::equal_to<K>>
-    using hl_hashmap = internal::raw_hl_hashtable<mem_allocator<std::byte>, internal::map_traits<K, V, H, Eq>>;
+    using hl_hashmap = detail::raw_hl_hashtable<mem_allocator<std::byte>, detail::map_traits<K, V, H, Eq>>;
 } // namespace acul

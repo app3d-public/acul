@@ -3,8 +3,8 @@
 
 #include "../exception/exception.hpp"
 #include "../fwd/string.hpp"
-#include "../hash/utils.hpp"
 #include "base.hpp"
+#include "detail/string_hash.hpp"
 #include "string_view.hpp"
 
 #if defined(__GNUC__) && !defined(__clang_analyzer__) && !defined(__clang__)
@@ -292,10 +292,8 @@ namespace acul
             auto alloc = _salloc.size.alloc_flags;
             auto other_alloc = other._salloc.size.alloc_flags;
 
-            if (alloc == ALLOC_STACK && other_alloc == ALLOC_STACK)
-                std::swap(_salloc, other._salloc);
-            else if (alloc != ALLOC_STACK && other_alloc != ALLOC_STACK)
-                std::swap(_lalloc, other._lalloc);
+            if (alloc == ALLOC_STACK && other_alloc == ALLOC_STACK) std::swap(_salloc, other._salloc);
+            else if (alloc != ALLOC_STACK && other_alloc != ALLOC_STACK) std::swap(_lalloc, other._lalloc);
             else
             {
                 if (alloc == ALLOC_STACK)
@@ -543,10 +541,8 @@ namespace acul
             if (count > size()) return npos;
 
             size_type start;
-            if (pos == npos || pos + 1 < count)
-                start = size() - count;
-            else
-                start = (pos >= size() ? size() - count : pos - count + 1);
+            if (pos == npos || pos + 1 < count) start = size() - count;
+            else start = (pos >= size() ? size() - count : pos - count + 1);
 
             const_pointer base = c_str();
             for (;;)
@@ -1029,7 +1025,9 @@ namespace std
     {
         size_t operator()(const acul::basic_string<T, Allocator> &s) const noexcept
         {
-            return acul::cityhash64((const char *)s.c_str(), s.size());
+            auto len = s.size();
+            return len <= 16 ? acul::detail::cityhash64_short(s.c_str(), len)
+                             : acul::detail::cityhash64_long(s.c_str(), len);
         }
     };
 } // namespace std

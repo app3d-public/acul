@@ -21,31 +21,6 @@ void test_crc32()
     assert(crc != 0);
 }
 
-void test_cityhash64()
-{
-    const char *data = "The quick brown fox jumps over the lazy dog";
-    u64 hash1 = acul::cityhash64(data, std::strlen(data));
-    u64 hash2 = acul::cityhash64(data, std::strlen(data));
-
-    assert(hash1 == hash2);
-
-    const char *data2 = "The quick brown fox jumps over the lazy cog";
-    u64 hash3 = acul::cityhash64(data2, std::strlen(data2));
-    assert(hash1 != hash3);
-
-    // Check 64+
-    const char *long_data = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-                            "Integer nec odio. Praesent libero. Sed cursus ante dapibus.";
-    size_t long_len = std::strlen(long_data);
-
-    u64 hash_long1 = acul::cityhash64(long_data, long_len);
-    u64 hash_long2 = acul::cityhash64(long_data, long_len);
-    assert(hash_long1 == hash_long2);
-
-    // Just in case, hash should differ from short strings
-    assert(hash_long1 != hash1);
-}
-
 void test_hash_combine()
 {
     std::size_t seed = 0;
@@ -62,6 +37,5 @@ void test_hash_utils()
 {
     test_id_gen();
     test_crc32();
-    test_cityhash64();
     test_hash_combine();
 }

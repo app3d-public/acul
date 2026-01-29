@@ -2,8 +2,8 @@
 
 #include "../exception/exception.hpp"
 #include "../fwd/string_view.hpp"
-#include "../hash/utils.hpp"
 #include "base.hpp"
+#include "detail/string_hash.hpp"
 
 namespace acul
 {
@@ -133,7 +133,9 @@ namespace std
     {
         size_t operator()(const acul::basic_string_view<T> &s) const noexcept
         {
-            return acul::cityhash64((const char *)s.data(), s.size());
+            auto len = s.size();
+            return len <= 16 ? acul::detail::cityhash64_short(s.c_str(), len)
+                             : acul::detail::cityhash64_long(s.c_str(), len);
         }
     };
 } // namespace std

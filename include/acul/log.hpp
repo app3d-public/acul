@@ -9,272 +9,264 @@
 #include "string/sstream.hpp"
 #include "task.hpp"
 
-namespace acul
+namespace acul::log
 {
-    namespace log
+    enum class level
     {
-        enum class level
+        fatal,
+        error,
+        warn,
+        info,
+        debug,
+        trace
+    };
+
+    class token_handler_base
+    {
+    public:
+        virtual ~token_handler_base() = default;
+        virtual void handle(level level, const char *message, stringstream &ss) const = 0;
+    };
+
+    using token_handler_list = vector<shared_ptr<token_handler_base>>;
+
+    class text_handler final : public token_handler_base
+    {
+    public:
+        explicit text_handler(const string_view &text) : _text(text) {}
+
+        void handle(level level, const char *message, stringstream &ss) const override { ss << _text; }
+
+    private:
+        const string _text;
+    };
+
+    class time_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override;
+    };
+
+    class thread_id_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override { ss << task::get_thread_id(); }
+    };
+
+    class level_name_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override;
+    };
+
+    class message_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override { ss << message; }
+    };
+
+    namespace colors
+    {
+        constexpr string_view red = "\x1b[31m";
+        constexpr string_view green = "\x1b[32m";
+        constexpr string_view yellow = "\x1b[33m";
+        constexpr string_view blue = "\x1b[34m";
+        constexpr string_view magenta = "\x1b[35m";
+        constexpr string_view cyan = "\x1b[36m";
+        constexpr string_view reset = "\x1b[0m";
+    }; // namespace colors
+
+    class color_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override;
+    };
+
+    class decolor_handler final : public token_handler_base
+    {
+    public:
+        void handle(level level, const char *message, stringstream &ss) const override { ss << colors::reset; }
+    };
+
+    class APPLIB_API logger_base
+    {
+    public:
+        logger_base(const string &name) : _name(name), _tokens(make_shared<token_handler_list>()) {}
+
+        virtual ~logger_base() = default;
+
+        void set_pattern(const string &pattern);
+
+        string name() const { return _name; }
+
+        virtual std::ostream &stream() = 0;
+
+        virtual void write(const string &message) = 0;
+
+        void parse_tokens(level level, const char *message, stringstream &ss)
         {
-            fatal,
-            error,
-            warn,
-            info,
-            debug,
-            trace
-        };
+            for (auto &token : *_tokens) token->handle(level, message, ss);
+        }
 
-        class token_handler_base
+    private:
+        string _name;
+        shared_ptr<token_handler_list> _tokens;
+    };
+
+    class APPLIB_API file_logger final : public logger_base
+    {
+    public:
+        file_logger(const string &name, const path &path, std::ios_base::openmode flags)
+            : logger_base(name), _path(path)
         {
-        public:
-            virtual ~token_handler_base() = default;
-            virtual void handle(level level, const char *message, stringstream &ss) const = 0;
-        };
+            _fs.open(path.str().c_str(), flags);
+        }
 
-        using token_handler_list = vector<shared_ptr<token_handler_base>>;
-
-        class text_handler final : public token_handler_base
+        ~file_logger()
         {
-        public:
-            explicit text_handler(const string_view &text) : _text(text) {}
+            if (_fs.is_open()) _fs.close();
+        }
 
-            void handle(level level, const char *message, stringstream &ss) const override { ss << _text; }
+        std::ostream &stream() override { return _fs; }
 
-        private:
-            const string _text;
-        };
-
-        class time_handler final : public token_handler_base
+        virtual void write(const string &message) override
         {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override;
-        };
+            if (_fs.is_open()) _fs << message.c_str();
+        }
 
-        class thread_id_handler final : public token_handler_base
+    private:
+        path _path;
+        std::ofstream _fs;
+    };
+
+    class file_view_stream final : public logger_base
+    {
+    public:
+        file_view_stream(const string &name, std::ofstream &fs) : logger_base(name), _fs(fs) {}
+
+        ~file_view_stream() = default;
+
+        std::ostream &stream() override { return _fs; }
+
+        virtual void write(const string &message) override
         {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override
-            {
+            if (_fs.is_open()) _fs << message.c_str();
+        }
 
-                ss << task::get_thread_id();
-            }
-        };
+    private:
+        std::ofstream &_fs;
+    };
 
-        class level_name_handler final : public token_handler_base
-        {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override;
-        };
+    class console_logger final : public logger_base
+    {
+    public:
+        explicit console_logger(const string &name) : logger_base(name) {}
 
-        class message_handler final : public token_handler_base
-        {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override { ss << message; }
-        };
+        std::ostream &stream() override { return std::cout; }
 
-        namespace colors
-        {
-            constexpr string_view red = "\x1b[31m";
-            constexpr string_view green = "\x1b[32m";
-            constexpr string_view yellow = "\x1b[33m";
-            constexpr string_view blue = "\x1b[34m";
-            constexpr string_view magenta = "\x1b[35m";
-            constexpr string_view cyan = "\x1b[36m";
-            constexpr string_view reset = "\x1b[0m";
-        }; // namespace colors
+        virtual void write(const string &message) override { std::cout << message.c_str(); }
+    };
 
-        class color_handler final : public token_handler_base
-        {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override;
-        };
+    /**
+     * @class The Log Service
+     * @brief Manages loggers for the application.
+     *
+     * Provides functionality to add, get, and remove loggers. It also allows logging messages with
+     * different log levels.
+     */
+    class APPLIB_API log_service final : public task::service_base
+    {
+    public:
+        enum level level;
 
-        class decolor_handler final : public token_handler_base
-        {
-        public:
-            void handle(level level, const char *message, stringstream &ss) const override { ss << colors::reset; }
-        };
-
-        class APPLIB_API logger_base
-        {
-        public:
-            logger_base(const string &name) : _name(name), _tokens(make_shared<token_handler_list>()) {}
-
-            virtual ~logger_base() = default;
-
-            void set_pattern(const string &pattern);
-
-            string name() const { return _name; }
-
-            virtual std::ostream &stream() = 0;
-
-            virtual void write(const string &message) = 0;
-
-            void parse_tokens(level level, const char *message, stringstream &ss)
-            {
-                for (auto &token : *_tokens) token->handle(level, message, ss);
-            }
-
-        private:
-            string _name;
-            shared_ptr<token_handler_list> _tokens;
-        };
-
-        class APPLIB_API file_logger final : public logger_base
-        {
-        public:
-            file_logger(const string &name, const io::path &path, std::ios_base::openmode flags)
-                : logger_base(name), _path(path)
-            {
-                _fs.open(path.str().c_str(), flags);
-            }
-
-            ~file_logger()
-            {
-                if (_fs.is_open()) _fs.close();
-            }
-
-            std::ostream &stream() override { return _fs; }
-
-            virtual void write(const string &message) override
-            {
-                if (_fs.is_open()) _fs << message.c_str();
-            }
-
-        private:
-            io::path _path;
-            std::ofstream _fs;
-        };
-
-        class file_view_stream final : public logger_base
-        {
-        public:
-            file_view_stream(const string &name, std::ofstream &fs) : logger_base(name), _fs(fs) {}
-
-            ~file_view_stream() = default;
-
-            std::ostream &stream() override { return _fs; }
-
-            virtual void write(const string &message) override
-            {
-                if (_fs.is_open()) _fs << message.c_str();
-            }
-
-        private:
-            std::ofstream &_fs;
-        };
-
-        class console_logger final : public logger_base
-        {
-        public:
-            explicit console_logger(const string &name) : logger_base(name) {}
-
-            std::ostream &stream() override { return std::cout; }
-
-            virtual void write(const string &message) override { std::cout << message.c_str(); }
-        };
+        inline log_service();
+        ~log_service();
 
         /**
-         * @class The Log Service
-         * @brief Manages loggers for the application.
-         *
-         * Provides functionality to add, get, and remove loggers. It also allows logging messages with
-         * different log levels.
+         * @brief Adds a logger with the specified name and file path.
+         * @param name The name of the logger.
+         * @param path The file path where the log file should be created.
+         * @param flags The flags to open the log file with.
+         * @return A pointer to the added Logger object.
          */
-        class APPLIB_API log_service final : public task::service_base
+        template <typename T, typename... Args>
+        T *add_logger(const string &name, Args &&...args)
         {
-        public:
-            enum level level;
-
-            inline log_service();
-            ~log_service();
-
-            /**
-             * @brief Adds a logger with the specified name and file path.
-             * @param name The name of the logger.
-             * @param path The file path where the log file should be created.
-             * @param flags The flags to open the log file with.
-             * @return A pointer to the added Logger object.
-             */
-            template <typename T, typename... Args>
-            T *add_logger(const string &name, Args &&...args)
-            {
-                auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
-                _loggers[name] = logger;
-                return logger;
-            }
-
-            /**
-             * @brief Gets the logger with the specified name.
-             * @param name The name of the logger to retrieve.
-             * @return A pointer to the Logger object, or nullptr if the logger was not found.
-             */
-            logger_base *get_logger(const string &name) const
-            {
-                auto it = _loggers.find(name);
-                return it == _loggers.end() ? nullptr : it->second;
-            }
-
-            /**
-             * @brief Removes the logger with the specified name.
-             * @param name The name of the logger to remove.
-             */
-            void remove_logger(const string &name)
-            {
-                auto it = _loggers.find(name);
-                if (it == _loggers.end()) return;
-                acul::release(it->second);
-                _loggers.erase(it);
-            }
-
-            __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message,
-                                                           ...);
-
-            virtual std::chrono::steady_clock::time_point dispatch() override;
-
-            virtual void await(bool force = false) override
-            {
-                if (force)
-                {
-                    _queue.clear();
-                    return;
-                }
-                while (_count.load(std::memory_order_relaxed) > 0) std::this_thread::yield();
-            }
-
-        private:
-            hashmap<string, logger_base *> _loggers;
-            oneapi::tbb::concurrent_queue<pair<logger_base *, string>> _queue;
-            std::atomic<int> _count{0};
-        };
-
-        namespace internal
-        {
-            extern APPLIB_API struct log_ctx
-            {
-                log_service *log_service;
-                logger_base *default_logger;
-            } g_log_ctx;
-        } // namespace internal
-
-        inline log_service::log_service() { internal::g_log_ctx.log_service = this; }
-
-        inline logger_base *get_default_logger()
-        {
-            assert(internal::g_log_ctx.default_logger);
-            return internal::g_log_ctx.default_logger;
+            auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
+            _loggers[name] = logger;
+            return logger;
         }
 
-        inline void set_default_logger(logger_base *logger) { internal::g_log_ctx.default_logger = logger; }
-
-        inline log_service *get_log_service() { return internal::g_log_ctx.log_service; }
-
-        inline logger_base *get_logger(const string &name)
+        /**
+         * @brief Gets the logger with the specified name.
+         * @param name The name of the logger to retrieve.
+         * @return A pointer to the Logger object, or nullptr if the logger was not found.
+         */
+        logger_base *get_logger(const string &name) const
         {
-            if (!internal::g_log_ctx.log_service) return nullptr;
-            return get_log_service()->get_logger(name);
+            auto it = _loggers.find(name);
+            return it == _loggers.end() ? nullptr : it->second;
         }
-    } // namespace log
-} // namespace acul
+
+        /**
+         * @brief Removes the logger with the specified name.
+         * @param name The name of the logger to remove.
+         */
+        void remove_logger(const string &name)
+        {
+            auto it = _loggers.find(name);
+            if (it == _loggers.end()) return;
+            acul::release(it->second);
+            _loggers.erase(it);
+        }
+
+        __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message, ...);
+
+        virtual std::chrono::steady_clock::time_point dispatch() override;
+
+        virtual void await(bool force = false) override
+        {
+            if (force)
+            {
+                _queue.clear();
+                return;
+            }
+            while (_count.load(std::memory_order_relaxed) > 0) std::this_thread::yield();
+        }
+
+    private:
+        hashmap<string, logger_base *> _loggers;
+        oneapi::tbb::concurrent_queue<pair<logger_base *, string>> _queue;
+        std::atomic<int> _count{0};
+    };
+
+    namespace internal
+    {
+        extern APPLIB_API struct log_ctx
+        {
+            log_service *log_service;
+            logger_base *default_logger;
+        } g_log_ctx;
+    } // namespace internal
+
+    inline log_service::log_service() { internal::g_log_ctx.log_service = this; }
+
+    inline logger_base *get_default_logger()
+    {
+        assert(internal::g_log_ctx.default_logger);
+        return internal::g_log_ctx.default_logger;
+    }
+
+    inline void set_default_logger(logger_base *logger) { internal::g_log_ctx.default_logger = logger; }
+
+    inline log_service *get_log_service() { return internal::g_log_ctx.log_service; }
+
+    inline logger_base *get_logger(const string &name)
+    {
+        if (!internal::g_log_ctx.log_service) return nullptr;
+        return get_log_service()->get_logger(name);
+    }
+} // namespace acul::log
 
 // #define ACUL_LOG_DEFAULT(level, ...) \
 //     acul::log::get_log_service()->log(acul::log::get_default_logger(), level, __VA_ARGS__)

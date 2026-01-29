@@ -2,8 +2,7 @@
 #define APP_ACUL_CRC32_H
 
 #include <random>
-#include "../api.hpp"
-#include "../internal/simd/context.hpp"
+#include "../detail/isa/dispatch.hpp"
 #include "../scalars.hpp"
 
 namespace acul
@@ -19,11 +18,7 @@ namespace acul
         std::uniform_int_distribution<uint64_t> dist;
     };
 
-    // Based by Google CityHash
-    // @ref https://github.com/google/cityhash
-    APPLIB_API u64 cityhash64(const char *s, size_t len);
-
-    inline u32 crc32(u32 crc, const char *buf, size_t len) { return internal::g_simd_ctx.crc32(crc, buf, len); }
+    inline u32 crc32(u32 crc, const char *buf, size_t len) { return detail::g_isa_dispatcher.crc32(crc, buf, len); }
 
     template <class T>
     inline void hash_combine(std::size_t &seed, const T &v)

@@ -13,35 +13,32 @@ if(NOT DEFINED ACBT_LOADED)
     include(cmake/utils.cmake)
 endif()
 
-option(ACUL_LOG_ENABLE "Enable log support" ON)
-option(ACUL_SIMD_ENABLE "Enable SIMD support" ON)
 option(ACUL_INTL_ENABLE "Enable intl support" ON)
 option(ACUL_ZSTD_ENABLE "Enable zstd support" ON)
 
-add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/hash")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/exception")
-add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/string")
-add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io")
+# Dependencies check
 
-if(ACUL_SIMD_ENABLE)
-    add_files(${PROJECT_NAME} RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/simd")
-endif()
+
+set(ACUL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+
+add_files(${PROJECT_NAME} ${ACUL_SRC_DIR})
+add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/hash")
+add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/exception")
+add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/string")
+add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/io")
 
 if(ACUL_INTL_ENABLE)
-    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/locales")
+    add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/locales")
 endif()
 
 if(ACUL_ZSTD_ENABLE)
-    add_files(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/acul/io/jatc")
+    add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/io/fs")
 endif()
+
+include("${ACUL_SRC_DIR}/isa.cmake")
 
 add_library(${PROJECT_NAME} SHARED ${ACUL_SRC})
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
-
-if(USE_ASAN)
-    target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
@@ -56,10 +53,6 @@ endif()
 
 if(WIN32 AND ACUL_INTL_ENABLE)
     list(APPEND ACUL_PUBLIC_LIBS intl)
-endif()
-
-if(ACUL_LOG_ENABLE)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_LOG_ENABLE)
 endif()
 
 if(ACUL_INTL_ENABLE)
@@ -104,8 +97,4 @@ set_target_properties(${PROJECT_NAME}
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
-endif()
-
-if(ACUL_SIMD_ENABLE)
-    add_subdirectory(simd)
 endif()

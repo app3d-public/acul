@@ -2,6 +2,7 @@
 #include <acul/list.hpp>
 #include <acul/string/string.hpp>
 #include <cassert>
+#include <cmath>
 #include <cstring> // memcpy
 
 void test_bin_stream_basic_types()

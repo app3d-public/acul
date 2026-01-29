@@ -1,4 +1,4 @@
-#include <acul/io/file.hpp>
+#include <acul/io/fs/file.hpp>
 #include <acul/log.hpp>
 #include <acul/task.hpp>
 #include <cassert>
@@ -50,11 +50,11 @@ void test_log()
 
     {
         vector<char> buffer;
-        assert(io::file::read_binary(filepath, buffer));
+        assert(fs::read_binary(filepath, buffer));
 
         string content(buffer.data(), buffer.size());
         assert(content.find("File log: 456") != string::npos);
     }
 
-    io::file::remove_file(filepath.c_str());
+    fs::remove_file(filepath.c_str());
 }

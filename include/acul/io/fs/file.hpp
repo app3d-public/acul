@@ -4,10 +4,8 @@
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "../../api.hpp"
-#include "../../detail/simd/context.hpp"
-#include "../op_result.hpp"
-#include "../string/string_view_pool.hpp"
-#include "../vector.hpp"
+#include "../../op_result.hpp"
+#include "../../vector.hpp"
 
 #ifdef _WIN32
     #include <windows.h>
@@ -68,18 +66,6 @@ namespace acul::fs
      * @return Success if the file was successfully written, error otherwise.
      **/
     APPLIB_API bool write_binary(const string &filename, const char *buffer, size_t size);
-
-    /**
-     * Fills the line buffer by parsing the input data and splitting it into lines based on newline characters.
-     *
-     * @param data Pointer to the start of the data buffer
-     * @param size Size of the data buffer
-     * @param dst Dynamic array to store the parsed lines
-     */
-    inline void fill_line_buffer(const char *data, size_t size, acul::string_view_pool<char> &dst)
-    {
-        internal::g_simd_ctx.fill_line_buffer(data, size, dst);
-    }
 
     /**
      * Reads a file in blocks and processes it using a callback function.

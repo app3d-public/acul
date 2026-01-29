@@ -150,7 +150,7 @@ namespace acul
                                            vector<index_entry *> &index_entries);
 
         private:
-            vfs::path _path;
+            acul::path _path;
             task::thread_dispatch &_dispatch;
             oneapi::tbb::flow::graph _graph;
             tbb::flow::function_node<flow_output> *_write_node;

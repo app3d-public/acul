@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../detail/isa/dispatch.hpp"
+#include "../fwd/string_view_pool.hpp"
 #include "../vector.hpp"
 #include "string.hpp"
 
@@ -68,8 +70,7 @@ namespace acul
                 ++ptr;
                 return 1;
             }
-            else
-                return 0;
+            else return 0;
         }
 
         size_t num_digits = 0;
@@ -91,7 +92,8 @@ namespace acul
     #pragma clang diagnostic pop
 #endif
         int i = 0;
-        do {
+        do
+        {
             reverse_order[i++] = value % 10;
             value /= 10;
         } while (value);
@@ -372,5 +374,10 @@ namespace acul
         out.resize(s.size());
         for (size_t i = 0; i < s.size(); ++i) { out[i] = toupper(s[i]); }
         return out;
+    }
+
+    inline void fill_line_buffer(const char *data, size_t size, string_view_pool<char> &dst)
+    {
+        return detail::g_isa_dispatcher.fill_line_buffer(data, size, dst);
     }
 } // namespace acul

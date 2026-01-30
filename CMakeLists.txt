@@ -16,9 +16,6 @@ endif()
 option(ACUL_INTL_ENABLE "Enable intl support" ON)
 option(ACUL_ZSTD_ENABLE "Enable zstd support" ON)
 
-# Dependencies check
-
-
 set(ACUL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_files(${PROJECT_NAME} ${ACUL_SRC_DIR})

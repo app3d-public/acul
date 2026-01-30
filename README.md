@@ -30,7 +30,7 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 - Hash containers in `acul` are designed with a focus on fast `emplace` operations and efficient miss lookups.
 - Two families are provided:
   - `acul::hashmap` / `acul::hashset`: chain-based implementation, well-suited for small tables.  
-  - `acul::hl_hashmap` / `acul::hl_hashset`: open-addressing implementation with SIMD acceleration, optimized for large tables.
+  - `acul::hl_hashmap` / `acul::hl_hashset`: an open-addressed hash table optimized for large datasets, featuring ISA-specific hardware acceleration
 
 ### Smart Pointers
 - Custom `shared_ptr`, `weak_ptr`, and `unique_ptr`.  
@@ -59,9 +59,6 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 
 ### IO
 - Basic file utilities for cross-platform file operations.  
-
-> [!NOTE]
-> To enable SIMD-accelerated IO functions, call `enable_simd_module()` at program startup.
 
 #### Paths
 - Unified path abstraction for both local and virtual schemes.  
@@ -93,11 +90,8 @@ Each response resolves to an **index entry**, which contains the metadata locati
 - CXX GNU Extensions
 
 ### Cmake options:
-- `ACUL_LOG_ENABLE`: Enable log support
-- `ACUL_SIMD_ENABLE`: Enable SIMD support
 - `ACUL_INTL_ENABLE`: Enable intl support
 - `ACUL_ZSTD_ENABLE`: Enable zstd support
-- `USE_ASAN`: Enable address sanitizer
 - `BUILD_TESTS`: Enable testing
 - `ENABLE_COVERAGE`: Enable code coverage
 

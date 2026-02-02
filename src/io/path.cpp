@@ -1,18 +1,18 @@
+#include <acul/io/detail/constants.hpp>
 #include <acul/io/path.hpp>
+
 #ifdef _WIN32
     #include <acul/string/utils.hpp>
 #else
     #include <dlfcn.h>
 #endif
 
-#define IS_SEPARATOR(c) (c == PATH_CHAR_SEP_WIN32 || c == PATH_CHAR_SEP_UNIX)
-
 namespace acul
 {
     inline const char *get_separator(const char *start, const char *end)
     {
-        const char *sep_unix = (const char *)memchr(start, PATH_CHAR_SEP_UNIX, end - start);
-        const char *sep_win32 = (const char *)memchr(start, PATH_CHAR_SEP_WIN32, end - start);
+        const char *sep_unix = (const char *)memchr(start, ACUL_PATH_SEPARATOR_UNIX, end - start);
+        const char *sep_win32 = (const char *)memchr(start, ACUL_PATH_SEPARATOR_WIN32, end - start);
 
         if (!sep_unix) return sep_win32;
         if (!sep_win32) return sep_unix;
@@ -37,12 +37,12 @@ namespace acul
 
     void path::begin_parse(const char *&start, const char *end)
     {
-        if (IS_SEPARATOR(start[0]))
+        if (ACUL_IS_PATH_SEPARATOR(start[0]))
         {
-            if (start[0] == PATH_CHAR_SEP_WIN32) _flags |= FLAG_WIN32;
+            if (start[0] == ACUL_PATH_SEPARATOR_WIN32) _flags |= FLAG_WIN32;
             ++start;
             _flags |= FLAG_ABS;
-            if (IS_SEPARATOR(start[0])) // UNC
+            if (ACUL_IS_PATH_SEPARATOR(start[0])) // UNC
             {
                 _scheme = "unc";
                 ++start;
@@ -56,16 +56,16 @@ namespace acul
             if (scheme_end && scheme_end > start + 1)
             {
                 auto *colon_ptr = scheme_end - 1;
-                if (*colon_ptr == ':' && IS_SEPARATOR(scheme_end[0]))
+                if (*colon_ptr == ':' && ACUL_IS_PATH_SEPARATOR(scheme_end[0]))
                 {
-                    if (scheme_end[1] == PATH_CHAR_SEP_UNIX) // Manual scheme
+                    if (scheme_end[1] == ACUL_PATH_SEPARATOR_UNIX) // Manual scheme
                     {
                         _scheme = string(start, colon_ptr - start);
                         start = scheme_end + 2;
                         _flags |= FLAG_PROTO_CALC;
                         if (_scheme != "file") _flags |= FLAG_PROTO_EXTERNAL;
                     }
-                    else if (IS_SEPARATOR(scheme_end[0]) && !(_flags & FLAG_PROTO_EXTERNAL)) // Windows Path
+                    else if (ACUL_IS_PATH_SEPARATOR(scheme_end[0]) && !(_flags & FLAG_PROTO_EXTERNAL)) // Windows Path
                     {
                         _nodes.emplace_back(start, 1);
                         _scheme = "file";
@@ -149,7 +149,7 @@ namespace acul
         if (_path.empty())
         {
             if (_nodes.empty()) return _path;
-            char sep = _flags & FLAG_WIN32 ? PATH_CHAR_SEP_WIN32 : PATH_CHAR_SEP_UNIX;
+            char sep = _flags & FLAG_WIN32 ? ACUL_PATH_SEPARATOR_WIN32 : ACUL_PATH_SEPARATOR_UNIX;
             size_t start = build_scheme_part(_path, sep);
 
             for (size_t i = start; i < _nodes.size() - 1; ++i)
@@ -161,25 +161,5 @@ namespace acul
         }
 
         return _path;
-    }
-
-    path get_module_directory() noexcept
-    {
-#ifdef _WIN32
-        HMODULE hModule = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           reinterpret_cast<LPCWSTR>(&get_module_directory), &hModule);
-
-        wchar_t path[MAX_PATH];
-        GetModuleFileNameW(hModule, path, MAX_PATH);
-
-        u16string full_path((c16 *)path);
-        acul::path p = utf16_to_utf8(full_path);
-#else
-        Dl_info info;
-        dladdr(reinterpret_cast<void *>(&get_module_directory), &info);
-        io::path p(info.dli_fname);
-#endif
-        return p.parent_path();
     }
 } // namespace acul

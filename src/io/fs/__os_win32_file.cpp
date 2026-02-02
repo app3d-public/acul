@@ -45,7 +45,8 @@ namespace acul::fs
             DWORD err = GetLastError();
             CloseHandle(hSrc);
 
-            if (!overwrite && err == ERROR_FILE_EXISTS) return make_op_error(ACUL_OP_SKIPPED, err);
+            if (!overwrite && err == ERROR_FILE_EXISTS)
+                return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
             return make_op_error(ACUL_OP_WRITE_ERROR, err);
         }
 
@@ -75,8 +76,13 @@ namespace acul::fs
         else
         {
             DWORD error = GetLastError();
-            u16 state = error == ERROR_ALREADY_EXISTS ? ACUL_OP_WRITE_ERROR : ACUL_OP_SKIPPED;
-            return make_op_error(state, error);
+            if (error == ERROR_ALREADY_EXISTS)
+            {
+                DWORD dw_attrib = GetFileAttributesA(path);
+                if (dw_attrib != INVALID_FILE_ATTRIBUTES && (dw_attrib & FILE_ATTRIBUTE_DIRECTORY))
+                    return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
+            }
+            return make_op_error(ACUL_OP_WRITE_ERROR, error);
         }
     }
 

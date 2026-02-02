@@ -16,12 +16,12 @@
 #define ACUL_OP_DELETE_ERROR     10
 #define ACUL_OP_SEEK_ERROR       11
 #define ACUL_OP_CHECKSUM_ERROR   12
-#define ACUL_OP_SKIPPED          13
 
 // Codes specific
-#define ACUL_CODE_SIZE_ZERO    1
-#define ACUL_CODE_SIZE_UNKNOWN 2
-#define ACUL_CODE_SIZE_ERROR   3
+#define ACUL_OP_CODE_SIZE_ZERO    1
+#define ACUL_OP_CODE_SIZE_UNKNOWN 2
+#define ACUL_OP_CODE_SIZE_ERROR   3
+#define ACUL_OP_CODE_SKIPPED      4
 
 namespace acul
 {

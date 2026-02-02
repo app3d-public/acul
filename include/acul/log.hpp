@@ -221,6 +221,7 @@ namespace acul::log
         }
 
         __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message, ...);
+        void vlog(logger_base *logger, enum level level, const char *message, va_list args);
 
         virtual std::chrono::steady_clock::time_point dispatch() override;
 
@@ -266,14 +267,18 @@ namespace acul::log
         if (!internal::g_log_ctx.log_service) return nullptr;
         return get_log_service()->get_logger(name);
     }
+
+    __attribute__((format(printf, 4, 5))) APPLIB_API void write(log_service *log_service, logger_base *logger,
+                                                                enum level level, const char *message, ...);
+
 } // namespace acul::log
 
-// #define ACUL_LOG_DEFAULT(level, ...) \
-//     acul::log::get_log_service()->log(acul::log::get_default_logger(), level, __VA_ARGS__)
-// #define LOG_INFO(...)  ACUL_LOG_DEFAULT(acul::log::level::info, __VA_ARGS__)
-// #define LOG_DEBUG(...) ACUL_LOG_DEFAULT(acul::log::level::debug, __VA_ARGS__)
-// #define LOG_TRACE(...) ACUL_LOG_DEFAULT(acul::log::level::trace, __VA_ARGS__)
-// #define LOG_WARN(...)  ACUL_LOG_DEFAULT(acul::log::level::warn, __VA_ARGS__)
-// #define LOG_ERROR(...) ACUL_LOG_DEFAULT(acul::log::level::error, __VA_ARGS__)
-// #define LOG_FATAL(...) ACUL_LOG_DEFAULT(acul::log::level::fatal, __VA_ARGS__)
+#define ACUL_LOG_DEFAULT(level, ...) \
+    acul::log::get_log_service()->log(acul::log::get_default_logger(), level, __VA_ARGS__)
+#define LOG_INFO(...)  ACUL_LOG_DEFAULT(acul::log::level::info, __VA_ARGS__)
+#define LOG_DEBUG(...) ACUL_LOG_DEFAULT(acul::log::level::debug, __VA_ARGS__)
+#define LOG_TRACE(...) ACUL_LOG_DEFAULT(acul::log::level::trace, __VA_ARGS__)
+#define LOG_WARN(...)  ACUL_LOG_DEFAULT(acul::log::level::warn, __VA_ARGS__)
+#define LOG_ERROR(...) ACUL_LOG_DEFAULT(acul::log::level::error, __VA_ARGS__)
+#define LOG_FATAL(...) ACUL_LOG_DEFAULT(acul::log::level::fatal, __VA_ARGS__)
 #endif

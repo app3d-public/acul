@@ -80,11 +80,11 @@ namespace acul::fs
     op_result decompress(const char *data, size_t size, vector<char> &decompressed)
     {
         size_t decompressed_size = ZSTD_getFrameContentSize(data, size);
-        if (decompressed_size == 0) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ZERO);
+        if (decompressed_size == 0) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_OP_CODE_SIZE_ZERO);
         if (decompressed_size == ZSTD_CONTENTSIZE_ERROR)
-            return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ERROR);
+            return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_OP_CODE_SIZE_ERROR);
         if (decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN)
-            return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_UNKNOWN);
+            return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_OP_CODE_SIZE_UNKNOWN);
 
         decompressed.resize(decompressed_size);
 

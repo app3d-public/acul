@@ -347,7 +347,7 @@ static void BM_path_join_impl(benchmark::State &state, const char *label)
                 p = p / "users" / "wusiki" / "project" / "assets" / "images" / "2025" / "08" / "25" / "test" /
                     "file.png";
 
-                if constexpr (std::is_same_v<PathT, acul::io::path>)
+                if constexpr (std::is_same_v<PathT, acul::path>)
                 {
                     auto s = p.str();
                     sink ^= s.size();
@@ -364,7 +364,7 @@ static void BM_path_join_impl(benchmark::State &state, const char *label)
 
 static void BM_path_join_acul(benchmark::State &state)
 {
-    BM_path_join_impl<acul::io::path>(state, "path_join acul::io::path");
+    BM_path_join_impl<acul::path>(state, "path_join acul::path");
 }
 BENCHMARK(BM_path_join_acul)->Arg(250'000)->UseManualTime();
 
@@ -390,7 +390,7 @@ static void BM_path_decompose_impl(benchmark::State &state, const char *label)
                 PathT p("root/users/wusiki/project/assets/images/2025/08/25/test/file.tar.gz");
                 auto name = p.filename();
                 auto par = p.parent_path();
-                if constexpr (std::is_same_v<PathT, acul::io::path>)
+                if constexpr (std::is_same_v<PathT, acul::path>)
                     sink ^= name.size() ^ par.str().size();
                 else
                     sink ^= name.string().size() ^ par.string().size();
@@ -401,7 +401,7 @@ static void BM_path_decompose_impl(benchmark::State &state, const char *label)
 
 static void BM_path_decompose_acul(benchmark::State &state)
 {
-    BM_path_decompose_impl<acul::io::path>(state, "path_decompose acul::io::path");
+    BM_path_decompose_impl<acul::path>(state, "path_decompose acul::path");
 }
 BENCHMARK(BM_path_decompose_acul)->Arg(250'000)->UseManualTime();
 

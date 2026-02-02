@@ -17,14 +17,8 @@
 #define JATC_VERSION_PATCH 0
 #define JATC_VERSION       (JATC_VERSION_MAJOR << 16 | JATC_VERSION_MINOR << 8 | JATC_VERSION_PATCH)
 #define JATC_MAGIC_NUMBER  0x4A1950B9
-// Default compression settings
-#ifndef JATC_MIN_COMPRESS
-    #define JATC_MIN_COMPRESS 10240
-#endif
-#ifndef JATC_COMPRESS_LEVEL
-    #define JATC_COMPRESS_LEVEL 5
-#endif
 
+#define JATC_OP_DOMAIN       0x6E9C
 #define JATC_CODE_HEADER     1
 #define JATC_CODE_INDEX      2
 #define JATC_CODE_ENTRYPOINT 3

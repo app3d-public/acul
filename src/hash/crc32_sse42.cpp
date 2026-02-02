@@ -4,7 +4,7 @@
 
 #include <nmmintrin.h>
 #include <stddef.h>
-#include <stdint.h>
+#include <cstdint>
 #include <wmmintrin.h>
 
 #if defined(_MSC_VER)

@@ -146,15 +146,33 @@ namespace acul
         void log_service::log(logger_base *logger, enum level level, const char *message, ...)
         {
             if (level > this->level) return;
-            stringstream ss;
-            logger->parse_tokens(level, message, ss);
             va_list args;
             va_start(args, message);
+            vlog(logger, level, message, args);
+            va_end(args);
+        }
+
+        void log_service::vlog(logger_base *logger, enum level level, const char *message, va_list args)
+        {
+            if (level > this->level) return;
+            stringstream ss;
+            va_list copy;
+            va_copy(copy, args);
+            logger->parse_tokens(level, message, ss);
             _count.fetch_add(1, std::memory_order_relaxed);
             string parsed = ss.str();
-            _queue.emplace(logger, acul::format_va_list(parsed.c_str(), args));
-            va_end(args);
+            _queue.emplace(logger, acul::format_va_list(parsed.c_str(), copy));
+            va_end(copy);
             notify();
+        }
+
+        void write(log_service *log_service, logger_base *logger, enum level level, const char *message, ...)
+        {
+            if (!log_service || !logger) return;
+            va_list args;
+            va_start(args, message);
+            log_service->vlog(logger, level, message, args);
+            va_end(args);
         }
 
         log_service::~log_service()

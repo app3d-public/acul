@@ -2,8 +2,18 @@
 #include <acul/io/fs/file.hpp>
 #include <acul/io/fs/jatc.hpp>
 
+// Default compression settings
+#ifndef JATC_MIN_COMPRESS
+    #define JATC_MIN_COMPRESS 10240
+#endif
+#ifndef JATC_COMPRESS_LEVEL
+    #define JATC_COMPRESS_LEVEL 5
+#endif
+
 namespace acul::fs::jatc
 {
+    op_result inline make_op_error(u16 state, u32 code = 0) { return {state, JATC_OP_DOMAIN, code}; }
+
     bool write_header(entrypoint *entrypoint)
     {
         header header{JATC_MAGIC_NUMBER, JATC_VERSION};
@@ -78,11 +88,11 @@ namespace acul::fs::jatc
 
     op_result cache::read(entrypoint *entrypoint, entrygroup *group, const index_entry &entry, bin_stream &dst)
     {
-        if (entry.size == 0) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ZERO);
+        if (entry.size == 0) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_OP_CODE_SIZE_ZERO);
         if (!entrypoint || !group) return make_op_error(ACUL_OP_NULLPTR);
 
         vector<char> buffer(entry.size);
-        if (!buffer.data()) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_CODE_SIZE_ZERO);
+        if (!buffer.data()) return make_op_error(ACUL_OP_INVALID_SIZE, ACUL_OP_CODE_SIZE_ZERO);
 
         {
             shared_lock lock(entrypoint->lock);

@@ -1,4 +1,4 @@
-#include <acul/io/path.hpp>
+#include <acul/io/fs/path.hpp>
 #include <cassert>
 
 void test_path_iterators()
@@ -93,39 +93,38 @@ void test_path_helpers()
     using namespace acul;
 
     // get_extension
-    string ext = get_extension("file.txt");
+    string ext = fs::get_extension("file.txt");
     assert(ext == ".txt");
 
-    string no_ext = get_extension("/folder/file");
+    string no_ext = fs::get_extension("/folder/file");
     assert(no_ext.empty());
 
     // get_filename
-    string fname = get_filename("/folder/file.txt");
+    string fname = fs::get_filename("/folder/file.txt");
     assert(fname == "file.txt");
 
-    string no_folder_fname = get_filename("file.txt");
+    string no_folder_fname = fs::get_filename("file.txt");
     assert(no_folder_fname == "file.txt");
 
     // replace_filename
-    string replaced = replace_filename("/folder/file.txt", "newfile.md");
+    string replaced = fs::replace_filename("/folder/file.txt", "newfile.md");
     assert(replaced.find("newfile.md") != string::npos);
-    assert(get_filename(replaced) == "newfile.md");
+    assert(fs::get_filename(replaced) == "newfile.md");
 
     // replace_filename with Windows separator
-    string replaced_win = replace_filename("C:\\folder\\file.txt", "newfile.md");
+    string replaced_win = fs::replace_filename("C:\\folder\\file.txt", "newfile.md");
     assert(replaced_win.find("newfile.md") != string::npos);
-    assert(get_filename(replaced_win) == "newfile.md");
+    assert(fs::get_filename(replaced_win) == "newfile.md");
 
     // replace_extension
-    string changed_ext = replace_extension("/folder/file.txt", ".md");
-    assert(get_extension(changed_ext) == ".md");
+    string changed_ext = fs::replace_extension("/folder/file.txt", ".md");
+    assert(fs::get_extension(changed_ext) == ".md");
 
-    string append_ext = replace_extension("/folder/file", ".md");
-    assert(get_extension(append_ext) == ".md");
+    string append_ext = fs::replace_extension("/folder/file", ".md");
+    assert(fs::get_extension(append_ext) == ".md");
 
     // get_current_path
-    path cur = get_current_path();
-    assert(!cur.empty());
+    assert(!fs::get_current_path().empty());
 }
 
 void test_path()

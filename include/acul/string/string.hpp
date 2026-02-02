@@ -1025,9 +1025,9 @@ namespace std
     {
         size_t operator()(const acul::basic_string<T, Allocator> &s) const noexcept
         {
-            auto len = s.size();
-            return len <= 16 ? acul::detail::cityhash64_short(s.c_str(), len)
-                             : acul::detail::cityhash64_long(s.c_str(), len);
+            const char *bytes = reinterpret_cast<const char *>(s.data());
+            size_t len = s.size() * sizeof(T);
+            return len <= 16 ? acul::detail::cityhash64_short(bytes, len) : acul::detail::cityhash64_long(bytes, len);
         }
     };
 } // namespace std

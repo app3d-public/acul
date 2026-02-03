@@ -1,6 +1,8 @@
 #pragma once
 
-#include <functional>
+#include <iterator>
+#include <type_traits>
+#include "fwd/functional.hpp"
 
 namespace acul
 {
@@ -13,9 +15,15 @@ namespace acul
         using argument_type = Arg;
     };
 
-    // std::function
-    template <typename R, typename Arg>
-    struct lambda_arg_traits<std::function<R(Arg)>>
+    // function
+    template <typename R, typename Arg, size_t S, template <class> class Alloc>
+    struct lambda_arg_traits<unique_function<R(Arg), S, Alloc>>
+    {
+        using argument_type = Arg;
+    };
+
+    template <typename R, typename Arg, size_t S, template <class> class Alloc>
+    struct lambda_arg_traits<function<R(Arg), S, Alloc>>
     {
         using argument_type = Arg;
     };
@@ -71,7 +79,7 @@ namespace acul
     {
     };
 
-    template<typename T>
+    template <typename T>
     inline constexpr bool is_char_v = is_char<T>::value;
 
     template <typename T>

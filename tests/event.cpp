@@ -1,4 +1,5 @@
 #include <acul/event.hpp>
+#include <acul/functional/unique_function.hpp>
 #include <cassert>
 
 using namespace acul;

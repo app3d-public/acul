@@ -1,5 +1,6 @@
 #include <acul/list.hpp>
 #include <acul/type_traits.hpp>
+#include <acul/functional/unique_function.hpp>
 #include <acul/vector.hpp>
 #include <cassert>
 #include <iterator>
@@ -10,7 +11,7 @@ void test_lambda_arg_traits()
     using arg_type = typename acul::lambda_arg_traits<decltype(lambda)>::argument_type;
     assert((std::is_same_v<arg_type, int>));
 
-    std::function<float(float)> func = [](float f) { return f * 2.0f; };
+    acul::unique_function<float(float)> func = [](float f) { return f * 2.0f; };
     using arg_type_func = typename acul::lambda_arg_traits<decltype(func)>::argument_type;
     assert((std::is_same_v<arg_type_func, float>));
 

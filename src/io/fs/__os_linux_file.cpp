@@ -141,7 +141,7 @@ namespace acul
                 return op_state::success;
             }
 
-            op_state read_by_block(const string &filename, const std::function<void(char *, size_t)> &callback)
+            op_state read_by_block(const string &filename, const unique_function<void(char *, size_t)> &callback)
             {
                 int fd = open(filename.c_str(), O_RDONLY);
                 if (fd < 0) return op_state::error;

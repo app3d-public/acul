@@ -114,7 +114,7 @@ namespace acul::fs
         return make_op_success();
     }
 
-    op_result read_by_block(const string &filename, const std::function<void(char *, size_t)> &callback)
+    op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback)
     {
         u16string w_filename = utf8_to_utf16(filename);
         HANDLE file_handle = CreateFileW((LPCWSTR)w_filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,

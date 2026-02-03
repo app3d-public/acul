@@ -28,10 +28,10 @@ namespace acul
             return nullptr;
         }
 
-        static inline pointer reallocate(pointer p, size_type newSize) noexcept
+        static inline pointer reallocate(pointer p, size_type new_size) noexcept
         {
-            return reinterpret_cast<pointer>(p ? scalable_realloc(p, newSize * sizeof(T))
-                                               : scalable_malloc(newSize * sizeof(T)));
+            return reinterpret_cast<pointer>(p ? scalable_realloc(p, new_size * sizeof(T))
+                                               : scalable_malloc(new_size * sizeof(T)));
         }
 
         static inline void deallocate(pointer p, size_type num = 0) noexcept { scalable_free(p); }

@@ -13,8 +13,8 @@ namespace acul
 
             for (auto &buffer : data.cache_list)
             {
-                buffer->on_free();
-                acul::release(buffer);
+                if (buffer->on_free) buffer->on_free();
+                buffer.reset();
             }
         }
     }

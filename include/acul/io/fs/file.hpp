@@ -75,7 +75,7 @@ namespace acul::fs
      * op_state::error otherwise.
      */
 
-    APPLIB_API op_result read_by_block(const string &filename, const std::function<void(char *, size_t)> &callback);
+    APPLIB_API op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback);
 
     /**
      * Writes data to a file in blocks.

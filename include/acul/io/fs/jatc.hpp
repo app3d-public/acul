@@ -4,6 +4,7 @@
 #include <fstream>
 #include <oneapi/tbb/flow_graph.h>
 #include "../../bin_stream.hpp"
+#include "../../functional/function.hpp"
 #include "../../op_result.hpp"
 #include "../../shared_mutex.hpp"
 #include "../../string/utils.hpp"
@@ -68,7 +69,7 @@ namespace acul
 
         struct request
         {
-            std::function<void(bin_stream &)> write_callback;
+            function<void(bin_stream &)> write_callback;
             entrygroup *group = nullptr;
             struct entrypoint *entrypoint = nullptr;
         };

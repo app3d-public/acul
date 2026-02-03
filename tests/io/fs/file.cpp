@@ -1,3 +1,4 @@
+#include <acul/functional/unique_function.hpp>
 #include <acul/io/fs/file.hpp>
 #include <acul/io/path.hpp>
 #include <acul/string/string_view_pool.hpp>

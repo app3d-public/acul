@@ -87,6 +87,9 @@ namespace acul
             using Fn = std::decay_t<F>;
             reset();
 
+            if constexpr (std::is_pointer_v<Fn> && std::is_function_v<std::remove_pointer_t<Fn>>)
+                if (!f) return;
+
             if constexpr (sizeof(Fn) <= S && alignof(Fn) <= storage_align)
             {
                 Alloc<Fn>::construct(reinterpret_cast<Fn *>(_storage), std::forward<F>(f));

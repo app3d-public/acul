@@ -31,43 +31,13 @@ namespace acul::fs
         return make_op_success();
     }
 
-    op_result copy(const char *src, const char *dst, bool overwrite) noexcept
+    op_result copy_file(const char *src, const char *dst, bool overwrite) noexcept
     {
-        HANDLE hSrc = CreateFileA(src, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-                                  FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hSrc == INVALID_HANDLE_VALUE) return make_op_error(ACUL_OP_READ_ERROR, GetLastError());
-
-        DWORD creation = overwrite ? CREATE_ALWAYS : CREATE_NEW;
-        HANDLE hDst = CreateFileA(dst, GENERIC_WRITE, 0, NULL, creation, FILE_ATTRIBUTE_NORMAL, NULL);
-
-        if (hDst == INVALID_HANDLE_VALUE)
-        {
-            DWORD err = GetLastError();
-            CloseHandle(hSrc);
-
-            if (!overwrite && err == ERROR_FILE_EXISTS)
-                return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
-            return make_op_error(ACUL_OP_WRITE_ERROR, err);
-        }
-
-        char buffer[4096];
-        DWORD bytes_read, bytes_written, err;
-        bool copy_success = true;
-
-        while (ReadFile(hSrc, buffer, sizeof(buffer), &bytes_read, NULL) && bytes_read > 0)
-        {
-            if (!WriteFile(hDst, buffer, bytes_read, &bytes_written, NULL) || bytes_read != bytes_written)
-            {
-                copy_success = false;
-                err = GetLastError();
-                break;
-            }
-        }
-
-        CloseHandle(hSrc);
-        CloseHandle(hDst);
-
-        return copy_success ? make_op_success() : make_op_error(ACUL_OP_WRITE_ERROR, err);
+        if (CopyFileA(src, dst, !overwrite)) return make_op_success();
+        DWORD err = GetLastError();
+        if (!overwrite && err == ERROR_FILE_EXISTS)
+            return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
+        return make_op_error(ACUL_OP_WRITE_ERROR, err);
     }
 
     op_result create_directory(const char *path)

@@ -260,7 +260,44 @@ namespace acul
             _last = node;
         }
 
-        void resize(size_type count, const_reference value = T())
+        void resize(size_type count)
+        {
+            size_type current = 0;
+            pointer node = _head;
+
+            while (node && current < count)
+            {
+                node = node->next;
+                ++current;
+            }
+
+            if (current == count)
+            {
+                while (node)
+                {
+                    pointer next = node->next;
+                    node_allocator::destroy(node);
+                    node_allocator::deallocate(node, 1);
+                    node = next;
+                }
+
+                if (current == 0)
+                {
+                    _head = nullptr;
+                    _last = nullptr;
+                }
+                else
+                {
+                    _last = _head;
+                    for (size_type i = 1; i < current; ++i) _last = _last->next;
+                    _last->next = nullptr;
+                }
+            }
+            else
+                for (; current < count; ++current) emplace_back();
+        }
+
+        void resize(size_type count, const_reference value)
         {
             size_type current = 0;
             pointer node = _head;

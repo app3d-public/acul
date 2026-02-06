@@ -50,7 +50,7 @@ void test_file()
 
     // --- copy
     path copy_file2 = data / "copy_file2.txt";
-    op_result copy_result = copy(copy_file.str().c_str(), copy_file2.str().c_str(), true);
+    op_result copy_result = fs::copy_file(copy_file.str().c_str(), copy_file2.str().c_str(), true);
     assert(copy_result.success());
     assert(exists(copy_file2.str().c_str()));
 

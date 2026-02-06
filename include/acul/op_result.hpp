@@ -23,6 +23,12 @@
 #define ACUL_OP_CODE_SIZE_ERROR   3
 #define ACUL_OP_CODE_SKIPPED      4
 
+#define ACUL_TRY(expr)                \
+    {                                 \
+        auto _r = (expr);             \
+        if (!_r.success()) return _r; \
+    }
+
 namespace acul
 {
     struct op_result

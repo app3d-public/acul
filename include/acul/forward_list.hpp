@@ -219,7 +219,43 @@ namespace acul
             node_allocator::deallocate(temp, 1);
         }
 
-        void resize(size_type count, const T &value = T())
+        void resize(size_type count)
+        {
+            pointer current = _head;
+            pointer last = nullptr;
+            size_type current_size = 0;
+
+            while (current && current_size < count)
+            {
+                last = current;
+                current = current->next;
+                ++current_size;
+            }
+
+            if (current_size < count)
+            {
+                while (current_size < count)
+                {
+                    pointer node = node_allocator::allocate(1);
+                    node_allocator::construct(node);
+                    node->next = nullptr;
+                    if (last)
+                        last->next = node;
+                    else
+                        _head = node;
+                    last = node;
+                    ++current_size;
+                }
+                if (last) last->next = nullptr;
+            }
+            else if (current_size > count && last)
+            {
+                clear_from(last->next);
+                last->next = nullptr;
+            }
+        }
+
+        void resize(size_type count, const T &value)
         {
             pointer current = _head;
             pointer last = nullptr;

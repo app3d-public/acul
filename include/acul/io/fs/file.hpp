@@ -96,7 +96,7 @@ namespace acul::fs
      * @param overwrite If true, the destination file will be overwritten if it already exists.
      * @return Returns a status code indicating the success or failure of the copy operation.
      */
-    APPLIB_API op_result copy(const char *src, const char *dst, bool overwrite) noexcept;
+    APPLIB_API op_result copy_file(const char *src, const char *dst, bool overwrite) noexcept;
 
     /**
      * @brief Creates a directory at the specified path.

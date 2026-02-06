@@ -241,30 +241,30 @@ namespace acul::log
         std::atomic<int> _count{0};
     };
 
-    namespace internal
+    namespace detail
     {
         extern APPLIB_API struct log_ctx
         {
-            log_service *log_service;
+            log::log_service *log_service;
             logger_base *default_logger;
         } g_log_ctx;
-    } // namespace internal
+    } // namespace detail
 
-    inline log_service::log_service() { internal::g_log_ctx.log_service = this; }
+    inline log_service::log_service() { detail::g_log_ctx.log_service = this; }
 
     inline logger_base *get_default_logger()
     {
-        assert(internal::g_log_ctx.default_logger);
-        return internal::g_log_ctx.default_logger;
+        assert(detail::g_log_ctx.default_logger);
+        return detail::g_log_ctx.default_logger;
     }
 
-    inline void set_default_logger(logger_base *logger) { internal::g_log_ctx.default_logger = logger; }
+    inline void set_default_logger(logger_base *logger) { detail::g_log_ctx.default_logger = logger; }
 
-    inline log_service *get_log_service() { return internal::g_log_ctx.log_service; }
+    inline log_service *get_log_service() { return detail::g_log_ctx.log_service; }
 
     inline logger_base *get_logger(const string &name)
     {
-        if (!internal::g_log_ctx.log_service) return nullptr;
+        if (!detail::g_log_ctx.log_service) return nullptr;
         return get_log_service()->get_logger(name);
     }
 

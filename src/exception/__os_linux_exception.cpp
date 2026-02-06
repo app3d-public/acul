@@ -1,13 +1,13 @@
 #include <acul/exception/exception.hpp>
 #include <acul/exception/utils.hpp>
 #include <acul/hash/hashmap.hpp>
+#include <acul/io/fs/path.hpp>
 #include <acul/io/path.hpp>
 #include <acul/string/sstream.hpp>
 #include "elf_read.hpp"
 
 namespace acul
 {
-
     bool capture_stack_trace_remote(pid_t pid, const ucontext_t &uctx, vector<void *> &out, size_t max_depth = 64);
 
     void capture_stack_trace(except_info &info)
@@ -21,8 +21,7 @@ namespace acul
             int nptrs = backtrace(buffer, MaxFrames);
             for (int i = 0; i < nptrs; ++i) addresses.push_back(buffer[i]);
         }
-        else if (!capture_stack_trace_remote(info.pid, info.context, addresses))
-            return;
+        else if (!capture_stack_trace_remote(info.pid, info.context, addresses)) return;
         info.addresses_count = addresses.size();
         info.addresses = addresses.release();
     }
@@ -88,7 +87,7 @@ namespace acul
         build_exec_table(info.pid, module_table);
         vector<exec_module>::const_iterator main_module_it = module_table.cend();
         char main_module_path[PATH_MAX];
-        if (io::get_executable_path(main_module_path, PATH_MAX))
+        if (fs::get_executable_path(main_module_path, PATH_MAX))
         {
             string str = (const char *)main_module_path;
             main_module_it = std::find_if(module_table.begin(), module_table.end(),
@@ -112,8 +111,7 @@ namespace acul
                     if (load_it == module_load_cache.end())
                     {
                         elf_module elf;
-                        if (!load_module(module_it->path, elf))
-                            is_error = true;
+                        if (!load_module(module_it->path, elf)) is_error = true;
                         else
                         {
                             auto load_pair = module_load_cache.emplace(&(*module_it), elf);
@@ -127,10 +125,9 @@ namespace acul
                         out << " in " << get_symbol_name_from_elf(elf, ip_local_va);
                     }
                 }
-                if (module_it != main_module_it) out << " at " << io::get_filename(module_it->path).c_str();
+                if (module_it != main_module_it) out << " at " << fs::get_filename(module_it->path).c_str();
             }
-            else
-                out << " at " << "<unknown>";
+            else out << " at " << "<unknown>";
             out << '\n';
         }
     }

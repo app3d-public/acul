@@ -18,7 +18,7 @@ namespace acul::fs
 #else
         Dl_info info;
         dladdr(reinterpret_cast<void *>(&get_module_directory), &info);
-        io::path p(info.dli_fname);
+        path p(info.dli_fname);
 #endif
         return p.parent_path();
     }

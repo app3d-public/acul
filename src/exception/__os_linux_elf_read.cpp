@@ -1,5 +1,6 @@
 #include <acul/hash/hashmap.hpp>
-#include <acul/io/file.hpp>
+#include <acul/io/fs/file.hpp>
+#include <acul/string/string_view_pool.hpp>
 #include <acul/string/utils.hpp>
 #include <cstring>
 #include "elf_read.hpp"
@@ -10,10 +11,10 @@ namespace acul
     {
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
-        if (io::file::read_virtual(maps_file, content) != io::file::op_state::success) return false;
+        if (!fs::read_virtual(maps_file, content)) return false;
         string_view_pool<char> lines;
-        lines.reserve(content.size() / 40);
-        io::file::fill_line_buffer(content.data(), content.size(), lines);
+        lines.reserve(content.size() / 96);
+        fill_line_buffer(content.data(), content.size(), lines);
         hashmap<string, int> path_map;
         for (const auto line : lines)
         {
@@ -31,8 +32,7 @@ namespace acul
                 out.emplace_back(path);
                 m = &out.back();
             }
-            else
-                m = &out[it->second];
+            else m = &out[it->second];
             m->ranges.emplace_back(lo, hi);
             m->is_exec = m->is_exec || perms[2] == 'x';
             m->load_bias = std::min(m->load_bias, lo - file_offset);

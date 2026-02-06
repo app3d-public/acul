@@ -1,6 +1,7 @@
 #include <acul/bin_stream.hpp>
-#include <acul/io/file.hpp>
+#include <acul/io/fs/file.hpp>
 #include <acul/memory/smart_ptr.hpp>
+#include <acul/string/string_view_pool.hpp>
 #include <acul/string/utils.hpp>
 #include <dirent.h>
 #include <elf.h>
@@ -125,9 +126,10 @@ namespace acul
     {
         string maps_file = format("/proc/%d/maps", pid);
         vector<char> content;
-        if (io::file::read_virtual(maps_file, content) != io::file::op_state::success) return false;
-        acul::string_view_pool<char> lines(content.size());
-        io::file::fill_line_buffer(content.data(), content.size(), lines);
+        if (!fs::read_virtual(maps_file, content)) return false;
+        string_view_pool<char> lines;
+        lines.reserve(content.size() / 96);
+        fill_line_buffer(content.data(), content.size(), lines);
 
         constexpr size_t ELF_SMALL_ANON = 128 * 1024;
         constexpr size_t ELF_HEAD_ANON = 64 * 1024;
@@ -140,7 +142,8 @@ namespace acul
             unsigned long inode = 0;
             char path_buf[PATH_MAX] = {};
 
-            int n = sscanf(line, "%lx-%lx %4s %lx %x:%x %lu %s", &lo, &hi, perm, &off, &devm, &devn, &inode, path_buf);
+            int n = sscanf(line.data(), "%lx-%lx %4s %lx %x:%x %lu %s", &lo, &hi, perm, &off, &devm, &devn, &inode,
+                           path_buf);
             if (n < 7) continue; // must have at least perms
             const size_t size = hi - lo;
 
@@ -154,22 +157,16 @@ namespace acul
             // PT_LOAD filter
             bool include_full = (n == 8 && path_buf[0] != '\0');
             bool include_head = false;
-            if (fl & PF_X)
-                include_full = true;
-            else if ((fl & PF_R) && !(fl & PF_W))
-                include_full = true; // .rodata, .eh_frame
+            if (fl & PF_X) include_full = true;
+            else if ((fl & PF_R) && !(fl & PF_W)) include_full = true; // .rodata, .eh_frame
             else if ((fl & PF_R) && (fl & PF_W))
             {
-                if (is_file_backed)
-                    include_full = true; // .data/stacks
-                else if (size <= ELF_SMALL_ANON)
-                    include_full = true;
-                else
-                    include_head = true;
+                if (is_file_backed) include_full = true; // .data/stacks
+                else if (size <= ELF_SMALL_ANON) include_full = true;
+                else include_head = true;
             }
 
-            if (include_full)
-                segments.push_back({lo, hi, fl, 0, hi - lo});
+            if (include_full) segments.push_back({lo, hi, fl, 0, hi - lo});
             else if (include_head)
             {
                 size_t head = std::min(ELF_HEAD_ANON, size);
@@ -257,7 +254,7 @@ namespace acul
     {
         string path = format("/proc/%d/comm", pid);
         vector<char> buf;
-        if (io::file::read_virtual(path, buf) != io::file::op_state::success) return "unknown";
+        if (!fs::read_virtual(path, buf)) return "unknown";
         return trim_end(buf.data(), buf.size());
     }
 
@@ -265,7 +262,7 @@ namespace acul
     {
         string path = format("/proc/%d/cmdline", pid);
         vector<char> buf;
-        if (io::file::read_virtual(path, buf) != io::file::op_state::success) return {};
+        if (!fs::read_virtual(path, buf)) return {};
         std::replace(buf.begin(), buf.end(), '\0', ' ');
         return buf.data();
     }
@@ -310,8 +307,7 @@ namespace acul
             prstatus_t pr{};
             pr.pr_pid = tid;
             pr.pr_ppid = pv.pid;
-            if (tid == crash_tid)
-                write_crash_tid_status(pr, uc.uc_mcontext, crash_sig);
+            if (tid == crash_tid) write_crash_tid_status(pr, uc.uc_mcontext, crash_sig);
             else
             {
                 elf_gregset_t regs{};

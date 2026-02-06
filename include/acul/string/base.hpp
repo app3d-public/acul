@@ -16,7 +16,14 @@ namespace acul
     }
 
     constexpr inline size_t null_terminated_length(const char *s) noexcept { return (size_t)__builtin_strlen(s); }
+
+#ifndef __has_builtin
+    #define __has_builtin(x) 0
+#endif
+
+#if __has_builtin(__builtin_wcslen)
     constexpr inline size_t null_terminated_length(const wchar_t *s) noexcept { return (size_t)__builtin_wcslen(s); }
+#endif
 
     template <typename T, typename U, typename = void>
     struct is_string_like : std::false_type

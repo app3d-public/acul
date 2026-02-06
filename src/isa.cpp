@@ -1,5 +1,9 @@
 #include <acul/detail/isa/dispatch.hpp>
 
+#if defined(__GNUC__) || defined(__clang__)
+    #include <cpuid.h>
+#endif
+
 namespace acul::detail
 {
     isa_dispatch g_isa_dispatcher{};

@@ -58,11 +58,19 @@
 #endif
 
 #ifdef ACUL_WORDS_BIGENDIAN
+    #define ACUL_IS_BIG_ENDIAN 1
+    #define ACUL_IS_LITTLE_ENDIAN 0
     #define ACUL_U32_IN_EXPECTED_ORDER(x) (ACUL_BSWAP_32(x))
     #define ACUL_U64_IN_EXPECTED_ORDER(x) (ACUL_BSWAP_64(x))
 #else
+    #define ACUL_IS_BIG_ENDIAN 0
+    #define ACUL_IS_LITTLE_ENDIAN 1
     #define ACUL_U32_IN_EXPECTED_ORDER(x) (x)
     #define ACUL_U64_IN_EXPECTED_ORDER(x) (x)
+#endif
+
+#ifndef ACUL_BSWAP_16
+    #define ACUL_BSWAP_16(x) static_cast<u16>((static_cast<u16>(x) >> 8) | (static_cast<u16>(x) << 8))
 #endif
 
 namespace acul

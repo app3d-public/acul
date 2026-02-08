@@ -1,12 +1,86 @@
 #pragma once
 
 #include "api.hpp"
+#include "bit.hpp"
 #include "list.hpp"
 #include "string/string.hpp"
 #include "vector.hpp"
+#include <type_traits>
 
 namespace acul
 {
+    namespace detail
+    {
+        template <typename T>
+        inline T bswap_scalar(T value)
+        {
+            if constexpr (std::is_enum<T>::value)
+            {
+                using U = typename std::underlying_type<T>::type;
+                U raw = static_cast<U>(value);
+                if constexpr (sizeof(U) == 2)
+                    raw = static_cast<U>(ACUL_BSWAP_16(raw));
+                else if constexpr (sizeof(U) == 4)
+                    raw = static_cast<U>(ACUL_BSWAP_32(raw));
+                else if constexpr (sizeof(U) == 8)
+                    raw = static_cast<U>(ACUL_BSWAP_64(raw));
+                return static_cast<T>(raw);
+            }
+            else if constexpr (std::is_integral<T>::value && !std::is_same<T, bool>::value)
+            {
+                using U = typename std::make_unsigned<T>::type;
+                U raw = static_cast<U>(value);
+                if constexpr (sizeof(U) == 2)
+                    raw = static_cast<U>(ACUL_BSWAP_16(raw));
+                else if constexpr (sizeof(U) == 4)
+                    raw = static_cast<U>(ACUL_BSWAP_32(raw));
+                else if constexpr (sizeof(U) == 8)
+                    raw = static_cast<U>(ACUL_BSWAP_64(raw));
+                return static_cast<T>(raw);
+            }
+            else if constexpr (std::is_floating_point<T>::value)
+            {
+                if constexpr (sizeof(T) == 4)
+                {
+                    u32 raw;
+                    memcpy(&raw, &value, sizeof(raw));
+                    raw = ACUL_BSWAP_32(raw);
+                    memcpy(&value, &raw, sizeof(value));
+                }
+                else if constexpr (sizeof(T) == 8)
+                {
+                    u64 raw;
+                    memcpy(&raw, &value, sizeof(raw));
+                    raw = ACUL_BSWAP_64(raw);
+                    memcpy(&value, &raw, sizeof(value));
+                }
+                return value;
+            }
+            else
+                return value;
+        }
+
+        template <typename T>
+        inline T to_little_endian_scalar(T value)
+        {
+#ifdef ACUL_WORDS_BIGENDIAN
+            if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
+                return bswap_scalar(value);
+#endif
+            return value;
+        }
+
+        template <typename T>
+        inline T from_little_endian_scalar(T value)
+        {
+#ifdef ACUL_WORDS_BIGENDIAN
+            if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
+                return bswap_scalar(value);
+#endif
+            return value;
+        }
+    } // namespace detail
+
     /**
      * @brief Utility class for binary stream manipulation.
      *
@@ -52,8 +126,9 @@ namespace acul
         bin_stream &write(const T &val)
         {
             static_assert(std::is_standard_layout<T>::value);
-            const_pointer byte_data = reinterpret_cast<const_pointer>(&val);
-            _data.insert(_data.end(), byte_data, byte_data + sizeof(val));
+            T tmp = detail::to_little_endian_scalar(val);
+            const_pointer byte_data = reinterpret_cast<const_pointer>(&tmp);
+            _data.insert(_data.end(), byte_data, byte_data + sizeof(tmp));
             return *this;
         }
 
@@ -106,7 +181,8 @@ namespace acul
         {
             if (_pos + sizeof(T) <= _data.size())
             {
-                val = *reinterpret_cast<const T *>(&_data[_pos]);
+                memcpy(&val, &_data[_pos], sizeof(T));
+                val = detail::from_little_endian_scalar(val);
                 _pos += sizeof(T);
             }
             else
@@ -158,6 +234,13 @@ namespace acul
         {
             if (data == nullptr) throw runtime_error("Null pointer passed to write");
 
+#ifdef ACUL_WORDS_BIGENDIAN
+            if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
+            {
+                for (size_type i = 0; i < size; ++i) write(data[i]);
+                return *this;
+            }
+#endif
             _data.insert(_data.end(), reinterpret_cast<const_pointer>(data),
                          reinterpret_cast<const_pointer>(data) + size * sizeof(T));
             return *this;
@@ -181,6 +264,12 @@ namespace acul
             memcpy(data, &_data[_pos], byte_size);
             _pos += byte_size;
 
+#ifdef ACUL_WORDS_BIGENDIAN
+            if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
+            {
+                for (size_type i = 0; i < size; ++i) data[i] = detail::from_little_endian_scalar(data[i]);
+            }
+#endif
             return *this;
         }
 

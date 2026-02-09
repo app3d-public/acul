@@ -32,7 +32,7 @@ namespace acul
 
     extern HANDLE exception_hprocess;
     APPLIB_API HANDLE get_exception_process();
-    void destroy_exception_context(HANDLE hProcess = NULL);
+    APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
 #else
     using except_addr = void *;
     struct except_info

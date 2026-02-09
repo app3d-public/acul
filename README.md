@@ -23,7 +23,6 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 - Exception system with captured stack trace on throw.
 
 > [!NOTE]
-> On Microsoft Windows, you must call `destroy_exception_context()` at program shutdown for compatibility with remote memory access.  
 > On Linux, remote stack capture requires enabling `ptrace` API to allow tracing the process.
 
 ### Hash Maps / Sets

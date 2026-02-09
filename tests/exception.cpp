@@ -118,9 +118,6 @@ void test_stacktrace()
         write_stack_trace(stream, err.except_info);
         assert(!stream.str().empty());
     }
-#ifdef _WIN32
-    destroy_exception_context();
-#endif
 }
 
 void test_exception()

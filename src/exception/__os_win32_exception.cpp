@@ -60,6 +60,7 @@ namespace acul
         HANDLE current_process = hProcess ? hProcess : exception_hprocess;
         if (!current_process) return;
         SymCleanup(current_process);
+        if (!hProcess || hProcess == exception_hprocess) exception_hprocess = nullptr;
     }
 
     APPLIB_API void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)

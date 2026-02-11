@@ -8,6 +8,7 @@ set(TEST_ENV "TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR}")
 set(TEST_SOURCES "")
 
 add_test_files(acul flags flags.cpp)
+add_test_files(acul isa isa.cpp)
 add_test_files(acul event event.cpp)
 add_test_files(acul exception exception.cpp)
 add_test_files(acul memory memory.cpp)

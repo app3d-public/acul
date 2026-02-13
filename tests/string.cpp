@@ -164,11 +164,11 @@ void test_utils()
     ok = acul::stoull(str2, uvalue);
     assert(ok && uvalue == 123456789ull);
 
-    // stoull (ptr)
+    // stoull_hex (ptr)
     const char *strP = "0xDEADBEEF";
     void *addr = nullptr;
 
-    ok = acul::stoull(strP, addr);
+    ok = acul::stoull_hex(strP, addr);
     assert(ok);
     assert(reinterpret_cast<u64>(addr) == 0xDEADBEEFull);
 

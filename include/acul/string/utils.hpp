@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "../detail/isa/dispatch.hpp"
 #include "../fwd/string_view_pool.hpp"
 #include "../vector.hpp"
@@ -149,12 +150,26 @@ namespace acul
     APPLIB_API bool stoull(const char *&str, unsigned long long &value);
 
     /**
-     * @brief Deserialize the C-style string to the pointer in hex format
+     * @brief Deserialize the C-style string to unsigned long long in hex format
      * @param str Source string
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stoull(const char *&str, void *&value);
+    APPLIB_API bool stoull_hex(const char *&str, unsigned long long &value);
+
+    /**
+     * @brief Deserialize the C-style string to pointer in hex format (wrapper over stoull_hex)
+     * @param str Source string
+     * @param value Destination value
+     * @return True if successful. Otherwise false
+     **/
+    inline bool stoull_hex(const char *&str, void *&value)
+    {
+        unsigned long long raw = 0;
+        if (!stoull_hex(str, raw)) return false;
+        value = reinterpret_cast<void *>(static_cast<std::uintptr_t>(raw));
+        return true;
+    }
 
     /**
      * @brief Deserialize the C-style string to the float32

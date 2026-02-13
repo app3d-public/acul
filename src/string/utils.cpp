@@ -272,16 +272,16 @@ namespace acul
         return true;
     }
 
-    bool stoull(const char *&str, void *&value)
+    bool stoull_hex(const char *&str, unsigned long long &value)
     {
         const char *ptr = str;
-        unsigned long long result = 0;
 
         while (isspace(*ptr)) ++ptr;
 
-        if (!(ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X'))) return false;
-        ptr += 2;
+        if (ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X')) ptr += 2;
         if (!isxdigit(*ptr)) return false;
+
+        unsigned long long result = 0;
 
         while (isxdigit(*ptr))
         {
@@ -300,7 +300,7 @@ namespace acul
             ++ptr;
         }
 
-        value = reinterpret_cast<void *>(result);
+        value = result;
         str = ptr;
         return true;
     }

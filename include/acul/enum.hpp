@@ -56,7 +56,7 @@ namespace acul
         template <typename T>
         constexpr std::enable_if_t<has_flag_bitmask<T>::value, flags> operator|(flags const &rhs) const noexcept
         {
-            return flags(_mask & rhs._mask);
+            return flags(_mask | rhs._mask);
         }
 
         constexpr flags operator^(flags const &rhs) const noexcept { return flags(_mask ^ rhs._mask); }

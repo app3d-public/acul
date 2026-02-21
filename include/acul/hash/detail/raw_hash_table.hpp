@@ -122,8 +122,8 @@ namespace acul::detail
         raw_hashtable(raw_hashtable &&rhs) noexcept
             : _values(rhs._values),
               _next(rhs._next),
-              _num_buckets(rhs._num_buckets),
               _mask(rhs._mask),
+              _num_buckets(rhs._num_buckets),
               _num_filled(rhs._num_filled),
               _last(rhs._last)
         {

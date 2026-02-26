@@ -247,7 +247,7 @@ namespace acul
         }
 
         template <typename... Args>
-        void emplace_back(Args &&...args)
+        reference emplace_back(Args &&...args)
         {
             pointer node = node_allocator::allocate(1);
             node_allocator::construct(node, std::forward<Args>(args)...);
@@ -258,6 +258,7 @@ namespace acul
             else
                 _head = node;
             _last = node;
+            return node->data;
         }
 
         void resize(size_type count)

@@ -20,9 +20,13 @@ void test_disposal_queue()
     shared_ptr<int> i0 = make_shared<int>(42);
     queue.push(make_unique<shared_mem_cache<int>>(i0));
 
-    assert(!queue.empty());
+    bool b2 = false;
+    queue.emplace([&]() { b2 = true; });
+
+    assert(!queue.is_main_queue_empty());
     queue.flush();
 
     assert(b0);
     assert(b1);
+    assert(b2);
 }

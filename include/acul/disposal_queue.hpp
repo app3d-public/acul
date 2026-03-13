@@ -5,6 +5,7 @@
 #include "functional/unique_function.hpp"
 #include "list.hpp"
 #include "memory/smart_ptr.hpp"
+#include "vector.hpp"
 
 namespace acul
 {
@@ -38,13 +39,22 @@ namespace acul
             unique_function<void()> on_wait = nullptr;
         };
 
-        void push(mem_data &&data) { _queue.push(std::move(data)); }
+        inline void push(mem_data &&data) { _main_queue.push_back(std::move(data)); }
+
+        inline void push_mt(mem_data &&data) { _mt_queue.push(std::move(data)); }
 
         void push(unique_ptr<mem_cache> cache)
         {
             mem_data d;
             d.cache_list.push_back(std::move(cache));
-            _queue.push(std::move(d));
+            push(std::move(d));
+        }
+
+        void push_mt(unique_ptr<mem_cache> cache)
+        {
+            mem_data d;
+            d.cache_list.push_back(std::move(cache));
+            push_mt(std::move(d));
         }
 
         template <class F>
@@ -52,7 +62,15 @@ namespace acul
         {
             mem_data d;
             d.cache_list.push_back(make_unique<mem_cache>(std::forward<F>(f)));
-            _queue.push(std::move(d));
+            push(std::move(d));
+        }
+
+        template <class F>
+        void emplace_mt(F &&f)
+        {
+            mem_data d;
+            d.cache_list.push_back(make_unique<mem_cache>(std::forward<F>(f)));
+            push_mt(std::move(d));
         }
 
         template <class F>
@@ -61,14 +79,35 @@ namespace acul
             mem_data d;
             d.cache_list.push_back(std::move(cache));
             d.on_wait = std::forward<F>(func);
-            _queue.push(std::move(d));
+            push(std::move(d));
         }
 
-        void flush();
+        template <class F>
+        void push_mt(unique_ptr<mem_cache> cache, F &&func)
+        {
+            mem_data d;
+            d.cache_list.push_back(std::move(cache));
+            d.on_wait = std::forward<F>(func);
+            push_mt(std::move(d));
+        }
 
-        bool empty() const { return _queue.empty(); }
+        void flush_main_queue();
 
+        void flush_mt_queue();
+
+        void flush()
+        {
+            if (!_main_queue.empty()) flush_main_queue();
+            if (!_mt_queue.empty()) flush_mt_queue();
+        }
+
+        bool is_main_queue_empty() const { return _main_queue.empty(); }
+        bool is_mt_queue_empty() const { return _mt_queue.empty(); }
+        
     private:
-        oneapi::tbb::concurrent_queue<mem_data> _queue;
+        void process(mem_data &data);
+
+        vector<mem_data> _main_queue;
+        oneapi::tbb::concurrent_queue<mem_data> _mt_queue;
     };
 } // namespace acul

@@ -6,19 +6,39 @@
 
 namespace acul::fs
 {
+    size_t read_binary_fd(const string &filename, FILE *&fd)
+    {
+        fd = fopen(filename.c_str(), "rb");
+        if (!fd) return 0;
+        if (fs::fseek(fd, 0, SEEK_END) != 0)
+        {
+            fclose(fd);
+            fd = nullptr;
+            return 0;
+        }
+        const i64 file_size = fs::ftell(fd);
+        if (file_size < 0 || fs::fseek(fd, 0, SEEK_SET) != 0)
+        {
+            fclose(fd);
+            fd = nullptr;
+            return 0;
+        }
+        return static_cast<size_t>(file_size);
+    }
+
     bool read_binary(const string &filename, vector<char> &buffer)
     {
-        FILE *file = fopen(filename.c_str(), "rb");
-        if (!file) return false;
-
-        fseek(file, 0, SEEK_END);
-        size_t file_size = ftell(file);
-        fseek(file, 0, SEEK_SET);
+        FILE *fd;
+        size_t file_size = read_binary_fd(filename, fd);
+        if (file_size == 0) return false;
 
         buffer.resize(file_size);
-        fread(buffer.data(), 1, file_size, file);
-        fclose(file);
-
+        if (fread(buffer.data(), 1, file_size, fd) != file_size)
+        {
+            fclose(fd);
+            return false;
+        }
+        fclose(fd);
         return true;
     }
 

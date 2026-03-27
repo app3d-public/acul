@@ -1,6 +1,8 @@
 #ifndef APP_ACUL_FILE_H
 #define APP_ACUL_FILE_H
 
+#include <cassert>
+#include <cstdio>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "../../api.hpp"
@@ -38,6 +40,54 @@ namespace acul::fs
 #else
         struct stat buffer;
         return (stat(path, &buffer) == 0);
+#endif
+    }
+
+    /**
+     * @brief Opens a file in binary read mode and returns its size.
+     * @param filename Path to the file to open.
+     * @param fd FILE pointer to store the opened file descriptor.
+     * @return Size of the file in bytes.
+     */
+    APPLIB_API size_t read_binary_fd(const string &filename, FILE *&fd);
+
+    /**
+     * @brief Seeks to a specific offset in a file.
+     *
+     * This function is a thin wrapper around the platform-specific fseek
+     * functions. It takes a file descriptor, an offset in bytes, and an
+     * origin (one of SEEK_SET, SEEK_CUR, or SEEK_END) and moves the file
+     * pointer accordingly.
+     *
+     * @param fd Valid file descriptor.
+     * @param offset Offset in bytes to move the file pointer to.
+     * @param origin One of SEEK_SET, SEEK_CUR, or SEEK_END.
+     * @return 0 on success, -1 on error.
+     */
+    inline int fseek(FILE *fd, u64 offset, int origin)
+    {
+        assert(fd && "Invalid file descriptor");
+#ifdef _WIN32
+        return _fseeki64(fd, static_cast<long long>(offset), origin);
+#else
+        return fseeko(fd, static_cast<off_t>(offset), origin);
+#endif
+    }
+
+    /**
+     * @brief Retrieves the current position of the file pointer.
+     *
+     * @param fd Valid file descriptor.
+     * @return The current offset of the file pointer in bytes.
+     */
+
+    inline i64 ftell(FILE *fd)
+    {
+        assert(fd && "Invalid file descriptor");
+#ifdef _WIN32
+        return static_cast<i64>(_ftelli64(fd));
+#else
+        return static_cast<i64>(ftello(fd));
 #endif
     }
 

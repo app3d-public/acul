@@ -11,6 +11,13 @@
 
 namespace acul::fs
 {
+    bool is_directory(const char *path) noexcept
+    {
+        if (!path || !*path) return false;
+        struct stat st;
+        return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+    }
+
     op_result write_by_block(const string &filename, const char *buffer, size_t block_size)
     {
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);

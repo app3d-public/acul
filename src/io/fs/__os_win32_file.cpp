@@ -1,9 +1,18 @@
 #include <acul/io/fs/file.hpp>
 #include <acul/log.hpp>
+#include <acul/string/utils.hpp>
 #include <cassert>
 
 namespace acul::fs
 {
+    bool is_directory(const char *path) noexcept
+    {
+        if (!path || !*path) return false;
+        u16string w_path = utf8_to_utf16(path);
+        DWORD file_attr = GetFileAttributesW((LPCWSTR)w_path.c_str());
+        return file_attr != INVALID_FILE_ATTRIBUTES && (file_attr & FILE_ATTRIBUTE_DIRECTORY);
+    }
+
     op_result write_by_block(const string &filename, const char *buffer, size_t block_size)
     {
         HANDLE file_handle =

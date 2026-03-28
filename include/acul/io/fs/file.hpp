@@ -43,6 +43,8 @@ namespace acul::fs
 #endif
     }
 
+    APPLIB_API bool is_directory(const char *path) noexcept;
+
     /**
      * @brief Opens a file in binary read mode and returns its size.
      * @param filename Path to the file to open.

@@ -502,8 +502,6 @@ The following dependencies are included as git submodules and must be checked ou
 <details>
 <summary>Iterate</summary>
 
-# Benchmarks — Iterate
-
 ## Iterate — uint64_t (1000)
 
 | Hashmap             | bw_gib_s | cps_avg  | cps_max  | cps_min  |

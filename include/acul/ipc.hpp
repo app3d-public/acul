@@ -22,8 +22,8 @@ namespace acul
         u64 addr = 0;
     };
 
-    static_assert(sizeof(crash_notify) == 24, "CrashNotify ABI size mismatch");
-    static_assert(offsetof(crash_notify, addr) == 16, "CrashNotify ABI layout mismatch");
+    static_assert(sizeof(crash_notify) == 24, "crash_notify ABI size mismatch");
+    static_assert(offsetof(crash_notify, addr) == 16, "crash_notify ABI layout mismatch");
 
     struct pipe
     {

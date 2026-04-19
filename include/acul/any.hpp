@@ -40,6 +40,13 @@ namespace acul
             return *this;
         }
 
+        template <typename T>
+        any &operator=(const T &t) noexcept
+        {
+            set(t);
+            return *this;
+        }
+
         ~any() noexcept { reset(); }
 
         bool has_value() const noexcept { return flags != 0; }

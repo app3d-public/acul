@@ -214,6 +214,13 @@ namespace acul
                 return *this;
             }
 
+            if (self_alloc == ALLOC_HEAP && _lalloc.cap >= required_capacity)
+            {
+                memcpy(_lalloc.ptr, other.c_str(), required_capacity * sizeof(value_type));
+                _lalloc.size.data = other_size;
+                return *this;
+            }
+
             if (!grow(required_capacity)) return *this;
 
             memcpy(_lalloc.ptr, other.c_str(), required_capacity * sizeof(value_type));

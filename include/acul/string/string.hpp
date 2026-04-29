@@ -767,6 +767,13 @@ namespace acul
 
         void push_back(value_type c) noexcept { *this += c; }
 
+        void pop_back() noexcept
+        {
+            size_type sz = size();
+            if (sz == 0) return;
+            resize(sz - 1);
+        }
+
         void resize(size_type new_size, value_type fill = '\0') noexcept
         {
             size_type old_size = size();

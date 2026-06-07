@@ -1,6 +1,5 @@
 #pragma once
 
-#include <oneapi/tbb/concurrent_queue.h>
 #include "api.hpp"
 #include "functional/unique_function.hpp"
 #include "list.hpp"
@@ -39,9 +38,17 @@ namespace acul
             unique_function<void()> on_wait = nullptr;
         };
 
-        inline void push(mem_data &&data) { _main_queue.push_back(std::move(data)); }
+        ~disposal_queue();
 
-        inline void push_mt(mem_data &&data) { _mt_queue.push(std::move(data)); }
+        void enable_mt();
+
+        inline void push(mem_data &&data)
+        {
+            if (_guard) process(data);
+            else _main_queue.push_back(std::move(data));
+        }
+
+        void push_mt(mem_data &&data);
 
         void push(unique_ptr<mem_cache> cache)
         {
@@ -95,19 +102,24 @@ namespace acul
 
         void flush_mt_queue();
 
-        void flush()
+        void discard();
+
+        inline void flush()
         {
             if (!_main_queue.empty()) flush_main_queue();
-            if (!_mt_queue.empty()) flush_mt_queue();
+            if (!is_mt_queue_empty()) flush_mt_queue();
         }
 
         bool is_main_queue_empty() const { return _main_queue.empty(); }
-        bool is_mt_queue_empty() const { return _mt_queue.empty(); }
+        bool is_mt_queue_empty() const;
         
     private:
+        struct mt_disposal_queue;
+
         void process(mem_data &data);
 
         vector<mem_data> _main_queue;
-        oneapi::tbb::concurrent_queue<mem_data> _mt_queue;
+        bool _guard = false;
+        mt_disposal_queue *_mt_queue = nullptr;
     };
 } // namespace acul

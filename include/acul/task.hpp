@@ -12,7 +12,6 @@
 #ifdef _WIN32
     #include <processthreadsapi.h>
 #endif
-#include "api.hpp"
 
 namespace acul::task
 {
@@ -115,7 +114,7 @@ namespace acul::task
      *
      * This class provides mechanisms to add tasks and await their completion.
      */
-    class APPLIB_API thread_dispatch
+    class thread_dispatch
     {
     public:
         thread_dispatch() : _ctx(oneapi::tbb::task_group_context::isolated), _group(_ctx) {}
@@ -200,17 +199,17 @@ namespace acul::task
         std::condition_variable _cv;
         vector<service_base *> _services;
 
-        APPLIB_API void worker_thread();
+        ACUL_EXPORT void worker_thread();
 
         friend class service_base;
     };
 
     inline void service_base::notify() { _sd->_cv.notify_one(); }
 
-    class APPLIB_API shedule_service final : public service_base
+    class shedule_service final : public service_base
     {
     public:
-        virtual std::chrono::steady_clock::time_point dispatch() override;
+        ACUL_EXPORT virtual std::chrono::steady_clock::time_point dispatch() override;
 
         template <typename F>
         void add_task(F &&task, std::chrono::steady_clock::time_point time)

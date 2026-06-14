@@ -99,17 +99,10 @@ namespace acul
             response *res;
         };
 
-        class APPLIB_API cache
+        class cache
         {
         public:
-            cache(const string &path, task::thread_dispatch &dispatch)
-                : _path(path),
-                  _dispatch(dispatch),
-                  _write_node(alloc<oneapi::tbb::flow::function_node<flow_output>>(
-                      _graph, tbb::flow::unlimited,
-                      [this](const flow_output &output) { this->write_to_entrypoint(output.req, *output.res); }))
-            {
-            }
+            ACUL_EXPORT cache(const string &path, task::thread_dispatch &dispatch);
 
             ~cache() { release(_write_node); }
 
@@ -119,9 +112,8 @@ namespace acul
                 return _path / name;
             }
 
-            entrypoint *register_entrypoint(entrygroup *group);
-
-            op_result deregister_entrypoint(entrypoint *entrypoint, entrygroup *group);
+            ACUL_EXPORT entrypoint *register_entrypoint(entrygroup *group);
+            ACUL_EXPORT op_result deregister_entrypoint(entrypoint *entrypoint, entrygroup *group);
 
             void add_request(const request &request, response *response)
             {
@@ -138,11 +130,12 @@ namespace acul
                 _cv.wait(read_lock, [&]() { return _op_count.load() == 0; });
             }
 
-            op_result read(entrypoint *entrypoint, entrygroup *group, const index_entry &entry, bin_stream &dst);
+            ACUL_EXPORT op_result read(entrypoint *entrypoint, entrygroup *group, const index_entry &entry,
+                                       bin_stream &dst);
 
             // Filter index blocks and replace them in the file
-            op_result filter_index_entries(entrypoint *entrypoint, entrygroup *group,
-                                           vector<index_entry *> &index_entries);
+            ACUL_EXPORT op_result filter_index_entries(entrypoint *entrypoint, entrygroup *group,
+                                                       vector<index_entry *> &index_entries);
 
         private:
             acul::path _path;
@@ -155,9 +148,7 @@ namespace acul
 
             op_result write_to_entrypoint(const request &request, response &response, index_entry &index,
                                           const char *buffer, size_t size);
-
             void write_to_entrypoint(const request &request, response &response);
-
             std::fstream *get_file_stream(entrypoint *entrypoint, entrygroup *group);
         };
     } // namespace fs::jatc

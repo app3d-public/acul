@@ -82,7 +82,7 @@ namespace acul
     } // namespace detail
 
 #if defined(__x86_64__) || defined(_M_X64)
-    APPLIB_API bool is_x86_64_v3_supported() noexcept
+    ACUL_EXPORT bool is_x86_64_v3_supported() noexcept
     {
     #if defined(__GNUC__) || defined(__clang__)
         unsigned int eax = 0;

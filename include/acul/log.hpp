@@ -88,14 +88,14 @@ namespace acul::log
         void handle(level level, const char *message, stringstream &ss) const override { ss << colors::reset; }
     };
 
-    class APPLIB_API logger_base
+    class logger_base
     {
     public:
         logger_base(const string &name) : _name(name), _tokens(make_shared<token_handler_list>()) {}
 
         virtual ~logger_base() = default;
 
-        void set_pattern(const string &pattern);
+        ACUL_EXPORT void set_pattern(const string &pattern);
 
         string name() const { return _name; }
 
@@ -113,7 +113,7 @@ namespace acul::log
         shared_ptr<token_handler_list> _tokens;
     };
 
-    class APPLIB_API file_logger final : public logger_base
+    class file_logger final : public logger_base
     {
     public:
         file_logger(const string &name, const path &path, std::ios_base::openmode flags)
@@ -174,13 +174,13 @@ namespace acul::log
      * Provides functionality to add, get, and remove loggers. It also allows logging messages with
      * different log levels.
      */
-    class APPLIB_API log_service final : public task::service_base
+    class log_service final : public task::service_base
     {
     public:
         enum level level;
 
         inline log_service();
-        ~log_service();
+        ACUL_EXPORT ~log_service();
 
         /**
          * @brief Adds a logger with the specified name and file path.
@@ -220,10 +220,10 @@ namespace acul::log
             _loggers.erase(it);
         }
 
-        __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message, ...);
-        void vlog(logger_base *logger, enum level level, const char *message, va_list args);
+        ACUL_EXPORT __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message, ...);
+        ACUL_EXPORT void vlog(logger_base *logger, enum level level, const char *message, va_list args);
 
-        virtual std::chrono::steady_clock::time_point dispatch() override;
+        ACUL_EXPORT virtual std::chrono::steady_clock::time_point dispatch() override;
 
         virtual void await(bool force = false) override
         {
@@ -243,7 +243,7 @@ namespace acul::log
 
     namespace detail
     {
-        extern APPLIB_API struct log_ctx
+        extern ACUL_EXPORT struct log_ctx
         {
             log::log_service *log_service;
             logger_base *default_logger;
@@ -268,7 +268,7 @@ namespace acul::log
         return get_log_service()->get_logger(name);
     }
 
-    __attribute__((format(printf, 4, 5))) APPLIB_API void write(log_service *log_service, logger_base *logger,
+    __attribute__((format(printf, 4, 5))) ACUL_EXPORT void write(log_service *log_service, logger_base *logger,
                                                                 enum level level, const char *message, ...);
 
 } // namespace acul::log

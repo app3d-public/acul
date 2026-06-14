@@ -1,7 +1,7 @@
 #pragma once
 
+#include <acul/compile_attributes.h>
 #include <cstring>
-#include "api.hpp"
 #include "pair.hpp"
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
@@ -58,13 +58,13 @@
 #endif
 
 #ifdef ACUL_WORDS_BIGENDIAN
-    #define ACUL_IS_BIG_ENDIAN 1
-    #define ACUL_IS_LITTLE_ENDIAN 0
+    #define ACUL_IS_BIG_ENDIAN            1
+    #define ACUL_IS_LITTLE_ENDIAN         0
     #define ACUL_U32_IN_EXPECTED_ORDER(x) (ACUL_BSWAP_32(x))
     #define ACUL_U64_IN_EXPECTED_ORDER(x) (ACUL_BSWAP_64(x))
 #else
-    #define ACUL_IS_BIG_ENDIAN 0
-    #define ACUL_IS_LITTLE_ENDIAN 1
+    #define ACUL_IS_BIG_ENDIAN            0
+    #define ACUL_IS_LITTLE_ENDIAN         1
     #define ACUL_U32_IN_EXPECTED_ORDER(x) (x)
     #define ACUL_U64_IN_EXPECTED_ORDER(x) (x)
 #endif
@@ -108,11 +108,8 @@ namespace acul
     }
 
     ACUL_FORCEINLINE u32 load_u32u_le(const void *p) noexcept { return ACUL_U32_IN_EXPECTED_ORDER(load_u32u(p)); }
-
     ACUL_FORCEINLINE u64 load_u64u_le(const void *p) noexcept { return ACUL_U64_IN_EXPECTED_ORDER(load_u64u(p)); }
-
     ACUL_FORCEINLINE u64 ror64(u64 v, unsigned s) noexcept { return s ? ((v >> s) | (v << (64u - s))) : v; }
-
     ACUL_FORCEINLINE u64 shift_mix(u64 v) noexcept { return v ^ (v >> 47); }
 
     typedef pair<u64, u64> u128;

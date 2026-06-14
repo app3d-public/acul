@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
-#include "../../api.hpp"
 #include "../../op_result.hpp"
 #include "../../vector.hpp"
 
@@ -43,7 +42,7 @@ namespace acul::fs
 #endif
     }
 
-    APPLIB_API bool is_directory(const char *path) noexcept;
+    ACUL_EXPORT bool is_directory(const char *path) noexcept;
 
     /**
      * @brief Opens a file in binary read mode and returns its size.
@@ -51,7 +50,7 @@ namespace acul::fs
      * @param fd FILE pointer to store the opened file descriptor.
      * @return Size of the file in bytes.
      */
-    APPLIB_API size_t read_binary_fd(const string &filename, FILE *&fd);
+    ACUL_EXPORT size_t read_binary_fd(const string &filename, FILE *&fd);
 
     /**
      * @brief Seeks to a specific offset in a file.
@@ -99,7 +98,7 @@ namespace acul::fs
      * @param buffer A reference to a variable to store the data.
      * @return Success if the file was successfully read, error otherwise.
      **/
-    APPLIB_API bool read_binary(const string &filename, vector<char> &buffer);
+    ACUL_EXPORT bool read_binary(const string &filename, vector<char> &buffer);
 
     /**
      * @brief Reads a virtual file as binary buffer.
@@ -108,7 +107,7 @@ namespace acul::fs
      * @param buffer A reference to a variable to store the data.
      * @return Success if the file was successfully read, error otherwise.
      **/
-    APPLIB_API bool read_virtual(const string &filename, vector<char> &buffer);
+    ACUL_EXPORT bool read_virtual(const string &filename, vector<char> &buffer);
 
     /**
      * @brief Writes a binary buffer to a file
@@ -117,7 +116,7 @@ namespace acul::fs
      * @param size The size of the data.
      * @return Success if the file was successfully written, error otherwise.
      **/
-    APPLIB_API bool write_binary(const string &filename, const char *buffer, size_t size);
+    ACUL_EXPORT bool write_binary(const string &filename, const char *buffer, size_t size);
 
     /**
      * Reads a file in blocks and processes it using a callback function.
@@ -127,7 +126,7 @@ namespace acul::fs
      * op_state::error otherwise.
      */
 
-    APPLIB_API op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback);
+    ACUL_EXPORT op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback);
 
     /**
      * Writes data to a file in blocks.
@@ -138,7 +137,7 @@ namespace acul::fs
      * @return Returns op_result
      * otherwise.
      */
-    APPLIB_API op_result write_by_block(const acul::string &filename, const char *buffer, size_t block_size);
+    ACUL_EXPORT op_result write_by_block(const acul::string &filename, const char *buffer, size_t block_size);
 
     /**
      * @brief Copy a file from source path to destination path.
@@ -148,7 +147,7 @@ namespace acul::fs
      * @param overwrite If true, the destination file will be overwritten if it already exists.
      * @return Returns a status code indicating the success or failure of the copy operation.
      */
-    APPLIB_API op_result copy_file(const char *src, const char *dst, bool overwrite) noexcept;
+    ACUL_EXPORT op_result copy_file(const char *src, const char *dst, bool overwrite) noexcept;
 
     /**
      * @brief Creates a directory at the specified path.
@@ -156,11 +155,9 @@ namespace acul::fs
      * @param path The path of the directory to be created.
      * @return Returns a status code indicating the success or failure of the directory creation operation.
      */
-    APPLIB_API op_result create_directory(const char *path);
-
-    APPLIB_API op_result remove_file(const char *path);
-
-    APPLIB_API op_result list_files(const acul::string &base_path, vector<acul::string> &dst, bool recursive = false);
+    ACUL_EXPORT op_result create_directory(const char *path);
+    ACUL_EXPORT op_result remove_file(const char *path);
+    ACUL_EXPORT op_result list_files(const acul::string &base_path, vector<acul::string> &dst, bool recursive = false);
 
     /**
      * @brief Compresses the given data using zstd.
@@ -178,7 +175,7 @@ namespace acul::fs
      * provides maximum compression (at the cost of speed).
      * @return Returns the op result
      */
-    APPLIB_API op_result compress(const char *data, size_t size, vector<char> &compressed, int quality);
+    ACUL_EXPORT op_result compress(const char *data, size_t size, vector<char> &compressed, int quality);
 
     /**
      * @brief Decompresses the given data using zstd.
@@ -192,7 +189,7 @@ namespace acul::fs
      * vector.
      * @return Returns the op result
      */
-    APPLIB_API op_result decompress(const char *data, size_t size, vector<char> &decompressed);
+    ACUL_EXPORT op_result decompress(const char *data, size_t size, vector<char> &decompressed);
 
 } // namespace acul::fs
 

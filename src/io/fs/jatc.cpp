@@ -53,6 +53,15 @@ namespace acul::fs::jatc
         return make_op_success();
     }
 
+    cache::cache(const string &path, task::thread_dispatch &dispatch)
+        : _path(path),
+          _dispatch(dispatch),
+          _write_node(alloc<oneapi::tbb::flow::function_node<flow_output>>(
+              _graph, tbb::flow::unlimited,
+              [this](const flow_output &output) { this->write_to_entrypoint(output.req, *output.res); }))
+    {
+    }
+
     entrypoint *cache::register_entrypoint(entrygroup *group)
     {
         auto entrypoint = alloc<jatc::entrypoint>();

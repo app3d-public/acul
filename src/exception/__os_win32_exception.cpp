@@ -63,7 +63,7 @@ namespace acul
         if (!hProcess || hProcess == exception_hprocess) exception_hprocess = nullptr;
     }
 
-    APPLIB_API void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)
+    ACUL_EXPORT void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)
     {
         stream << format("Exception code: 0x%llx\n", record.ExceptionCode);
         stream << format("Exception address: 0x%llx\n", record.ExceptionAddress);
@@ -77,7 +77,7 @@ namespace acul
         }
     }
 
-    APPLIB_API void write_frame_registers(stringstream &stream, const CONTEXT &context)
+    ACUL_EXPORT void write_frame_registers(stringstream &stream, const CONTEXT &context)
     {
         stream << "Frame registers:\n";
         stream << format("\tRAX: 0x%llx\n", context.Rax);
@@ -294,7 +294,7 @@ namespace acul
         return hModule;
     }
 
-    APPLIB_API void write_stack_trace(stringstream &stream, const except_info &except_info)
+    ACUL_EXPORT void write_stack_trace(stringstream &stream, const except_info &except_info)
     {
         hmodule_symbol_map hmodule_symbol_map;
 
@@ -338,7 +338,7 @@ namespace acul
         }
     }
 
-    APPLIB_API bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exception_record,
+    ACUL_EXPORT bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exception_record,
                                      CONTEXT &context, vector<char> &buffer)
     {
         HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,

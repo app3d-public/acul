@@ -1,8 +1,8 @@
 #pragma once
 
+#include <acul/compile_attributes.h>
 #include <cstdint>
 #include <type_traits>
-#include "../../api.hpp"
 
 namespace acul::detail
 {

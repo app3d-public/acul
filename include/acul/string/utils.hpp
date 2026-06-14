@@ -19,11 +19,11 @@ namespace acul
 
     /// @brief Convert string in UTF-8 encoding to string in UTF-16 encoding
     /// @param src String in UTF-8 encoding
-    APPLIB_API u16string utf8_to_utf16(const string &src);
+    ACUL_EXPORT u16string utf8_to_utf16(const string &src);
 
     /// @brief Convert string in UTF-16 encoding to string in UTF-8 encoding
     /// @param src String in UTF-16 encoding
-    APPLIB_API string utf16_to_utf8(const u16string &src);
+    ACUL_EXPORT string utf16_to_utf8(const u16string &src);
 
     /**
      * @brief Formats a string using a format string and arguments.
@@ -31,9 +31,9 @@ namespace acul
      * @param args The arguments to format the string.
      * @return The formatted string.
      */
-    APPLIB_API string format(const char *format, ...) noexcept;
+    ACUL_EXPORT string format(const char *format, ...) noexcept;
 
-    APPLIB_API string format_va_list(const char *format, va_list args) noexcept;
+    ACUL_EXPORT string format_va_list(const char *format, va_list args) noexcept;
 
     template <typename T>
     constexpr size_t num_to_strbuf_size()
@@ -116,7 +116,7 @@ namespace acul
      * @param precision Precision
      * @return The number of characters written
      **/
-    APPLIB_API int to_string(f32 value, char *buffer, size_t buffer_size, int precision);
+    ACUL_EXPORT int to_string(f32 value, char *buffer, size_t buffer_size, int precision);
 
     template <typename T>
     inline auto to_string(T value) -> std::enable_if_t<std::is_integral_v<T>, acul::string>
@@ -139,7 +139,7 @@ namespace acul
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stoi(const char *&str, int &value);
+    ACUL_EXPORT bool stoi(const char *&str, int &value);
 
     /**
      * @brief Deserialize the C-style string to the unsigned long long
@@ -147,7 +147,7 @@ namespace acul
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stoull(const char *&str, unsigned long long &value);
+    ACUL_EXPORT bool stoull(const char *&str, unsigned long long &value);
 
     /**
      * @brief Deserialize the C-style string to unsigned long long in hex format
@@ -155,7 +155,7 @@ namespace acul
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stoull_hex(const char *&str, unsigned long long &value);
+    ACUL_EXPORT bool stoull_hex(const char *&str, unsigned long long &value);
 
     /**
      * @brief Deserialize the C-style string to pointer in hex format (wrapper over stoull_hex)
@@ -177,21 +177,21 @@ namespace acul
      * @param value Destination value
      * @return True if successful. Otherwise false
      **/
-    APPLIB_API bool stof(const char *&str, f32 &value);
+    ACUL_EXPORT bool stof(const char *&str, f32 &value);
 
     /// Removes control whitespace characters (\f, \n, \r, \t, \v) from the input string,
     /// trims leading and trailing spaces, and optionally truncates the result to `max` length.
     /// Internal spaces (' ') are preserved.
     /// Example:
     ///   strip_controls("   hello  \t\r world \n\t") -> "hello   world"
-    APPLIB_API string strip_controls(const string &input_str, size_t max = std::numeric_limits<size_t>::max());
+    ACUL_EXPORT string strip_controls(const string &input_str, size_t max = std::numeric_limits<size_t>::max());
 
     /// Reads the next word (sequence of non-space characters) from a C-string,
     /// skipping leading spaces. Advances the input pointer to the end of the word.
     /// Example:
     ///   const char* s = "   hello world";
     ///   read_word(s) -> "hello", s points to " world"
-    APPLIB_API string read_word(const char *&str);
+    ACUL_EXPORT string read_word(const char *&str);
 
     /// Removes leading and trailing whitespace characters from the given string-like object.
     // Internal whitespace is preserved. Accepts any type `S` that provides `.size()` and `.substr()`.

@@ -37,7 +37,6 @@ namespace acul
 #endif
     };
 
-    APPLIB_API bool create_pipe(pipe &dst, const char *name, const char *env, size_t size);
-
-    APPLIB_API void close_pipe(pipe& src, const char* env);
+    ACUL_EXPORT bool create_pipe(pipe &dst, const char *name, const char *env, size_t size);
+    ACUL_EXPORT void close_pipe(pipe &src, const char *env);
 } // namespace acul

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <acul/compile_attributes.h>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <iterator>
 #include <optional>
-#include "../../api.hpp"
 #include "../../exception/exception.hpp"
 #include "../../memory/alloc.hpp"
 #include "../../pair.hpp"

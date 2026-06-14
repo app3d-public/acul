@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../../api.hpp"
+#include <acul/symbol_export.h>
 #include "../../hash/detail/crc32_isa_fn.hpp"
 #include "../../string/detail/string_isa_fn.hpp"
 #include "flags.hpp"
 
 namespace acul::detail
 {
-    extern APPLIB_API struct isa_dispatch
+    extern ACUL_EXPORT struct isa_dispatch
     {
         isa_flags flags;
         PFN_crc32 crc32;

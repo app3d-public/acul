@@ -1,6 +1,6 @@
 #pragma once
 
-#include "api.hpp"
+#include <oneapi/tbb/concurrent_queue.h>
 #include "functional/unique_function.hpp"
 #include "list.hpp"
 #include "memory/smart_ptr.hpp"
@@ -8,6 +8,11 @@
 
 namespace acul
 {
+    namespace detail
+    {
+        struct mt_disposal_queue;
+    } // namespace detail
+
     struct mem_cache
     {
         unique_function<void()> on_free = nullptr;
@@ -29,7 +34,7 @@ namespace acul
         explicit shared_mem_cache(shared_ptr<T> p) : ptr(std::move(p)) {}
     };
 
-    class APPLIB_API disposal_queue
+    class disposal_queue
     {
     public:
         struct mem_data
@@ -38,17 +43,22 @@ namespace acul
             unique_function<void()> on_wait = nullptr;
         };
 
-        ~disposal_queue();
+        ~disposal_queue()
+        {
+            flush();
+            if (_mt_queue) acul::release(_mt_queue);
+        }
 
-        void enable_mt();
-
+        inline void enable_mt()
+        {
+            if (!_mt_queue) _mt_queue = acul::alloc<detail::mt_disposal_queue>();
+        }
         inline void push(mem_data &&data)
         {
             if (_guard) process(data);
             else _main_queue.push_back(std::move(data));
         }
-
-        void push_mt(mem_data &&data);
+        inline void push_mt(mem_data &&data);
 
         void push(unique_ptr<mem_cache> cache)
         {
@@ -98,28 +108,40 @@ namespace acul
             push_mt(std::move(d));
         }
 
-        void flush_main_queue();
+        ACUL_EXPORT void flush_main_queue();
+        ACUL_EXPORT void flush_mt_queue();
+        ACUL_EXPORT void discard();
 
-        void flush_mt_queue();
-
-        void discard();
-
-        inline void flush()
+        ACUL_FORCEINLINE void flush()
         {
             if (!_main_queue.empty()) flush_main_queue();
             if (!is_mt_queue_empty()) flush_mt_queue();
         }
 
         bool is_main_queue_empty() const { return _main_queue.empty(); }
-        bool is_mt_queue_empty() const;
-        
-    private:
-        struct mt_disposal_queue;
+        inline bool is_mt_queue_empty() const;
+        bool is_empty() const { return is_main_queue_empty() && is_mt_queue_empty(); }
 
-        void process(mem_data &data);
+    private:
+        ACUL_EXPORT void process(mem_data &data);
 
         vector<mem_data> _main_queue;
         bool _guard = false;
-        mt_disposal_queue *_mt_queue = nullptr;
+        detail::mt_disposal_queue *_mt_queue = nullptr;
     };
+
+    namespace detail
+    {
+        struct mt_disposal_queue
+        {
+            oneapi::tbb::concurrent_queue<disposal_queue::mem_data> queue;
+        };
+    } // namespace detail
+
+    inline bool disposal_queue::is_mt_queue_empty() const { return !_mt_queue || _mt_queue->queue.empty(); }
+    inline void disposal_queue::push_mt(mem_data &&data)
+    {
+        assert(_mt_queue && "MT disposal queue is not enabled");
+        _mt_queue->queue.push(std::move(data));
+    }
 } // namespace acul

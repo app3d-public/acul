@@ -4,7 +4,7 @@
 
 namespace acul
 {
-    class APPLIB_API path
+    class path
     {
         enum
         {
@@ -27,7 +27,7 @@ namespace acul
 
         const string str() const { return build_path(); }
 
-        path operator/(const path &other) const;
+        ACUL_EXPORT path operator/(const path &other) const;
 
         operator string() const { return str(); }
 
@@ -121,9 +121,8 @@ namespace acul
 
         void begin_parse(const char *&start, const char *end);
         void parse_relative_part(const char *&start, const char *end);
-        void parse_path(const string &p);
         size_type build_scheme_part(string &result, char sep) const;
-
-        string build_path() const;
+        ACUL_EXPORT void parse_path(const string &p);
+        ACUL_EXPORT string build_path() const;
     };
 } // namespace acul

@@ -75,5 +75,5 @@ namespace acul::fs
         return (const char *)buffer;
     }
 
-    APPLIB_API path get_module_directory() noexcept;
+    ACUL_EXPORT path get_module_directory() noexcept;
 } // namespace acul::fs

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../pair.hpp"
-#include "../../api.hpp"
+#include <acul/compile_attributes.h>
 
 namespace acul::detail
 {

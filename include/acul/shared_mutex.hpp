@@ -2,9 +2,9 @@
 
 // Based by: https://github.com/Emanem/shared_mutex/tree/master
 
+#include <acul/symbol_export.h>
 #include <atomic>
 #include <thread>
-#include "../acul/api.hpp"
 #include "vector.hpp"
 
 #ifndef L1_CACHE_LINESIZE
@@ -13,7 +13,7 @@
 
 namespace acul
 {
-    class APPLIB_API shared_mutex
+    class shared_mutex
     {
         struct entry_lock
         {
@@ -28,13 +28,10 @@ namespace acul
     public:
         shared_mutex() : _el(std::thread::hardware_concurrency()) {}
 
-        void lock_shared();
-
-        void unlock_shared();
-
-        void lock();
-
-        void unlock();
+        ACUL_EXPORT void lock_shared();
+        ACUL_EXPORT void unlock_shared();
+        ACUL_EXPORT void lock();
+        ACUL_EXPORT void unlock();
     };
 
     class exclusive_lock

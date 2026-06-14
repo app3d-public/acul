@@ -1,7 +1,6 @@
 #pragma once
 
 #include <type_traits>
-#include "api.hpp"
 #include "bit.hpp"
 #include "list.hpp"
 #include "string/string.hpp"
@@ -72,7 +71,7 @@ namespace acul
      * random access. It's suitable for serializing and deserializing complex data structures
      * in binary format.
      */
-    class APPLIB_API bin_stream
+    class bin_stream
     {
     public:
         using value_type = char;

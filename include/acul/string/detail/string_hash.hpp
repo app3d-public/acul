@@ -1,5 +1,6 @@
 #pragma once
 
+#include <acul/symbol_export.h>
 #include "../../bit.hpp"
 
 #define ACUL_CITYHASH_K0 0xc3a5c85c97cb3127ULL
@@ -65,5 +66,5 @@ namespace acul::detail
         return ACUL_CITYHASH_K2;
     }
 
-    APPLIB_API u64 cityhash64_long(const char *s, size_t len);
+    ACUL_EXPORT u64 cityhash64_long(const char *s, size_t len);
 } // namespace acul::detail

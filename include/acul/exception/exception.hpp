@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../api.hpp"
+#include <acul/symbol_export.h>
 #include "../fwd/string.hpp"
 #include "../string/refstring.hpp"
+
 
 #ifdef _WIN32
     #include <windows.h>
@@ -31,8 +32,8 @@ namespace acul
     };
 
     extern HANDLE exception_hprocess;
-    APPLIB_API HANDLE get_exception_process();
-    APPLIB_API void destroy_exception_context(HANDLE hProcess = NULL);
+    ACUL_EXPORT HANDLE get_exception_process();
+    ACUL_EXPORT void destroy_exception_context(HANDLE hProcess = NULL);
 #else
     using except_addr = void *;
     struct except_info
@@ -44,9 +45,9 @@ namespace acul
     };
 #endif
 
-    APPLIB_API void capture_stack_trace(except_info &except_info);
+    ACUL_EXPORT void capture_stack_trace(except_info &except_info);
 
-    class APPLIB_API exception : public std::exception
+    class exception : public std::exception
     {
     public:
         struct except_info except_info;
@@ -75,10 +76,10 @@ namespace acul
         virtual const char *what() const noexcept = 0;
     };
 
-    class APPLIB_API runtime_error final : public exception
+    class runtime_error final : public exception
     {
     public:
-        runtime_error(const string &message) noexcept;
+        ACUL_EXPORT runtime_error(const string &message) noexcept;
         runtime_error(const char *message) noexcept : exception(), _message(message) {}
 
         const char *what() const noexcept override { return _message.c_str(); }
@@ -89,10 +90,10 @@ namespace acul
         refstring _message;
     };
 
-    class APPLIB_API bad_alloc final : public exception
+    class bad_alloc final : public exception
     {
     public:
-        bad_alloc(size_t size) noexcept;
+        ACUL_EXPORT bad_alloc(size_t size) noexcept;
 
         const char *what() const noexcept override { return _message.c_str(); }
 
@@ -102,10 +103,10 @@ namespace acul
         refstring _message;
     };
 
-    class APPLIB_API bad_cast final : public exception
+    class bad_cast final : public exception
     {
     public:
-        bad_cast(const string &message) noexcept;
+        ACUL_EXPORT bad_cast(const string &message) noexcept;
         bad_cast(const char *message) noexcept : exception(), _message(message) {}
 
         const char *what() const noexcept override { return _message.c_str(); }
@@ -116,10 +117,10 @@ namespace acul
         refstring _message;
     };
 
-    class APPLIB_API out_of_range final : public exception
+    class out_of_range final : public exception
     {
     public:
-        out_of_range(size_t max_range, size_t attempt) noexcept;
+        ACUL_EXPORT out_of_range(size_t max_range, size_t attempt) noexcept;
 
         const char *what() const noexcept override { return _message.c_str(); }
 

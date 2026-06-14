@@ -1,8 +1,8 @@
 #pragma once
 
+#include <acul/compile_attributes.h>
 #include <array>
 #include <cstddef>
-#include "api.hpp"
 
 namespace acul
 {

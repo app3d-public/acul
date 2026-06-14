@@ -16,6 +16,9 @@ endif()
 option(ACUL_INTL_ENABLE "Enable intl support" ON)
 option(ACUL_ZSTD_ENABLE "Enable zstd support" ON)
 
+create_symbol_export_file()
+create_compile_attributes_file()
+
 set(ACUL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_files(${PROJECT_NAME} ${ACUL_SRC_DIR})
@@ -35,9 +38,12 @@ endif()
 include("${ACUL_SRC_DIR}/isa.cmake")
 
 add_library(${PROJECT_NAME} SHARED ${ACUL_SRC})
-target_compile_definitions(${PROJECT_NAME} PRIVATE APPLIB_BUILD)
+target_include_directories(${PROJECT_NAME} PUBLIC ${ACUL_CONFIGURE_PATH})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    DEFINE_SYMBOL ACUL_BUILD
+    CXX_VISIBILITY_PRESET hidden
+)
 target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility-inlines-hidden)
 
 # TBB

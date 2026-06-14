@@ -1,4 +1,3 @@
-#include <acul/api.hpp>
 #include <acul/string/string_view_pool.hpp>
 
 namespace acul::detail::scalar

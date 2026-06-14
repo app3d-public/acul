@@ -1,20 +1,17 @@
 #ifndef APP_ABC_HPP
 #define APP_ABC_HPP
 
+#include <acul/symbol_export.h>
 #include <libintl.h>
-#include "../api.hpp"
 #include "../fwd/string.hpp"
+
 
 #define _(STRING) gettext(STRING)
 
-namespace acul
+namespace acul::locales
 {
-    namespace locales
-    {
-        APPLIB_API void setup_i18n(const string &locale);
-
-        APPLIB_API string get_user_language(const char **pLanguages, size_t count);
-    } // namespace locales
-} // namespace acul
+    ACUL_EXPORT void setup_i18n(const string &locale);
+    ACUL_EXPORT string get_user_language(const char **pLanguages, size_t count);
+} // namespace acul::locales
 
 #endif

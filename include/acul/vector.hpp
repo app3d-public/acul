@@ -1,6 +1,7 @@
 #ifndef APP_ACUL_STD_VECTOR_H
 #define APP_ACUL_STD_VECTOR_H
 
+#include <acul/compile_attributes.h>
 #include "exception/exception.hpp"
 #include "iterator.hpp"
 #include "memory/alloc.hpp"
@@ -36,10 +37,8 @@ namespace acul
             : _size(size), _capacity(size), _data(Allocator::allocate(size))
         {
             for (size_type i = 0; i < _size; ++i)
-                if constexpr (std::is_trivially_copyable_v<T>)
-                    _data[i] = value;
-                else
-                    Allocator::construct(_data + i, value);
+                if constexpr (std::is_trivially_copyable_v<T>) _data[i] = value;
+                else Allocator::construct(_data + i, value);
         }
 
         template <typename InputIt, std::enable_if_t<is_input_iterator<InputIt>::value, int> = 0>
@@ -56,10 +55,8 @@ namespace acul
             {
                 size_type i = 0;
                 for (ForwardIt it = first; it != last; ++it, ++i)
-                    if constexpr (std::is_trivially_constructible_v<value_type>)
-                        _data[i] = *it;
-                    else
-                        Allocator::construct(_data + i, *it);
+                    if constexpr (std::is_trivially_constructible_v<value_type>) _data[i] = *it;
+                    else Allocator::construct(_data + i, *it);
             }
         }
 
@@ -100,8 +97,7 @@ namespace acul
                 _data = new_data;
                 _capacity = ilist.size();
             }
-            else
-                std::copy(ilist.begin(), ilist.end(), _data);
+            else std::copy(ilist.begin(), ilist.end(), _data);
             _size = ilist.size();
             return *this;
         }
@@ -265,10 +261,8 @@ namespace acul
         inline void push_back(const_reference value) noexcept
         {
             if (_size == _capacity) reallocate();
-            if constexpr (std::is_trivially_copyable_v<value_type>)
-                _data[_size] = value;
-            else
-                Allocator::construct(_data + _size, value);
+            if constexpr (std::is_trivially_copyable_v<value_type>) _data[_size] = value;
+            else Allocator::construct(_data + _size, value);
             ++_size;
         }
 
@@ -276,10 +270,8 @@ namespace acul
         inline void push_back(U &&value)
         {
             if (_size == _capacity) reallocate();
-            if constexpr (std::is_trivially_move_assignable_v<value_type>)
-                _data[_size] = std::forward<U>(value);
-            else
-                Allocator::construct(_data + _size, std::forward<U>(value));
+            if constexpr (std::is_trivially_move_assignable_v<value_type>) _data[_size] = std::forward<U>(value);
+            else Allocator::construct(_data + _size, std::forward<U>(value));
             ++_size;
         }
 
@@ -347,8 +339,7 @@ namespace acul
                 _data = new_data;
                 _capacity = count;
             }
-            else
-                std::fill_n(_data, count, value);
+            else std::fill_n(_data, count, value);
             _size = count;
         }
 
@@ -477,10 +468,8 @@ namespace acul
             }
         }
 
-        if constexpr (std::is_trivially_copyable_v<T>)
-            _data[index] = value;
-        else
-            Allocator::construct(_data + index, value);
+        if constexpr (std::is_trivially_copyable_v<T>) _data[index] = value;
+        else Allocator::construct(_data + index, value);
         ++_size;
         return iterator(_data + index);
     }
@@ -504,10 +493,8 @@ namespace acul
             }
         }
 
-        if constexpr (std::is_trivially_move_constructible_v<value_type>)
-            _data[index] = std::move(value);
-        else
-            Allocator::construct(_data + index, std::move(value));
+        if constexpr (std::is_trivially_move_constructible_v<value_type>) _data[index] = std::move(value);
+        else Allocator::construct(_data + index, std::move(value));
         ++_size;
         return iterator(_data + index);
     }

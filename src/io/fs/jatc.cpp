@@ -1,6 +1,7 @@
 #include <acul/hash/utils.hpp>
 #include <acul/io/fs/file.hpp>
 #include <acul/io/fs/jatc.hpp>
+#include <cassert>
 
 // Default compression settings
 #ifndef JATC_MIN_COMPRESS
@@ -64,6 +65,7 @@ namespace acul::fs::jatc
 
     entrypoint *cache::register_entrypoint(entrygroup *group)
     {
+        assert(group);
         auto entrypoint = alloc<jatc::entrypoint>();
         entrypoint->id = id_gen()();
         entrypoint->op_count = 0;
@@ -73,6 +75,7 @@ namespace acul::fs::jatc
 
     op_result cache::deregister_entrypoint(entrypoint *entrypoint, entrygroup *group)
     {
+        assert(group);
         auto it = std::find(group->entrypoints.begin(), group->entrypoints.end(), entrypoint);
         if (it == group->entrypoints.end()) return make_op_error(ACUL_OP_OUT_OF_BOUNDS, JATC_CODE_ENTRYPOINT);
         group->entrypoints.erase(it);

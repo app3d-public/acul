@@ -1,6 +1,7 @@
 #include <acul/locales/locales.hpp>
 #include <acul/string/string.hpp>
 #include <clocale>
+#include <cstdlib>
 #ifdef _WIN32
     #include <winnls.h>
 #endif
@@ -16,6 +17,11 @@ namespace acul
             _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
             const auto localeId = LocaleNameToLCID(wlocale.c_str(), LOCALE_ALLOW_NEUTRAL_NAMES);
             SetThreadLocale(localeId);
+            // GNU gettext uses the C runtime/process environment rather than the Win32 thread locale.
+            // Explicitly select the configured catalog, even if the process was started with LC_ALL=C.
+            _putenv_s("LANGUAGE", locale.c_str());
+            _putenv_s("LC_ALL", locale.c_str());
+            _putenv_s("LC_MESSAGES", locale.c_str());
 #else
             setlocale(LC_MESSAGES, locale.c_str());
 #endif
@@ -24,16 +30,16 @@ namespace acul
         string get_user_language(const char **pLanguages, size_t count)
         {
             string shell_locale = setlocale(LC_MESSAGES, "");
-            size_t underscore_pos = shell_locale.find("_");
-            string short_locale;
-            if (underscore_pos != SIZE_MAX) short_locale = shell_locale.substr(0, underscore_pos);
+            size_t language_end = shell_locale.size();
+            for (const char *separator : {"_", ".", "-"})
+            {
+                const size_t position = shell_locale.find(separator);
+                if (position != SIZE_MAX && position < language_end) language_end = position;
+            }
+            const string short_locale = shell_locale.substr(0, language_end);
             for (size_t i = 0; i < count; ++i)
-                if (short_locale == pLanguages[i]) return shell_locale;
-#ifdef _WIN32
-            return "en_US";
-#else
-            return "en_US.UTF-8";
-#endif
+                if (short_locale == pLanguages[i]) return pLanguages[i];
+            return count > 0 ? pLanguages[0] : string{};
         }
     } // namespace locales
 } // namespace acul

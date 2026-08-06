@@ -46,10 +46,14 @@ namespace acul
     {
         size_t min_size = lhs_size < rhs_size ? lhs_size : rhs_size;
 #if defined(__GNUC__) || defined(__clang__)
-        return __builtin_memcmp(lhs, rhs, min_size);
+        const int result = __builtin_memcmp(lhs, rhs, min_size);
 #else
-        return memcmp(lhs, rhs, min_size);
+        const int result = memcmp(lhs, rhs, min_size);
 #endif
+        if (result != 0) return result;
+        if (lhs_size < rhs_size) return -1;
+        if (lhs_size > rhs_size) return 1;
+        return 0;
     }
 
     inline size_t find_last_of(const char *str, size_t len, char ch) noexcept

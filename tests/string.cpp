@@ -4,6 +4,7 @@
 #include <acul/string/string_view.hpp>
 #include <acul/string/string_view_pool.hpp>
 #include <acul/string/utils.hpp>
+#include <acul/set.hpp>
 #include <cassert>
 
 
@@ -21,6 +22,10 @@ void test_basic_string()
 
     copy = std::move(str);
     assert(copy == "hello world");
+
+    acul::set<acul::string> extensions{"VK_KHR_surface"};
+    assert(extensions.find("VK_KHR_surface") != extensions.end());
+    assert(extensions.find("VK_KHR_surface_maintenance1") == extensions.end());
 }
 
 void test_refstring()

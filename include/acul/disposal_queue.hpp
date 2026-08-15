@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <oneapi/tbb/concurrent_queue.h>
 #include "functional/unique_function.hpp"
 #include "list.hpp"
@@ -53,18 +54,21 @@ namespace acul
         {
             if (!_mt_queue) _mt_queue = acul::alloc<detail::mt_disposal_queue>();
         }
-        inline void push(mem_data &&data)
+        // Forced work is queued for the next flush wave instead of executing
+        // reentrantly when push is called from a queue callback.
+        inline void push(mem_data &&data, bool force = false)
         {
-            if (_guard) process(data);
-            else _main_queue.push_back(std::move(data));
+            const bool guarded = _guard < queue_count;
+            if (guarded && !force) process(data);
+            else _main_queues[guarded ? (_guard ^ 1u) : 0u].push_back(std::move(data));
         }
         inline void push_mt(mem_data &&data);
 
-        void push(unique_ptr<mem_cache> cache)
+        void push(unique_ptr<mem_cache> cache, bool force = false)
         {
             mem_data d;
             d.cache_list.push_back(std::move(cache));
-            push(std::move(d));
+            push(std::move(d), force);
         }
 
         void push_mt(unique_ptr<mem_cache> cache)
@@ -75,11 +79,11 @@ namespace acul
         }
 
         template <class F>
-        void emplace(F &&f)
+        void emplace(F &&f, bool force = false)
         {
             mem_data d;
             d.cache_list.push_back(make_unique<mem_cache>(std::forward<F>(f)));
-            push(std::move(d));
+            push(std::move(d), force);
         }
 
         template <class F>
@@ -91,12 +95,12 @@ namespace acul
         }
 
         template <class F>
-        void push(unique_ptr<mem_cache> cache, F &&func)
+        void push(unique_ptr<mem_cache> cache, F &&func, bool force = false)
         {
             mem_data d;
             d.cache_list.push_back(std::move(cache));
             d.on_wait = std::forward<F>(func);
-            push(std::move(d));
+            push(std::move(d), force);
         }
 
         template <class F>
@@ -114,19 +118,21 @@ namespace acul
 
         ACUL_FORCEINLINE void flush()
         {
-            if (!_main_queue.empty()) flush_main_queue();
+            if (!is_main_queue_empty()) flush_main_queue();
             if (!is_mt_queue_empty()) flush_mt_queue();
         }
 
-        bool is_main_queue_empty() const { return _main_queue.empty(); }
+        bool is_main_queue_empty() const { return _main_queues[0].empty() && _main_queues[1].empty(); }
         inline bool is_mt_queue_empty() const;
         bool is_empty() const { return is_main_queue_empty() && is_mt_queue_empty(); }
 
     private:
         ACUL_EXPORT void process(mem_data &data);
 
-        vector<mem_data> _main_queue;
-        bool _guard = false;
+        static constexpr size_t queue_count = 2u;
+        vector<mem_data> _main_queues[queue_count];
+        // queue_count means idle; 0/1 identifies the queue currently being processed.
+        size_t _guard = queue_count;
         detail::mt_disposal_queue *_mt_queue = nullptr;
     };
 

@@ -29,4 +29,29 @@ void test_disposal_queue()
     assert(b0);
     assert(b1);
     assert(b2);
+
+    // Regular commands remain reentrant, while forced commands are executed
+    // only after the callback that enqueued them has returned.
+    acul::vector<int> order;
+    queue.emplace([&]() {
+        order.push_back(1);
+        queue.emplace([&]() { order.push_back(2); });
+        queue.emplace(
+            [&]() {
+                order.push_back(4);
+                queue.emplace([&]() { order.push_back(6); }, true);
+            },
+            true);
+        order.push_back(3);
+    });
+    queue.emplace([&]() { order.push_back(5); });
+    queue.flush();
+
+    assert(order.size() == 6);
+    assert(order[0] == 1);
+    assert(order[1] == 2);
+    assert(order[2] == 3);
+    assert(order[3] == 5);
+    assert(order[4] == 4);
+    assert(order[5] == 6);
 }

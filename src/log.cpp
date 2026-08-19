@@ -89,11 +89,6 @@ namespace acul::log
 
     void logger_base::set_pattern(const string &pattern)
     {
-        static acul::hashmap<string, shared_ptr<token_handler_base>> token_handlers = {
-            {"ascii_time", make_shared<time_handler>()},  {"level_name", make_shared<level_name_handler>()},
-            {"thread", make_shared<thread_id_handler>()}, {"message", make_shared<message_handler>()},
-            {"color_auto", make_shared<color_handler>()}, {"color_off", make_shared<decolor_handler>()}};
-
         _tokens->clear();
 
         const char *p = pattern.data();
@@ -115,8 +110,12 @@ namespace acul::log
 
                 const char *tok_end = static_cast<const char *>(close_v);
                 string token = strip_controls(string(tok_begin, size_t(tok_end - tok_begin)));
-                auto it = token_handlers.find(token);
-                if (it != token_handlers.end()) _tokens->push_back(it->second);
+                if (token == "ascii_time") _tokens->push_back(make_shared<time_handler>());
+                else if (token == "level_name") _tokens->push_back(make_shared<level_name_handler>());
+                else if (token == "thread") _tokens->push_back(make_shared<thread_id_handler>());
+                else if (token == "message") _tokens->push_back(make_shared<message_handler>());
+                else if (token == "color_auto") _tokens->push_back(make_shared<color_handler>());
+                else if (token == "color_off") _tokens->push_back(make_shared<decolor_handler>());
                 p = tok_end + 1;
                 begin = p;
                 continue;
@@ -134,8 +133,16 @@ namespace acul::log
             pair<logger_base *, string> pair;
             if (_queue.try_pop(pair))
             {
-                pair.first->write(pair.second);
-                _count.fetch_sub(1, std::memory_order_relaxed);
+                try
+                {
+                    pair.first->write(pair.second);
+                }
+                catch (...)
+                {
+                    _count.fetch_sub(1, std::memory_order_release);
+                    throw;
+                }
+                _count.fetch_sub(1, std::memory_order_release);
             }
             else return std::chrono::steady_clock::time_point::max();
         }
@@ -143,25 +150,75 @@ namespace acul::log
 
     void log_service::log(logger_base *logger, enum level level, const char *message, ...)
     {
-        if (level > this->level) return;
+        if (!logger || !message || level > this->level) return;
         va_list args;
         va_start(args, message);
-        vlog(logger, level, message, args);
+        try
+        {
+            vlog(logger, level, message, args);
+        }
+        catch (...)
+        {
+            va_end(args);
+            throw;
+        }
         va_end(args);
     }
 
     void log_service::vlog(logger_base *logger, enum level level, const char *message, va_list args)
     {
-        if (level > this->level) return;
+        if (!logger || !message || level > this->level) return;
         stringstream ss;
         va_list copy;
         va_copy(copy, args);
-        logger->parse_tokens(level, message, ss);
-        _count.fetch_add(1, std::memory_order_relaxed);
-        string parsed = ss.str();
-        _queue.emplace(logger, acul::format_va_list(parsed.c_str(), copy));
+        string formatted;
+        try
+        {
+            logger->parse_tokens(level, message, ss);
+            string parsed = ss.str();
+            formatted = acul::format_va_list(parsed.c_str(), copy);
+        }
+        catch (...)
+        {
+            va_end(copy);
+            throw;
+        }
         va_end(copy);
+
+        _count.fetch_add(1, std::memory_order_relaxed);
+        try
+        {
+            _queue.emplace(logger, std::move(formatted));
+        }
+        catch (...)
+        {
+            _count.fetch_sub(1, std::memory_order_release);
+            throw;
+        }
         notify();
+    }
+
+    void log_service::await(bool force)
+    {
+        if (force)
+        {
+            pair<logger_base *, string> discarded;
+            while (_queue.try_pop(discarded)) _count.fetch_sub(1, std::memory_order_release);
+        }
+        while (_count.load(std::memory_order_acquire) > 0) std::this_thread::yield();
+    }
+
+    void log_service::remove_logger(const string &name)
+    {
+        auto it = _loggers.find(name);
+        if (it == _loggers.end()) return;
+
+        // Queued records keep a raw logger pointer, so the queue must no longer
+        // reference it before the logger is destroyed.
+        await();
+        if (detail::g_log_ctx.default_logger == it->second) detail::g_log_ctx.default_logger = nullptr;
+        acul::release(it->second);
+        _loggers.erase(it);
     }
 
     void write(log_service *log_service, logger_base *logger, enum level level, const char *message, ...)
@@ -169,14 +226,42 @@ namespace acul::log
         if (!log_service || !logger) return;
         va_list args;
         va_start(args, message);
-        log_service->vlog(logger, level, message, args);
+        try
+        {
+            log_service->vlog(logger, level, message, args);
+        }
+        catch (...)
+        {
+            va_end(args);
+            throw;
+        }
         va_end(args);
     }
 
     log_service::~log_service()
     {
-        for (auto &logger : _loggers) acul::release(logger.second);
+        // service_dispatch stops and joins its worker before releasing services.
+        // Flush anything that was queued just before shutdown while logger
+        // instances are still alive.
+        try
+        {
+            dispatch();
+        }
+        catch (...)
+        {
+            pair<logger_base *, string> discarded;
+            while (_queue.try_pop(discarded)) _count.fetch_sub(1, std::memory_order_relaxed);
+        }
+        for (auto &logger : _loggers)
+        {
+            if (detail::g_log_ctx.default_logger == logger.second) detail::g_log_ctx.default_logger = nullptr;
+            acul::release(logger.second);
+        }
         _loggers.clear();
-        detail::g_log_ctx.log_service = nullptr;
+        if (detail::g_log_ctx.log_service == this)
+        {
+            detail::g_log_ctx.default_logger = nullptr;
+            detail::g_log_ctx.log_service = nullptr;
+        }
     }
 } // namespace acul::log

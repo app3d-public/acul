@@ -15,16 +15,16 @@ namespace acul
 
     void disposal_queue::flush_main_queue()
     {
-        assert(_guard == queue_count && "Nested disposal queue flush is not supported");
+        assert(_guard == guard_count && "Nested disposal queue flush is not supported");
         struct guard_scope
         {
             size_t &value;
             explicit guard_scope(size_t &v) : value(v) {}
-            ~guard_scope() { value = queue_count; }
+            ~guard_scope() { value = guard_count; }
         } guard(_guard);
         while (!is_main_queue_empty())
         {
-            for (size_t i = 0; i < queue_count; ++i)
+            for (size_t i = 0; i < main_queue_count; ++i)
             {
                 auto &queue = _main_queues[i];
                 if (queue.empty()) continue;
@@ -38,6 +38,13 @@ namespace acul
     void disposal_queue::flush_mt_queue()
     {
         if (!_mt_queue) return;
+        assert(_guard == guard_count && "Nested disposal queue flush is not supported");
+        struct guard_scope
+        {
+            size_t &value;
+            explicit guard_scope(size_t &v) : value(v) { value = mt_guard; }
+            ~guard_scope() { value = guard_count; }
+        } guard(_guard);
         while (true)
         {
             mem_data data;

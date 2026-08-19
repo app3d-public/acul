@@ -54,4 +54,21 @@ void test_disposal_queue()
     assert(order[3] == 5);
     assert(order[4] == 4);
     assert(order[5] == 6);
+
+    // Commands emitted while consuming the MT queue are main-thread dependencies
+    // and execute synchronously, just like regular commands emitted by a main queue callback.
+    queue.enable_mt();
+    order.clear();
+    queue.emplace_mt([&]() {
+        order.push_back(1);
+        queue.emplace([&]() { order.push_back(2); });
+        order.push_back(3);
+    });
+    queue.flush();
+
+    assert(queue.is_empty());
+    assert(order.size() == 3);
+    assert(order[0] == 1);
+    assert(order[1] == 2);
+    assert(order[2] == 3);
 }

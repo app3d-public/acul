@@ -58,9 +58,9 @@ namespace acul
         // reentrantly when push is called from a queue callback.
         inline void push(mem_data &&data, bool force = false)
         {
-            const bool guarded = _guard < queue_count;
+            const bool guarded = _guard < guard_count;
             if (guarded && !force) process(data);
-            else _main_queues[guarded ? (_guard ^ 1u) : 0u].push_back(std::move(data));
+            else _main_queues[_guard < main_queue_count ? (_guard ^ 1u) : 0u].push_back(std::move(data));
         }
         inline void push_mt(mem_data &&data);
 
@@ -129,10 +129,12 @@ namespace acul
     private:
         ACUL_EXPORT void process(mem_data &data);
 
-        static constexpr size_t queue_count = 2u;
-        vector<mem_data> _main_queues[queue_count];
-        // queue_count means idle; 0/1 identifies the queue currently being processed.
-        size_t _guard = queue_count;
+        static constexpr size_t main_queue_count = 2u;
+        static constexpr size_t mt_guard = main_queue_count;
+        static constexpr size_t guard_count = main_queue_count + 1u;
+        vector<mem_data> _main_queues[main_queue_count];
+        // guard_count means idle; other values identify the queue currently being processed.
+        size_t _guard = guard_count;
         detail::mt_disposal_queue *_mt_queue = nullptr;
     };
 

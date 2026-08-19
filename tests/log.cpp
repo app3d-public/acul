@@ -9,10 +9,10 @@ void test_log()
     using namespace acul::log;
 
     task::service_dispatch sd;
-    sd.run();
     auto *service = acul::alloc<log_service>();
     sd.register_service(service);
-    service->level = level::trace;
+    sd.run();
+    assert(service->level == level::trace);
 
     auto *console = service->add_logger<console_logger>("console");
     set_default_logger(console);
@@ -29,8 +29,16 @@ void test_log()
     logger_base *fetched = service->get_logger("console");
     assert(fetched == console);
     service->await(true);
+    service->log(console, level::info, "Log after forced await: %d", 321);
+    service->await();
     service->remove_logger("console");
     assert(service->get_logger("console") == nullptr);
+    assert(acul::log::detail::g_log_ctx.default_logger == nullptr);
+
+    service->add_logger<console_logger>("duplicate");
+    auto *second_duplicate = service->add_logger<console_logger>("duplicate");
+    assert(service->get_logger("duplicate") == second_duplicate);
+    service->remove_logger("duplicate");
 
     const char *output_dir = getenv("TEST_OUTPUT_DIR");
     assert(output_dir);
@@ -42,10 +50,8 @@ void test_log()
 
     set_default_logger(filelog);
     service->log(filelog, level::info, "File log: %d", 456);
-    {
-        auto next = service->dispatch();
-        while (next != std::chrono::steady_clock::time_point::max()) next = service->dispatch();
-    }
+    // remove_logger must wait until records containing its raw pointer have
+    // been consumed.
     service->remove_logger("file");
 
     {

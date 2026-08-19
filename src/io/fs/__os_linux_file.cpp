@@ -5,17 +5,69 @@
 #include <cerrno>
 #include <dirent.h>
 #include <fcntl.h>
+#include <limits>
+#include <sys/file.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 namespace acul::fs
 {
+    namespace
+    {
+        int open_lock_file(const string &filename)
+        {
+            if (filename.empty()) return -1;
+            return open(filename.c_str(), O_RDWR | O_CREAT, 0644);
+        }
+    } // namespace
+
     bool is_directory(const char *path) noexcept
     {
         if (!path || !*path) return false;
         struct stat st;
         return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+    }
+
+    fd_lock lock_file(const string &filename)
+    {
+        const int fd = open_lock_file(filename);
+        if (fd < 0) return invalid_fd_lock;
+
+        if (flock(fd, LOCK_EX | LOCK_NB) != 0)
+        {
+            close(fd);
+            return invalid_fd_lock;
+        }
+
+        return static_cast<fd_lock>(fd);
+    }
+
+    bool unlock_file(fd_lock id) noexcept
+    {
+        if (id == invalid_fd_lock || id > static_cast<fd_lock>(std::numeric_limits<int>::max())) return false;
+
+        const int fd = static_cast<int>(id);
+        const bool unlocked = flock(fd, LOCK_UN) == 0;
+        const bool closed = close(fd) == 0;
+        return unlocked && closed;
+    }
+
+    bool is_file_locked(const string &filename)
+    {
+        const int fd = open_lock_file(filename);
+        if (fd < 0) return false;
+
+        if (flock(fd, LOCK_EX | LOCK_NB) == 0)
+        {
+            flock(fd, LOCK_UN);
+            close(fd);
+            return false;
+        }
+
+        const bool locked = errno == EWOULDBLOCK || errno == EAGAIN;
+        close(fd);
+        return locked;
     }
 
     op_result write_by_block(const string &filename, const char *buffer, size_t block_size)
@@ -108,6 +160,11 @@ namespace acul::fs
     op_result remove_file(const char *path)
     {
         return unlink(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);
+    }
+
+    op_result remove_directory(const char *path)
+    {
+        return rmdir(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);
     }
 
     op_result list_files(const string &base_path, vector<string> &dst, bool recursive)

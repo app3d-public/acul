@@ -16,6 +16,17 @@ void test_file()
     using namespace acul;
 
     path data = path(output_dir);
+
+    // --- file lock
+    auto lock_filename = data / "application.lock";
+    assert(!is_file_locked(lock_filename));
+    fd_lock lock_id = lock_file(lock_filename);
+    assert(lock_id != invalid_fd_lock);
+    assert(is_file_locked(lock_filename));
+    assert(lock_file(lock_filename) == invalid_fd_lock);
+    assert(unlock_file(lock_id));
+    assert(!is_file_locked(lock_filename));
+
     // --- write_binary
     const char *text = "Hello\nWorld\nTest\n";
     auto filename = data / "test_file.txt";
@@ -89,9 +100,7 @@ void test_file()
     // --- clean
     remove_file(filename.str().c_str());
     remove_file(copy_file.str().c_str());
-#ifdef _WIN32
-    RemoveDirectoryA(dp.str().c_str());
-#else
-    rmdir(dp.str().c_str());
-#endif
+    remove_file(lock_filename.str().c_str());
+    assert(remove_directory(dp.str().c_str()).success());
+    assert(!exists(dp.str().c_str()));
 }

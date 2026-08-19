@@ -19,6 +19,12 @@
     #include <unistd.h>
 #endif
 
+namespace acul
+{
+    using fd_lock = u64;
+    inline constexpr fd_lock invalid_fd_lock = static_cast<fd_lock>(-1);
+} // namespace acul
+
 namespace acul::fs
 {
     /**
@@ -43,6 +49,43 @@ namespace acul::fs
     }
 
     ACUL_EXPORT bool is_directory(const char *path) noexcept;
+
+    /**
+     * @brief Tries to acquire an exclusive, non-blocking lock on a file.
+     *
+     * The file is created if it does not exist. The returned descriptor owns
+     * the lock. The caller must retain it as long as the lock is needed and pass
+     * it to unlock_file() to release it.
+     * The operating system also releases the descriptor when the process exits.
+     *
+     * On Linux the lock is advisory, so all cooperating processes must use file
+     * locking as well.
+     *
+     * @param filename Path to the file used as a lock.
+     * @return An owning descriptor if the lock was acquired, invalid_fd_lock if it
+     * is already held or the file could not be opened or locked.
+     */
+    ACUL_EXPORT fd_lock lock_file(const string &filename);
+
+    /**
+     * @brief Releases a file lock and closes its descriptor.
+     *
+     * @param id Descriptor returned by lock_file(). It must not be reused after
+     * this call.
+     * @return True if the lock was released and the descriptor was closed.
+     */
+    ACUL_EXPORT bool unlock_file(fd_lock id) noexcept;
+
+    /**
+     * @brief Checks whether another lock holder has exclusively locked a file.
+     *
+     * The check is non-blocking and does not retain a lock. The file is created
+     * if it does not exist.
+     *
+     * @param filename Path to the file used as a lock.
+     * @return True if an exclusive lock is currently held, false otherwise.
+     */
+    ACUL_EXPORT bool is_file_locked(const string &filename);
 
     /**
      * @brief Opens a file in binary read mode and returns its size.
@@ -156,6 +199,16 @@ namespace acul::fs
      * @return Returns a status code indicating the success or failure of the directory creation operation.
      */
     ACUL_EXPORT op_result create_directory(const char *path);
+
+    /**
+     * @brief Removes an empty directory at the specified path.
+     *
+     * @param path The path of the directory to be removed.
+     * @return Success if the directory was removed, otherwise an error with the
+     * platform-specific error code.
+     */
+    ACUL_EXPORT op_result remove_directory(const char *path);
+
     ACUL_EXPORT op_result remove_file(const char *path);
     ACUL_EXPORT op_result list_files(const acul::string &base_path, vector<acul::string> &dst, bool recursive = false);
 

@@ -177,7 +177,7 @@ namespace acul::log
     class log_service final : public task::service_base
     {
     public:
-        enum level level;
+        enum level level{level::trace};
 
         inline log_service();
         ACUL_EXPORT ~log_service();
@@ -192,6 +192,7 @@ namespace acul::log
         template <typename T, typename... Args>
         T *add_logger(const string &name, Args &&...args)
         {
+            if (_loggers.find(name) != _loggers.end()) remove_logger(name);
             auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
             _loggers[name] = logger;
             return logger;
@@ -212,28 +213,14 @@ namespace acul::log
          * @brief Removes the logger with the specified name.
          * @param name The name of the logger to remove.
          */
-        void remove_logger(const string &name)
-        {
-            auto it = _loggers.find(name);
-            if (it == _loggers.end()) return;
-            acul::release(it->second);
-            _loggers.erase(it);
-        }
+        ACUL_EXPORT void remove_logger(const string &name);
 
         ACUL_EXPORT __attribute__((format(printf, 4, 5))) void log(logger_base *logger, enum level level, const char *message, ...);
         ACUL_EXPORT void vlog(logger_base *logger, enum level level, const char *message, va_list args);
 
         ACUL_EXPORT virtual std::chrono::steady_clock::time_point dispatch() override;
 
-        virtual void await(bool force = false) override
-        {
-            if (force)
-            {
-                _queue.clear();
-                return;
-            }
-            while (_count.load(std::memory_order_relaxed) > 0) std::this_thread::yield();
-        }
+        ACUL_EXPORT void await(bool force = false) override;
 
     private:
         hashmap<string, logger_base *> _loggers;
@@ -250,7 +237,11 @@ namespace acul::log
         } g_log_ctx;
     } // namespace detail
 
-    inline log_service::log_service() { detail::g_log_ctx.log_service = this; }
+    inline log_service::log_service()
+    {
+        detail::g_log_ctx.log_service = this;
+        detail::g_log_ctx.default_logger = nullptr;
+    }
 
     inline logger_base *get_default_logger()
     {

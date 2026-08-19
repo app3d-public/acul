@@ -5,12 +5,79 @@
 
 namespace acul::fs
 {
+    namespace
+    {
+        HANDLE open_lock_file(const string &filename)
+        {
+            if (filename.empty()) return INVALID_HANDLE_VALUE;
+            const u16string w_filename = utf8_to_utf16(filename);
+            return CreateFileW((LPCWSTR)w_filename.c_str(), GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_ALWAYS,
+                               FILE_ATTRIBUTE_NORMAL, NULL);
+        }
+
+        bool try_lock(HANDLE handle)
+        {
+            OVERLAPPED overlapped{};
+            return LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, MAXDWORD, MAXDWORD,
+                              &overlapped) != FALSE;
+        }
+
+        void unlock(HANDLE handle)
+        {
+            OVERLAPPED overlapped{};
+            UnlockFileEx(handle, 0, MAXDWORD, MAXDWORD, &overlapped);
+        }
+    } // namespace
+
     bool is_directory(const char *path) noexcept
     {
         if (!path || !*path) return false;
         u16string w_path = utf8_to_utf16(path);
         DWORD file_attr = GetFileAttributesW((LPCWSTR)w_path.c_str());
         return file_attr != INVALID_FILE_ATTRIBUTES && (file_attr & FILE_ATTRIBUTE_DIRECTORY);
+    }
+
+    fd_lock lock_file(const string &filename)
+    {
+        HANDLE handle = open_lock_file(filename);
+        if (handle == INVALID_HANDLE_VALUE) return invalid_fd_lock;
+
+        if (!try_lock(handle))
+        {
+            CloseHandle(handle);
+            return invalid_fd_lock;
+        }
+
+        return static_cast<fd_lock>(reinterpret_cast<uintptr_t>(handle));
+    }
+
+    bool unlock_file(fd_lock id) noexcept
+    {
+        if (id == invalid_fd_lock || id == 0) return false;
+
+        HANDLE handle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(id));
+        OVERLAPPED overlapped{};
+        const bool unlocked = UnlockFileEx(handle, 0, MAXDWORD, MAXDWORD, &overlapped) != FALSE;
+        const bool closed = CloseHandle(handle) != FALSE;
+        return unlocked && closed;
+    }
+
+    bool is_file_locked(const string &filename)
+    {
+        HANDLE handle = open_lock_file(filename);
+        if (handle == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_SHARING_VIOLATION;
+
+        if (try_lock(handle))
+        {
+            unlock(handle);
+            CloseHandle(handle);
+            return false;
+        }
+
+        const DWORD error = GetLastError();
+        CloseHandle(handle);
+        return error == ERROR_LOCK_VIOLATION || error == ERROR_SHARING_VIOLATION;
     }
 
     op_result write_by_block(const string &filename, const char *buffer, size_t block_size)
@@ -68,6 +135,11 @@ namespace acul::fs
     op_result remove_file(const char *path)
     {
         return DeleteFileA(path) ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
+    }
+
+    op_result remove_directory(const char *path)
+    {
+        return RemoveDirectoryA(path) ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
     }
 
     op_result list_files(const string &base_path, vector<string> &dst, bool recursive)

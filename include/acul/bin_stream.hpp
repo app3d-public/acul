@@ -285,11 +285,21 @@ namespace acul
          */
         size_type size() const { return _data.size(); }
 
+        void size(size_type value)
+        {
+            if (value < _pos) throw out_of_range(_data.size(), value);
+            _data.resize(value);
+        }
+
         /**
          * @brief Shifts the stream position by the specified amount.
          * @param amount Amount to shift the position by.
          */
-        void shift(size_type amount) { _pos += amount; }
+        void shift(size_type amount)
+        {
+            if (amount > _data.size() - _pos) throw out_of_range(_data.size(), _pos + amount);
+            _pos += amount;
+        }
 
         iterator begin() { return _data.begin(); }
         const_iterator begin() const { return _data.begin(); }

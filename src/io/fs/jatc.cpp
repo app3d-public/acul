@@ -1,6 +1,7 @@
 #include <acul/hash/utils.hpp>
 #include <acul/io/fs/file.hpp>
 #include <acul/io/fs/jatc.hpp>
+#include <acul/io/fs/path.hpp>
 #include <cassert>
 
 // Default compression settings
@@ -42,6 +43,7 @@ namespace acul::fs::jatc
         {
             auto &data = data_buffers[i];
             index_entries[i]->offset = entrypoint->pos;
+            index_entries[i]->size = data.size();
             entrypoint->fd.write(data.data(), data.size());
 
             if (!entrypoint->fd.good())
@@ -50,6 +52,12 @@ namespace acul::fs::jatc
                 return make_op_error(ACUL_OP_WRITE_ERROR, JATC_CODE_ENTRYPOINT);
             }
             entrypoint->pos += data.size();
+        }
+        entrypoint->fd.flush();
+        if (!entrypoint->fd.good())
+        {
+            entrypoint->fd.clear();
+            return make_op_error(ACUL_OP_WRITE_ERROR, JATC_CODE_ENTRYPOINT);
         }
         return make_op_success();
     }
@@ -63,11 +71,16 @@ namespace acul::fs::jatc
     {
     }
 
-    entrypoint *cache::register_entrypoint(entrygroup *group)
+    entrypoint *cache::register_entrypoint(entrygroup *group, u64 id)
     {
         assert(group);
+        if (id != 0)
+        {
+            for (const auto *registered : group->entrypoints)
+                if (registered && registered->id == id) return nullptr;
+        }
         auto entrypoint = alloc<jatc::entrypoint>();
-        entrypoint->id = id_gen()();
+        entrypoint->id = id != 0 ? id : id_gen()();
         entrypoint->op_count = 0;
         group->entrypoints.push_back(entrypoint);
         return entrypoint;
@@ -96,6 +109,45 @@ namespace acul::fs::jatc
             }
         });
         return make_op_success();
+    }
+
+    op_result cache::remove_unregistered_entrypoints(entrygroup *group)
+    {
+        if (!group) return make_op_error(ACUL_OP_NULLPTR);
+        await();
+        if (!fs::exists(_path.str().c_str())) return make_op_success();
+
+        vector<string> files;
+        auto result = fs::list_files(_path.str(), files);
+        if (!result.success()) return result;
+
+        vector<string> registered_files;
+        registered_files.reserve(group->entrypoints.size());
+        for (auto *entrypoint : group->entrypoints)
+            if (entrypoint) registered_files.push_back(fs::get_filename(path(entrypoint, group)));
+
+        const string prefix = format("entrypoint-%s-", group->name.c_str());
+        constexpr char suffix[] = ".jatc";
+        for (const auto &file : files)
+        {
+            const auto filename = fs::get_filename(file);
+            if (!starts_with(filename, prefix.c_str()) || !ends_with(filename, suffix)) continue;
+
+            bool registered = false;
+            for (const auto &registered_file : registered_files)
+            {
+                if (registered_file == filename)
+                {
+                    registered = true;
+                    break;
+                }
+            }
+            if (registered) continue;
+
+            const auto remove_result = fs::remove_file(file.c_str());
+            if (!remove_result.success() && result.success()) result = remove_result;
+        }
+        return result;
     }
 
     op_result cache::read(entrypoint *entrypoint, entrygroup *group, const index_entry &entry, bin_stream &dst)
@@ -146,30 +198,24 @@ namespace acul::fs::jatc
             shared_lock read_lock(entrypoint->lock);
             entrypoint->cv.wait(read_lock, [&]() { return entrypoint->op_count.load() == 0; });
         }
-        auto fd = get_file_stream(entrypoint, group);
-        if (!fd) return make_op_error(ACUL_OP_READ_ERROR, JATC_CODE_ENTRYPOINT);
         vector<vector<char>> data_buffers;
         data_buffers.reserve(index_entries.size());
         for (index_entry *entry : index_entries)
         {
-            fd->seekg(entry->offset, std::ios::beg);
-            vector<char> buffer(entry->size);
-            fd->read(buffer.data(), entry->size);
-            if (!fd->good())
-            {
-                fd->clear();
-                return make_op_error(ACUL_OP_SEEK_ERROR, JATC_CODE_ENTRYPOINT);
-            }
-            data_buffers.push_back(std::move(buffer));
+            bin_stream stream;
+            const auto result = read(entrypoint, group, *entry, stream);
+            if (!result.success()) return result;
+            data_buffers.emplace_back(stream.data(), stream.data() + stream.size());
         }
-        fd->close();
+        for (index_entry *entry : index_entries) entry->compressed = 0;
+        if (entrypoint->fd.is_open()) entrypoint->fd.close();
         ++entrypoint->op_count;
 
         acul::exclusive_lock write_lock(entrypoint->lock);
-        rewrite_file(entrypoint, index_entries, data_buffers, path(entrypoint, group));
+        const auto result = rewrite_file(entrypoint, index_entries, data_buffers, path(entrypoint, group));
         --entrypoint->op_count;
         entrypoint->cv.notify_all();
-        return make_op_success();
+        return result;
     }
 
     op_result cache::write_to_entrypoint(const request &request, response &response, index_entry &index_entry,
@@ -182,6 +228,7 @@ namespace acul::fs::jatc
             fd->seekp(0, std::ios::end);
             u64 data_offset = request.entrypoint->fd.tellp();
             fd->write(buffer, size);
+            fd->flush();
 
             if (!request.entrypoint->fd.good())
             {
@@ -190,7 +237,7 @@ namespace acul::fs::jatc
             }
             else
             {
-                request.entrypoint->pos += data_offset + index_entry.size;
+                request.entrypoint->pos = data_offset + size;
                 index_entry.offset = data_offset;
                 response.state = ACUL_OP_SUCCESS;
                 response.entry(index_entry);
@@ -233,7 +280,7 @@ namespace acul::fs::jatc
             dst_size = stream.size();
             index_entry.compressed = 0;
         }
-        index_entry.size = stream.size();
+        index_entry.size = dst_size;
         index_entry.checksum = acul::crc32(0, stream.data(), stream.size());
         request.entrypoint->lock.lock();
         result = write_to_entrypoint(request, response, index_entry, dst_buffer, dst_size);
@@ -250,10 +297,46 @@ namespace acul::fs::jatc
         if (!entrypoint->fd.is_open())
         {
             auto path = this->path(entrypoint, group);
-            auto open_flags = std::ios::binary | std::ios::in | std::ios::out | std::ios::app;
+            auto open_flags = std::ios::binary | std::ios::in | std::ios::out;
             entrypoint->fd = std::fstream(path.c_str(), open_flags);
-            if (!entrypoint->fd.is_open()) return nullptr;
-            if (entrypoint->pos == 0 && !write_header(entrypoint)) return nullptr;
+            if (!entrypoint->fd.is_open())
+            {
+                entrypoint->fd.clear();
+                entrypoint->fd = std::fstream(path.c_str(), open_flags | std::ios::trunc);
+                if (!entrypoint->fd.is_open() || !write_header(entrypoint)) return nullptr;
+            }
+            else
+            {
+                entrypoint->fd.seekg(0, std::ios::end);
+                const auto size = entrypoint->fd.tellg();
+                if (size == 0)
+                {
+                    entrypoint->fd.clear();
+                    entrypoint->fd.seekp(0, std::ios::beg);
+                    if (!write_header(entrypoint)) return nullptr;
+                }
+                else
+                {
+                    header file_header{};
+                    entrypoint->fd.seekg(0, std::ios::beg);
+                    entrypoint->fd.read(reinterpret_cast<char *>(&file_header), sizeof(file_header));
+                    if (!entrypoint->fd.good() || file_header.magic_number != JATC_MAGIC_NUMBER ||
+                        file_header.version != JATC_VERSION)
+                    {
+                        entrypoint->fd.close();
+                        return nullptr;
+                    }
+                    entrypoint->fd.clear();
+                    entrypoint->fd.seekp(0, std::ios::end);
+                    const auto end = entrypoint->fd.tellp();
+                    if (!entrypoint->fd.good() || end < static_cast<std::streamoff>(sizeof(header)))
+                    {
+                        entrypoint->fd.close();
+                        return nullptr;
+                    }
+                    entrypoint->pos = end;
+                }
+            }
         }
         return &entrypoint->fd;
     }

@@ -112,8 +112,9 @@ namespace acul
                 return _path / name;
             }
 
-            ACUL_EXPORT entrypoint *register_entrypoint(entrygroup *group);
+            ACUL_EXPORT entrypoint *register_entrypoint(entrygroup *group, u64 id = 0);
             ACUL_EXPORT op_result deregister_entrypoint(entrypoint *entrypoint, entrygroup *group);
+            ACUL_EXPORT op_result remove_unregistered_entrypoints(entrygroup *group);
 
             void add_request(const request &request, response *response)
             {

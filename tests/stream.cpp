@@ -72,6 +72,33 @@ void test_bin_stream_positioning()
     assert(val == 2);
 }
 
+void test_bin_stream_temporary_size()
+{
+    acul::bin_stream stream;
+    stream.write(1).write(2);
+    const auto full_size = stream.size();
+
+    stream.size(sizeof(int));
+    int value = 0;
+    stream.read(value);
+    assert(value == 1);
+
+    bool caught = false;
+    try
+    {
+        stream.read(value);
+    }
+    catch (const acul::runtime_error &)
+    {
+        caught = true;
+    }
+    assert(caught);
+
+    stream.size(full_size);
+    stream.read(value);
+    assert(value == 2);
+}
+
 void test_bin_stream_exceptions()
 {
     acul::bin_stream s;
@@ -107,5 +134,6 @@ void test_stream()
     test_bin_stream_list();
     test_bin_stream_raw_data();
     test_bin_stream_positioning();
+    test_bin_stream_temporary_size();
     test_bin_stream_exceptions();
 }

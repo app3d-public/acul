@@ -40,6 +40,33 @@ void test_file()
     assert(!buffer.empty());
     assert(strncmp(buffer.data(), text, buffer.size()) == 0);
 
+    // --- persistent read-only mapping and move ownership
+    {
+        mapped_file source;
+        assert(source.open(filename).success());
+        assert(source.size() == buffer.size());
+        assert(std::memcmp(source.data(), buffer.data(), source.size()) == 0);
+        const char *mapped_data = source.data();
+        mapped_file moved(std::move(source));
+        assert(source.data() == nullptr && source.size() == 0u);
+        assert(moved.data() == mapped_data);
+        source = std::move(moved);
+        assert(moved.data() == nullptr && moved.size() == 0u);
+        assert(std::memcmp(source.data(), text, source.size()) == 0);
+        source.close();
+        source.close();
+        assert(source.data() == nullptr && source.size() == 0u);
+        assert(!source.open(data / "missing-map-source.bin").success());
+        assert(source.data() == nullptr && source.size() == 0u);
+
+        const auto empty_file = data / "empty-map-source.bin";
+        assert(write_binary(empty_file, "", 0u));
+        assert(source.open(empty_file).success());
+        assert(source.data() == nullptr && source.size() == 0u);
+        source.close();
+        assert(remove_file(empty_file.str().c_str()).success());
+    }
+
     // --- fill_line_buffer
     string_view_pool<char> pool;
     pool.reserve(256);
@@ -48,7 +75,7 @@ void test_file()
 
     // --- read_by_block
     string dst;
-    auto read_by_block_result = read_by_block(filename, [&dst](char *line, size_t size) { dst = line; });
+    auto read_by_block_result = read_by_block(filename, [&dst](char *line, size_t size) { dst = string(line, size); });
     assert(read_by_block_result.success());
     assert(!dst.empty());
 

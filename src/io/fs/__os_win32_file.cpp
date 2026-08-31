@@ -165,53 +165,69 @@ namespace acul::fs
         return make_op_success();
     }
 
+    op_result mapped_file::open(const string &filename)
+    {
+        close();
+        const u16string name = utf8_to_utf16(filename);
+        HANDLE file = CreateFileW(reinterpret_cast<LPCWSTR>(name.c_str()), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE) return make_op_error(ACUL_OP_READ_ERROR, GetLastError());
+        LARGE_INTEGER length;
+        if (!GetFileSizeEx(file, &length))
+        {
+            const DWORD error = GetLastError();
+            CloseHandle(file);
+            return make_op_error(ACUL_OP_INVALID_SIZE, error);
+        }
+        if (length.QuadPart < 0 || static_cast<u64>(length.QuadPart) > SIZE_MAX)
+        {
+            CloseHandle(file);
+            return make_op_error(ACUL_OP_INVALID_SIZE);
+        }
+        if (length.QuadPart == 0)
+        {
+            CloseHandle(file);
+            return make_op_success();
+        }
+        HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
+        if (!mapping)
+        {
+            const DWORD error = GetLastError();
+            CloseHandle(file);
+            return make_op_error(ACUL_OP_MAP_ERROR, error);
+        }
+        const auto *bytes = static_cast<const char *>(MapViewOfFile(mapping, FILE_MAP_READ, 0, 0,
+                                                                   static_cast<size_t>(length.QuadPart)));
+        const DWORD error = bytes ? ERROR_SUCCESS : GetLastError();
+        // The view retains the mapping until UnmapViewOfFile; these handles are no longer needed.
+        CloseHandle(mapping);
+        CloseHandle(file);
+        if (!bytes) return make_op_error(ACUL_OP_MAP_ERROR, error);
+        _data = bytes;
+        _size = static_cast<size_t>(length.QuadPart);
+        return make_op_success();
+    }
+
+    void mapped_file::close() noexcept
+    {
+        if (_data) UnmapViewOfFile(_data);
+        _data = nullptr;
+        _size = 0u;
+    }
+
     op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback)
     {
-        u16string w_filename = utf8_to_utf16(filename);
-        HANDLE file_handle = CreateFileW((LPCWSTR)w_filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (file_handle == INVALID_HANDLE_VALUE) return make_op_error(ACUL_OP_READ_ERROR, GetLastError());
-
-        LARGE_INTEGER file_size;
-        if (!GetFileSizeEx(file_handle, &file_size))
-        {
-            DWORD err = GetLastError();
-            CloseHandle(file_handle);
-            return make_op_error(ACUL_OP_INVALID_SIZE, err);
-        }
-
-        HANDLE mapping_handle = CreateFileMapping(file_handle, NULL, PAGE_READONLY, 0, 0, NULL);
-        if (mapping_handle == NULL)
-        {
-            DWORD err = GetLastError();
-            CloseHandle(file_handle);
-            return make_op_error(ACUL_OP_MAP_ERROR, err);
-        }
-
-        char *file_data = static_cast<char *>(MapViewOfFile(mapping_handle, FILE_MAP_READ, 0, 0, file_size.QuadPart));
-        if (file_data == NULL)
-        {
-            DWORD err = GetLastError();
-            CloseHandle(mapping_handle);
-            CloseHandle(file_handle);
-            return make_op_error(ACUL_OP_MAP_ERROR, err);
-        }
-
-        // Parse the file in parallel
-        u16 state = ACUL_OP_SUCCESS;
+        mapped_file mapping;
+        ACUL_TRY(mapping.open(filename));
+        if (mapping.size() == 0u) return make_op_success();
         try
         {
-            callback(file_data, file_size.QuadPart);
+            callback(const_cast<char *>(mapping.data()), mapping.size());
         }
         catch (...)
         {
-            state = ACUL_OP_ERROR_GENERIC;
+            return make_op_error(ACUL_OP_ERROR_GENERIC);
         }
-
-        // Unmap the file from memory
-        UnmapViewOfFile(file_data);
-        CloseHandle(mapping_handle);
-        CloseHandle(file_handle);
-        return {state, ACUL_OP_DOMAIN};
+        return make_op_success();
     }
 } // namespace acul::fs

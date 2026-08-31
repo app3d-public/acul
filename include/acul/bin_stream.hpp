@@ -79,13 +79,17 @@ namespace acul
         using const_pointer = const char *;
         using reference = char &;
         using const_reference = const char &;
-        using size_type = u32;
+        using size_type = size_t;
+        using ss_type = u32;
         using iterator = vector<char>::iterator;
         using const_iterator = vector<char>::const_iterator;
 
         bin_stream() : _pos(0) {}
 
-        bin_stream(const_pointer data, size_type len) : _data(data, data + len), _pos(0) {}
+        bin_stream(const_pointer data, size_type len) : _pos(0)
+        {
+            if (len != 0u) _data.assign(data, data + len);
+        }
 
         /**
          * @brief Constructor that initializes the stream with provided data.
@@ -116,7 +120,7 @@ namespace acul
         template <typename T>
         bin_stream &write(const list<T> &list)
         {
-            write(static_cast<size_type>(list.size()));
+            write(static_cast<ss_type>(list.size()));
             for (const auto &item : list) write(item);
             return *this;
         }
@@ -160,9 +164,9 @@ namespace acul
         template <typename T>
         bin_stream &read(T &val)
         {
-            if (_pos + sizeof(T) <= _data.size())
+            if (_pos <= _data.size() && sizeof(T) <= _data.size() - _pos)
             {
-                memcpy(&val, &_data[_pos], sizeof(T));
+                memcpy(&val, _data.data() + _pos, sizeof(T));
                 val = detail::swap_endian_scalar(val);
                 _pos += sizeof(T);
             }
@@ -173,9 +177,9 @@ namespace acul
         template <typename T>
         bin_stream &read(list<T> &list)
         {
-            size_type count;
+            ss_type count;
             read(count);
-            for (size_type i = 0; i < count; ++i)
+            for (ss_type i = 0; i < count; ++i)
             {
                 T item;
                 read(item);
@@ -193,12 +197,18 @@ namespace acul
         bin_stream &read(string &str)
         {
             str.clear();
+            bool terminated = false;
             while (_pos < _data.size())
             {
                 char ch = _data[_pos++];
-                if (ch == '\0') break;
+                if (ch == '\0')
+                {
+                    terminated = true;
+                    break;
+                }
                 str += ch;
             }
+            if (!terminated) throw runtime_error("Unterminated string in stream");
             return *this;
         }
 
@@ -212,7 +222,9 @@ namespace acul
         template <typename T>
         bin_stream &write(T *data, size_type size)
         {
-            if (data == nullptr) throw runtime_error("Null pointer passed to write");
+            if (size != 0u && data == nullptr) throw runtime_error("Null pointer passed to write");
+            if (size != 0u && sizeof(T) > static_cast<size_type>(-1) / size)
+                throw runtime_error("Stream write size overflow");
 
 #ifdef ACUL_WORDS_BIGENDIAN
             if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
@@ -221,8 +233,9 @@ namespace acul
                 return *this;
             }
 #endif
-            _data.insert(_data.end(), reinterpret_cast<const_pointer>(data),
-                         reinterpret_cast<const_pointer>(data) + size * sizeof(T));
+            const size_type byte_size = size * sizeof(T);
+            const auto *bytes = reinterpret_cast<const_pointer>(data);
+            if (byte_size != 0u) _data.insert(_data.end(), bytes, bytes + byte_size);
             return *this;
         }
 
@@ -236,18 +249,23 @@ namespace acul
         template <typename T>
         bin_stream &read(T *data, size_type size)
         {
-            if (data == nullptr) throw runtime_error("Null pointer passed to read");
+            if (size != 0u && data == nullptr) throw runtime_error("Null pointer passed to read");
+            if (size != 0u && sizeof(T) > static_cast<size_type>(-1) / size)
+                throw runtime_error("Stream read size overflow");
 
-            size_type byte_size = size * sizeof(T);
-            if (_pos + byte_size > _data.size()) throw runtime_error("Error reading from stream");
-
-            memcpy(data, &_data[_pos], byte_size);
-            _pos += byte_size;
+            const size_type byte_size = size * sizeof(T);
+            if (byte_size != 0u)
+            {
+                if (_pos > _data.size() || byte_size > _data.size() - _pos)
+                    throw runtime_error("Error reading from stream");
+                memcpy(data, _data.data() + _pos, byte_size);
+                _pos += byte_size;
 
 #ifdef ACUL_WORDS_BIGENDIAN
-            if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
-                for (size_type i = 0; i < size; ++i) data[i] = detail::swap_endian_scalar(data[i]);
+                if constexpr (std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_enum<T>::value)
+                    for (size_type i = 0; i < size; ++i) data[i] = detail::swap_endian_scalar(data[i]);
 #endif
+            }
             return *this;
         }
 
@@ -297,7 +315,7 @@ namespace acul
          */
         void shift(size_type amount)
         {
-            if (amount > _data.size() - _pos) throw out_of_range(_data.size(), _pos + amount);
+            if (_pos > _data.size() || amount > _data.size() - _pos) throw out_of_range(_data.size(), _pos + amount);
             _pos += amount;
         }
 

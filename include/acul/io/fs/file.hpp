@@ -27,6 +27,43 @@ namespace acul
 
 namespace acul::fs
 {
+    /** Read-only mapping. The source must not be modified or truncated while it is mapped. */
+    class mapped_file
+    {
+    public:
+        mapped_file() noexcept = default;
+        ~mapped_file() noexcept { close(); }
+        mapped_file(const mapped_file &) = delete;
+        mapped_file &operator=(const mapped_file &) = delete;
+
+        mapped_file(mapped_file &&other) noexcept : _data(other._data), _size(other._size)
+        {
+            other._data = nullptr;
+            other._size = 0u;
+        }
+        mapped_file &operator=(mapped_file &&other) noexcept
+        {
+            if (this != &other)
+            {
+                close();
+                _data = other._data;
+                _size = other._size;
+                other._data = nullptr;
+                other._size = 0u;
+            }
+            return *this;
+        }
+
+        ACUL_EXPORT op_result open(const string &filename);
+        ACUL_EXPORT void close() noexcept;
+        const char *data() const noexcept { return _data; }
+        size_t size() const noexcept { return _size; }
+
+    private:
+        const char *_data = nullptr;
+        size_t _size = 0u;
+    };
+
     /**
      * @brief Checks if a file or directory exists at the given path.
      *

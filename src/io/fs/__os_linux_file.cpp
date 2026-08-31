@@ -196,45 +196,58 @@ namespace acul::fs
         return make_op_success();
     }
 
-    op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback)
+    op_result mapped_file::open(const string &filename)
     {
-        int fd = open(filename.c_str(), O_RDONLY);
+        close();
+        const int fd = ::open(filename.c_str(), O_RDONLY | O_CLOEXEC);
         if (fd < 0) return make_op_error(ACUL_OP_READ_ERROR, errno);
-
-        struct stat st;
-        if (fstat(fd, &st) < 0)
+        struct stat info;
+        if (fstat(fd, &info) != 0)
         {
-            int err = errno;
-            close(fd);
-            return make_op_error(ACUL_OP_INVALID_SIZE, err);
+            const int error = errno;
+            ::close(fd);
+            return make_op_error(ACUL_OP_INVALID_SIZE, error);
         }
-
-        if (st.st_size == 0)
+        if (!S_ISREG(info.st_mode) || info.st_size < 0 || static_cast<u64>(info.st_size) > SIZE_MAX)
         {
-            close(fd);
+            ::close(fd);
+            return make_op_error(ACUL_OP_INVALID_SIZE);
+        }
+        if (info.st_size == 0)
+        {
+            ::close(fd);
             return make_op_success();
         }
+        const size_t length = static_cast<size_t>(info.st_size);
+        void *bytes = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0);
+        const int error = errno;
+        ::close(fd);
+        if (bytes == MAP_FAILED) return make_op_error(ACUL_OP_MAP_ERROR, error);
+        _data = static_cast<const char *>(bytes);
+        _size = length;
+        return make_op_success();
+    }
 
-        void *mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (mapped == MAP_FAILED)
-        {
-            int err = errno;
-            close(fd);
-            return make_op_error(ACUL_OP_MAP_ERROR, err);
-        }
+    void mapped_file::close() noexcept
+    {
+        if (_data) munmap(const_cast<char *>(_data), _size);
+        _data = nullptr;
+        _size = 0u;
+    }
 
-        u16 state = ACUL_OP_SUCCESS;
+    op_result read_by_block(const string &filename, unique_function<void(char *, size_t)> callback)
+    {
+        mapped_file mapping;
+        ACUL_TRY(mapping.open(filename));
+        if (mapping.size() == 0u) return make_op_success();
         try
         {
-            callback(static_cast<char *>(mapped), st.st_size);
+            callback(const_cast<char *>(mapping.data()), mapping.size());
         }
         catch (...)
         {
-            state = ACUL_OP_ERROR_GENERIC;
+            return make_op_error(ACUL_OP_ERROR_GENERIC);
         }
-
-        munmap(mapped, st.st_size);
-        close(fd);
-        return {state, ACUL_OP_DOMAIN};
+        return make_op_success();
     }
 } // namespace acul::fs

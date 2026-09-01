@@ -16,6 +16,7 @@
 #define ACUL_OP_DELETE_ERROR     10
 #define ACUL_OP_SEEK_ERROR       11
 #define ACUL_OP_CHECKSUM_ERROR   12
+#define ACUL_OP_CANCELLED        13
 
 // Codes specific
 #define ACUL_OP_CODE_SIZE_ZERO    1

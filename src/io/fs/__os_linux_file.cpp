@@ -208,7 +208,7 @@ namespace acul::fs
             ::close(fd);
             return make_op_error(ACUL_OP_INVALID_SIZE, error);
         }
-        if (!S_ISREG(info.st_mode) || info.st_size < 0 || static_cast<u64>(info.st_size) > SIZE_MAX)
+        if (!S_ISREG(info.st_mode) || info.st_size < 0)
         {
             ::close(fd);
             return make_op_error(ACUL_OP_INVALID_SIZE);

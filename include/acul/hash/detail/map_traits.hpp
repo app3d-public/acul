@@ -1,7 +1,9 @@
 #pragma once
 
-#include "../../pair.hpp"
 #include <acul/compile_attributes.h>
+#include <cstdint>
+#include "../../pair.hpp"
+
 
 namespace acul::detail
 {

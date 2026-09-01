@@ -179,7 +179,7 @@ namespace acul::fs
             CloseHandle(file);
             return make_op_error(ACUL_OP_INVALID_SIZE, error);
         }
-        if (length.QuadPart < 0 || static_cast<u64>(length.QuadPart) > SIZE_MAX)
+        if (length.QuadPart < 0)
         {
             CloseHandle(file);
             return make_op_error(ACUL_OP_INVALID_SIZE);

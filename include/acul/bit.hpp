@@ -3,6 +3,7 @@
 #include <acul/compile_attributes.h>
 #include <cstring>
 #include "pair.hpp"
+#include "scalars.hpp"
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
     #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__

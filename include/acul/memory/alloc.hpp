@@ -11,6 +11,12 @@
 
 namespace acul
 {
+#if defined(__has_feature)
+    #if __has_feature(address_sanitizer)
+        #define ACUL_ASAN_ALLOCATOR 1
+    #endif
+#endif
+
     template <typename T>
     class mem_allocator
     {
@@ -24,17 +30,32 @@ namespace acul
         static inline pointer allocate(size_type num, const void *hint = 0) noexcept
         {
             if (num > std::numeric_limits<size_type>::max() / sizeof(T)) return nullptr;
+#if defined(ACUL_ASAN_ALLOCATOR)
+            return static_cast<pointer>(std::malloc(num * sizeof(T)));
+#else
             if (auto p = static_cast<pointer>(scalable_malloc(num * sizeof(T)))) return p;
             return nullptr;
+#endif
         }
 
         static inline pointer reallocate(pointer p, size_type new_size) noexcept
         {
+#if defined(ACUL_ASAN_ALLOCATOR)
+            return static_cast<pointer>(std::realloc(p, new_size * sizeof(T)));
+#else
             return reinterpret_cast<pointer>(p ? scalable_realloc(p, new_size * sizeof(T))
                                                : scalable_malloc(new_size * sizeof(T)));
+#endif
         }
 
-        static inline void deallocate(pointer p, size_type num = 0) noexcept { scalable_free(p); }
+        static inline void deallocate(pointer p, size_type num = 0) noexcept
+        {
+#if defined(ACUL_ASAN_ALLOCATOR)
+            std::free(p);
+#else
+            scalable_free(p);
+#endif
+        }
 
         static inline size_type max_size() noexcept { return std::numeric_limits<size_type>::max() / sizeof(T); }
 

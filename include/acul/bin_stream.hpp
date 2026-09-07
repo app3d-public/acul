@@ -118,10 +118,25 @@ namespace acul
         }
 
         template <typename T>
+        bin_stream &write(T *val)
+        {
+            assert(val && "val cannot be null pointer");
+            return write(*val);
+        }
+
+        template <typename T>
         bin_stream &write(const list<T> &list)
         {
             write(static_cast<ss_type>(list.size()));
             for (const auto &item : list) write(item);
+            return *this;
+        }
+
+        template <typename T>
+        bin_stream &write(const vector<T> &vec)
+        {
+            write(static_cast<ss_type>(vec.size()));
+            for (const auto &item : vec) write(item);
             return *this;
         }
 
@@ -175,6 +190,13 @@ namespace acul
         }
 
         template <typename T>
+        bin_stream &read(T *&val)
+        {
+            assert(val && "val cannot be null pointer");
+            return read(*val);
+        }
+
+        template <typename T>
         bin_stream &read(list<T> &list)
         {
             ss_type count;
@@ -184,6 +206,21 @@ namespace acul
                 T item;
                 read(item);
                 list.push_back(item);
+            }
+            return *this;
+        }
+
+        template <typename T>
+        bin_stream &read(vector<T> &vec)
+        {
+            ss_type count = 0u;
+            read(count);
+            if (count > (size() - pos()) / sizeof(u64)) return *this;
+            vec.resize(vec.size() + static_cast<size_t>(count));
+            for (auto &el : vec)
+            {
+                el = T{};
+                read(el);
             }
             return *this;
         }

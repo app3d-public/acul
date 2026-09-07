@@ -21,6 +21,7 @@ namespace acul
         struct mem_control_block
         {
             size_t ref_counts;
+            void *allocation;
 
             static constexpr size_t strong_count_mask = 0x7FFFFFFF00000000;
             static constexpr size_t weak_count_mask = 0x00000000FFFFFFFF;
@@ -54,7 +55,7 @@ namespace acul
         template <class T, class SP>
         inline void accept_owner(T *p, const SP &sp)
         {
-            if constexpr (has_accept_owner<T, SP>::value) { p->_internal_accept_owner(sp); }
+            if constexpr (has_accept_owner<T, SP>::value) p->_internal_accept_owner(sp);
         }
     } // namespace detail
 
@@ -80,7 +81,7 @@ namespace acul
             if (_ctrl && _ctrl->decrement_strong() == 0)
             {
                 allocator::destroy(_data);
-                if (_ctrl->is_external()) allocator::deallocate(_data, 1);
+                if (_ctrl->is_external()) block_allocator::deallocate(static_cast<std::byte *>(_ctrl->allocation), 1u);
                 if (_ctrl->decrement_weak() == 0) block_allocator::deallocate((std::byte *)_ctrl, 1);
                 _ctrl = nullptr;
                 _data = nullptr;
@@ -110,6 +111,7 @@ namespace acul
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(blockSize);
             _ctrl->ref_counts = (1ULL << 32) | 1ULL;
             _data = reinterpret_cast<value_type *>((std::byte *)_ctrl + sizeof(detail::mem_control_block));
+            _ctrl->allocation = _data;
         }
 
         explicit shared_ptr(pointer ptr) : _ctrl(nullptr), _data(ptr)
@@ -118,6 +120,8 @@ namespace acul
             _ctrl = (detail::mem_control_block *)block_allocator::allocate(sizeof(detail::mem_control_block));
             _ctrl->ref_counts = (1ULL << 32) | 1ULL;
             _ctrl->set_external();
+            _ctrl->allocation = ptr;
+            if constexpr (std::is_polymorphic_v<value_type>) _ctrl->allocation = dynamic_cast<void *>(ptr);
             detail::accept_owner(ptr, *this);
         }
 
@@ -228,6 +232,7 @@ namespace acul
         result._ctrl = (detail::mem_control_block *)mem_allocator<std::byte>::allocate(blockSize);
         result._ctrl->ref_counts = (1ULL << 32) | 1ULL;
         result._data = reinterpret_cast<T *>((std::byte *)result._ctrl + sizeof(detail::mem_control_block));
+        result._ctrl->allocation = result._data;
         if constexpr (!std::is_trivially_constructible_v<T> || has_args<Args...>())
             mem_allocator<T>::construct(result._data, std::forward<Args>(args)...);
         detail::accept_owner(result._data, result);
@@ -406,6 +411,13 @@ namespace acul
                 _deleter(_data);
                 _data = ptr;
             }
+        }
+
+        pointer release() noexcept
+        {
+            pointer result = _data;
+            _data = nullptr;
+            return result;
         }
 
         template <typename U = T>

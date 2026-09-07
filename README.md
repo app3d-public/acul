@@ -63,16 +63,6 @@ Everything else is expected to be used as-is from the surrounding ecosystem.
 - Unified path abstraction for both local and virtual schemes.  
 - Internally all paths are stored as UTF-8, independent of host OS encoding.
 
-#### JATC (Journalable Asynchronous Temporary Cache)
-JATC is an asynchronous caching subsystem built around a journaled file format.  
-Its purpose is to provide safe, concurrent access to temporary data with guaranteed integrity.  
-
-**Design overview:**\
-Data is organized into **entrygroups**, which register one or more **entrypoints**.  
-Each entrypoint represents a journal file and manages synchronization for concurrent operations.  
-Client code interacts with JATC through request/response pairs.  
-Each response resolves to an **index entry**, which contains the metadata locating data inside the entrypoint journal.
-
 ## Building
 
 ### Supported compilers:
@@ -89,7 +79,6 @@ Each response resolves to an **index entry**, which contains the metadata locati
 - CXX GNU Extensions
 
 ### Cmake options:
-- `ACUL_INTL_ENABLE`: Enable intl support
 - `ACUL_ZSTD_ENABLE`: Enable zstd support
 - `BUILD_TESTS`: Enable testing
 - `ENABLE_COVERAGE`: Enable code coverage
@@ -98,7 +87,7 @@ Each response resolves to an **index entry**, which contains the metadata locati
 These are system libraries that must be available at build time:
 
 - [OneAPI TBB](https://github.com/oneapi-src/oneTBB) — required
-- [zstd](https://github.com/facebook/zstd) — optional, enables compressed buffers and caching in JATC
+- [zstd](https://github.com/facebook/zstd) — optional, enables compressed buffers
 - [gettext (intl)](https://www.gnu.org/software/gettext/) — optional, enables locale-aware messages and internationalization
 
 ### Bundled submodules

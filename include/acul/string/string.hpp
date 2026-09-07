@@ -204,26 +204,27 @@ namespace acul
                 _salloc.size.alloc_flags = ALLOC_RDATA;
                 return *this;
             }
-            size_type other_size = other.size();
-            size_type required_capacity = other.capacity();
-
-            if (self_alloc == ALLOC_STACK && required_capacity <= _sso_size)
+            if (other._salloc.size.alloc_flags == ALLOC_STACK)
             {
-                memcpy(_salloc.data, other._salloc.data, required_capacity * sizeof(value_type));
+                if (self_alloc == ALLOC_HEAP) Allocator::deallocate(_lalloc.ptr);
                 _salloc.size = other._salloc.size;
+                memcpy(_salloc.data, other._salloc.data, (other._salloc.size.data + 1) * sizeof(value_type));
                 return *this;
             }
 
+            const size_type other_size = other._lalloc.size.data;
+            const size_type required_capacity = other._lalloc.cap;
+
             if (self_alloc == ALLOC_HEAP && _lalloc.cap >= required_capacity)
             {
-                memcpy(_lalloc.ptr, other.c_str(), required_capacity * sizeof(value_type));
+                memcpy(_lalloc.ptr, other._lalloc.ptr, (other_size + 1) * sizeof(value_type));
                 _lalloc.size.data = other_size;
                 return *this;
             }
 
             if (!grow(required_capacity)) return *this;
 
-            memcpy(_lalloc.ptr, other.c_str(), required_capacity * sizeof(value_type));
+            memcpy(_lalloc.ptr, other._lalloc.ptr, (other_size + 1) * sizeof(value_type));
             _lalloc.size.data = other_size;
 
             return *this;
@@ -331,12 +332,6 @@ namespace acul
                 memcpy(result._salloc.data + size(), other.c_str(), (other.size() + 1) * sizeof(value_type));
                 result._salloc.size.alloc_flags = ALLOC_STACK;
                 result._salloc.size.data = new_size;
-            }
-            else if (_salloc.size.alloc_flags == ALLOC_HEAP && _lalloc.cap >= new_size + 1)
-            {
-                memcpy(_lalloc.ptr + size(), other.c_str(), (other.size() + 1) * sizeof(value_type));
-                result = *this;
-                result._lalloc.size.data = new_size;
             }
             else if (result.grow(new_size + 1))
             {

@@ -13,7 +13,6 @@ if(NOT DEFINED ACBT_LOADED)
     include(cmake/utils.cmake)
 endif()
 
-option(ACUL_INTL_ENABLE "Enable intl support" ON)
 option(ACUL_ZSTD_ENABLE "Enable zstd support" ON)
 
 create_symbol_export_file()
@@ -26,10 +25,6 @@ add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/hash")
 add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/exception")
 add_files(${PROJECT_NAME} RECURSE "${ACUL_SRC_DIR}/string")
 add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/io")
-
-if(ACUL_INTL_ENABLE)
-    add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/locales")
-endif()
 
 if(ACUL_ZSTD_ENABLE)
     add_files(${PROJECT_NAME} "${ACUL_SRC_DIR}/io/fs")
@@ -52,14 +47,6 @@ set(ACUL_PUBLIC_LIBS TBB::tbb TBB::tbbmalloc)
 
 if(ACUL_ZSTD_ENABLE)
     set(ACUL_PRIVATE_LIBS zstd)
-endif()
-
-if(WIN32 AND ACUL_INTL_ENABLE)
-    list(APPEND ACUL_PUBLIC_LIBS intl)
-endif()
-
-if(ACUL_INTL_ENABLE)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ACUL_INTL_ENABLE)
 endif()
 
 if(ACUL_ZSTD_ENABLE)

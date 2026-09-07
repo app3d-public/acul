@@ -26,6 +26,28 @@ void test_basic_string()
     acul::set<acul::string> extensions{"VK_KHR_surface"};
     assert(extensions.find("VK_KHR_surface") != extensions.end());
     assert(extensions.find("VK_KHR_surface_maintenance1") == extensions.end());
+
+    // Shrinking does not change the allocation class, so a short string can still use heap storage.
+    // Copy assignment must inspect that class and deeply copy the heap allocation.
+    acul::string heap_short = "This string begins long enough to require heap storage";
+    heap_short.resize(17u);
+    acul::string heap_short_copy;
+    heap_short_copy = heap_short;
+    assert(heap_short_copy == heap_short);
+    assert(heap_short_copy.c_str() != heap_short.c_str());
+
+    // Read-only literal storage has a long representation too, even when its contents fit SSO.
+    acul::string literal_copy;
+    const acul::string literal = "PMingLiU-ExtB";
+    literal_copy = literal;
+    assert(literal_copy == literal);
+
+    // Concatenation must never reuse and mutate spare capacity owned by the const left operand.
+    acul::string base_path = "C:\\Users\\wusik\\Documents\\code\\app3d\\assets";
+    base_path.reserve(128u);
+    const acul::string search_path = base_path + "\\*";
+    assert(base_path == "C:\\Users\\wusik\\Documents\\code\\app3d\\assets");
+    assert(search_path == "C:\\Users\\wusik\\Documents\\code\\app3d\\assets\\*");
 }
 
 void test_refstring()

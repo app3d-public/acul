@@ -36,25 +36,25 @@ namespace acul::log
         switch (level)
         {
             case level::info:
-                ss << "INFO";
+                ss << "info";
                 break;
             case level::debug:
-                ss << "DEBUG";
+                ss << "debug";
                 break;
             case level::trace:
-                ss << "TRACE";
+                ss << "trace";
                 break;
             case level::warn:
-                ss << "WARN";
+                ss << "warn";
                 break;
             case level::error:
-                ss << "ERROR";
+                ss << "error";
                 break;
             case level::fatal:
-                ss << "FATAL";
+                ss << "fatal";
                 break;
             default:
-                ss << "UNKNOWN";
+                ss << "unknown";
                 break;
         }
     }

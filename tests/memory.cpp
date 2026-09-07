@@ -6,6 +6,24 @@ struct Dummy
     int value = 42;
 };
 
+struct PolymorphicStorage
+{
+    virtual ~PolymorphicStorage() = default;
+};
+
+struct PolymorphicView
+{
+    virtual ~PolymorphicView() = default;
+};
+
+struct AliasedDummy final : PolymorphicStorage, PolymorphicView
+{
+    explicit AliasedDummy(bool &destroyed) : destroyed(destroyed) {}
+    ~AliasedDummy() override { destroyed = true; }
+
+    bool &destroyed;
+};
+
 void test_shared_ptr()
 {
     auto p1 = acul::make_shared<Dummy>();
@@ -24,6 +42,49 @@ void test_shared_ptr()
     assert(p3.use_count() == 1);
 
     p3.reset();
+
+    bool destroyed = false;
+    auto *raw = acul::alloc<AliasedDummy>(destroyed);
+    acul::shared_ptr<PolymorphicStorage> storage(static_cast<PolymorphicStorage *>(raw));
+    auto concrete = acul::static_pointer_cast<AliasedDummy>(storage);
+    acul::shared_ptr<PolymorphicView> view = concrete;
+    storage.reset();
+    concrete.reset();
+    assert(!destroyed);
+    view.reset();
+    assert(destroyed);
+
+    destroyed = false;
+    auto owned = acul::make_shared<AliasedDummy>(destroyed);
+    auto *expected_storage = static_cast<PolymorphicStorage *>(owned.get());
+    auto *expected_view = static_cast<PolymorphicView *>(owned.get());
+    acul::shared_ptr<PolymorphicStorage> owned_storage = owned;
+    acul::shared_ptr<PolymorphicView> owned_view = owned;
+    assert(owned_storage.get() == expected_storage);
+    assert(owned_view.get() == expected_view);
+    assert(static_cast<void *>(owned_storage.get()) != static_cast<void *>(owned_view.get()));
+    owned.reset();
+    owned_storage.reset();
+    assert(!destroyed);
+    owned_view.reset();
+    assert(destroyed);
+
+    destroyed = false;
+    raw = acul::alloc<AliasedDummy>(destroyed);
+    acul::shared_ptr<PolymorphicView> external_view(static_cast<PolymorphicView *>(raw));
+    external_view.reset();
+    assert(destroyed);
+
+    destroyed = false;
+    acul::shared_ptr<PolymorphicView> assigned_view;
+    {
+        auto concrete_owner = acul::make_shared<AliasedDummy>(destroyed);
+        assigned_view = concrete_owner;
+        assert(concrete_owner.use_count() == 2u);
+    }
+    assert(!destroyed);
+    assigned_view.reset();
+    assert(destroyed);
 }
 
 void test_weak_ptr()

@@ -65,12 +65,12 @@ namespace acul
 
     ACUL_EXPORT void write_exception_info(EXCEPTION_RECORD record, acul::stringstream &stream)
     {
-        stream << format("Exception code: 0x%llx\n", record.ExceptionCode);
-        stream << format("Exception address: 0x%llx\n", record.ExceptionAddress);
+        stream << format("exception code: 0x%llx\n", record.ExceptionCode);
+        stream << format("exception address: 0x%llx\n", record.ExceptionAddress);
 
         if (record.NumberParameters > 0)
         {
-            stream << "Exception parameters: ";
+            stream << "exception parameters: ";
             for (DWORD i = 0; i < record.NumberParameters; ++i)
                 stream << format("0x%llx ", record.ExceptionInformation[i]);
             stream << '\n';
@@ -79,7 +79,7 @@ namespace acul
 
     ACUL_EXPORT void write_frame_registers(stringstream &stream, const CONTEXT &context)
     {
-        stream << "Frame registers:\n";
+        stream << "frame registers:\n";
         stream << format("\tRAX: 0x%llx\n", context.Rax);
         stream << format("\tRBX: 0x%llx\n", context.Rbx);
         stream << format("\tRCX: 0x%llx\n", context.Rcx);

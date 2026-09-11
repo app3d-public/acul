@@ -148,13 +148,7 @@ namespace acul::detail
                 return *this;
             }
 
-            raw_hashtable tmp;
-            tmp.allocate_blocks(rhs._num_buckets);
-            memcpy(tmp._next, rhs._next, sizeof(uint32_t) * rhs._num_buckets);
-            for (size_type i = 0; i < rhs._num_buckets; ++i)
-                if (tmp._next[i] != AHM_INACTIVE) ::new ((void *)&tmp._values[i]) value_type(rhs._values[i]);
-            tmp._num_filled = rhs._num_filled;
-            tmp._last = rhs._last;
+            raw_hashtable tmp(rhs);
             swap(*this, tmp);
             return *this;
         }

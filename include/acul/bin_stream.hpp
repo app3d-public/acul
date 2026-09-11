@@ -215,13 +215,12 @@ namespace acul
         {
             ss_type count = 0u;
             read(count);
-            if (count > (size() - pos()) / sizeof(u64)) return *this;
-            vec.resize(vec.size() + static_cast<size_t>(count));
-            for (auto &el : vec)
-            {
-                el = T{};
-                read(el);
-            }
+            const size_type remaining = size() - pos();
+            if (count > remaining || static_cast<size_type>(count) > vec.max_size())
+                throw runtime_error("Invalid vector size in stream");
+
+            vec.resize(static_cast<size_type>(count));
+            for (auto &el : vec) read(el);
             return *this;
         }
 

@@ -46,7 +46,7 @@ namespace acul
     }
 
     template <typename T>
-    inline point<T> &operator+(const point<T> &a, const point<T> &b)
+    inline point<T> operator+(const point<T> &a, const point<T> &b)
     {
         return {a.x + b.x, a.y + b.y};
     }
@@ -60,7 +60,7 @@ namespace acul
     }
 
     template <typename T>
-    inline point<T> &operator-(const point<T> &a, const point<T> &b)
+    inline point<T> operator-(const point<T> &a, const point<T> &b)
     {
         return {a.x - b.x, a.y - b.y};
     }
@@ -73,17 +73,17 @@ namespace acul
         return a;
     }
     template <typename T>
-    inline point<T> &operator-(const point<T> &a)
+    inline point<T> operator-(const point<T> &a)
     {
         return {-a.x, -a.y};
     }
     template <typename T>
-    inline point<T> &operator*(const point<T> &a, i32 b)
+    inline point<T> operator*(const point<T> &a, i32 b)
     {
         return {a.x * b, a.y * b};
     }
     template <typename T>
-    inline point<T> &operator/(const point<T> &a, i32 b)
+    inline point<T> operator/(const point<T> &a, i32 b)
     {
         return {a.x / b, a.y / b};
     }

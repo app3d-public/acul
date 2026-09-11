@@ -11,6 +11,9 @@
 
 #ifdef _WIN32
     #include <processthreadsapi.h>
+#else
+    #include <sys/syscall.h>
+    #include <unistd.h>
 #endif
 
 namespace acul::task
@@ -171,6 +174,7 @@ namespace acul::task
     public:
         void run()
         {
+            std::lock_guard<std::mutex> lock(_mutex);
             _running = true;
             _thread = std::thread(&service_dispatch::worker_thread, this);
         }
@@ -188,8 +192,11 @@ namespace acul::task
 
         void register_service(service_base *service)
         {
-            _services.push_back(service);
+            std::lock_guard<std::mutex> lock(_mutex);
             service->_sd = this;
+            _services.push_back(service);
+            _notified = true;
+            _cv.notify_one();
         }
 
     public:
@@ -198,15 +205,21 @@ namespace acul::task
         std::mutex _mutex;
         std::condition_variable _cv;
         vector<service_base *> _services;
+        bool _notified{false};
 
         ACUL_EXPORT void worker_thread();
 
         friend class service_base;
     };
 
-    inline void service_base::notify() { _sd->_cv.notify_one(); }
+    inline void service_base::notify()
+    {
+        std::lock_guard<std::mutex> lock(_sd->_mutex);
+        _sd->_notified = true;
+        _sd->_cv.notify_one();
+    }
 
-    class shedule_service final : public service_base
+    class ACUL_CLASS_EXPORT shedule_service final : public service_base
     {
     public:
         ACUL_EXPORT virtual std::chrono::steady_clock::time_point dispatch() override;

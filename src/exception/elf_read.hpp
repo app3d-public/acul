@@ -1,8 +1,10 @@
 #pragma once
 #include <acul/map.hpp>
 #include <acul/pair.hpp>
+#include <acul/range.hpp>
 #include <acul/string/string.hpp>
 #include <acul/vector.hpp>
+#include <algorithm>
 #include <elf.h>
 
 namespace acul

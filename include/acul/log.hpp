@@ -174,7 +174,7 @@ namespace acul::log
      * Provides functionality to add, get, and remove loggers. It also allows logging messages with
      * different log levels.
      */
-    class log_service final : public task::service_base
+    class ACUL_CLASS_EXPORT log_service final : public task::service_base
     {
     public:
         enum level level{level::trace};
@@ -190,7 +190,7 @@ namespace acul::log
          * @return A pointer to the added Logger object.
          */
         template <typename T, typename... Args>
-        T *add_logger(const string &name, Args &&...args)
+        inline T *add_logger(const string &name, Args &&...args)
         {
             if (_loggers.find(name) != _loggers.end()) remove_logger(name);
             auto *logger = acul::alloc<T>(name, std::forward<Args>(args)...);
@@ -203,7 +203,7 @@ namespace acul::log
          * @param name The name of the logger to retrieve.
          * @return A pointer to the Logger object, or nullptr if the logger was not found.
          */
-        logger_base *get_logger(const string &name) const
+        inline logger_base *get_logger(const string &name) const
         {
             auto it = _loggers.find(name);
             return it == _loggers.end() ? nullptr : it->second;

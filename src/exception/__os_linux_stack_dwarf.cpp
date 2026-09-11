@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <unistd.h>
 #include "elf_read.hpp"
 
 #define REG_MAX_COUNT 17

@@ -22,9 +22,8 @@ namespace acul
     constexpr std::underlying_type_t<typename BitType::enum_type> compute_all_flags() noexcept
     {
         using mask_t = std::underlying_type_t<typename BitType::enum_type>;
-        mask_t all = 0;
-        for (mask_t i = 0; i < sizeof(mask_t) * 8; ++i) all |= (mask_t{1} << i);
-        return all;
+        using unsigned_mask_t = std::make_unsigned_t<mask_t>;
+        return static_cast<mask_t>(~unsigned_mask_t{0});
     }
 
     template <typename BitType, typename = is_flags<BitType>>

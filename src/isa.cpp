@@ -124,6 +124,6 @@ namespace acul
     #endif
     }
 #else
-    APPLIB_API bool is_x86_64_v3_supported() noexcept { return false; }
+    ACUL_EXPORT bool is_x86_64_v3_supported() noexcept { return false; }
 #endif
 } // namespace acul

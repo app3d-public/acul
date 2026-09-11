@@ -29,26 +29,26 @@ namespace acul
     void write_exception_info(siginfo_t *info, stringstream &stream)
     {
         int sig = info->si_signo;
-        stream << format("Signal: %d (%s)\n", sig, strsignal(sig));
+        stream << format("signal: %d (%s)\n", sig, strsignal(sig));
 
         if (info)
         {
-            stream << format("Signal code: %d\n", info->si_code);
-            stream << format("Fault address: %p\n", info->si_addr);
+            stream << format("signal code: %d\n", info->si_code);
+            stream << format("fault address: %p\n", info->si_addr);
 
             if (sig == SIGSEGV || sig == SIGBUS || sig == SIGFPE || sig == SIGILL)
             {
-                stream << "Signal details: ";
+                stream << "signal details: ";
                 switch (info->si_code)
                 {
                     case SEGV_MAPERR:
-                        stream << "Address not mapped to object\n";
+                        stream << "address not mapped to object\n";
                         break;
                     case SEGV_ACCERR:
-                        stream << "Invalid permissions for mapped object\n";
+                        stream << "invalid permissions for mapped object\n";
                         break;
                     default:
-                        stream << "Unknown reason\n";
+                        stream << "unknown reason\n";
                         break;
                 }
             }
@@ -59,7 +59,7 @@ namespace acul
     {
         const auto &regs = context.uc_mcontext.gregs;
 
-        stream << "Frame registers:\n";
+        stream << "frame registers:\n";
         stream << format("\tRAX: 0x%llx\n", regs[REG_RAX]);
         stream << format("\tRBX: 0x%llx\n", regs[REG_RBX]);
         stream << format("\tRCX: 0x%llx\n", regs[REG_RCX]);

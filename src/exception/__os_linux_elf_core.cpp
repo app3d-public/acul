@@ -1,4 +1,5 @@
 #include <acul/bin_stream.hpp>
+#include <acul/exception/utils.hpp>
 #include <acul/io/fs/file.hpp>
 #include <acul/memory/smart_ptr.hpp>
 #include <acul/string/string_view_pool.hpp>
@@ -170,7 +171,7 @@ namespace acul
             else if (include_head)
             {
                 size_t head = std::min(ELF_HEAD_ANON, size);
-                segments.emplace_back(lo, lo + head, fl, 0, head);
+                segments.emplace_back(lo, lo + head, fl, size_t{0}, head);
             }
             if (is_file_backed) mappings.emplace_back(lo, hi, off, (const char *)path_buf);
         }
@@ -448,7 +449,7 @@ namespace acul
         return true;
     }
 
-    APPLIB_API bool create_mini_dump(pid_t pid, pid_t crash_tid, int crash_sig, const ucontext_t &uc, vector<char> &out)
+    ACUL_EXPORT bool create_mini_dump(pid_t pid, pid_t crash_tid, int crash_sig, const ucontext_t &uc, vector<char> &out)
     {
         // Build process view
         process_view pv{};

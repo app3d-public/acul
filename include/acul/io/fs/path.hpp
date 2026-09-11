@@ -3,6 +3,9 @@
 #include "../detail/constants.hpp"
 #include "../path.hpp"
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 namespace acul::fs
 {

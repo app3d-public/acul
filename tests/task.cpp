@@ -1,5 +1,77 @@
 #include <acul/task.hpp>
 #include <cassert>
+#include <future>
+
+namespace
+{
+    bool wait_count(const std::atomic<int> &count, int expected)
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (count.load() < expected && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+        return count.load() >= expected;
+    }
+
+    struct CountingService : acul::task::service_base
+    {
+        std::atomic<int> &count;
+        bool called = false;
+        explicit CountingService(std::atomic<int> &count) : count(count) {}
+        std::chrono::steady_clock::time_point dispatch() override
+        {
+            if (!called) { called = true; ++count; }
+            return std::chrono::steady_clock::time_point::max();
+        }
+        void await(bool = false) override {}
+    };
+
+    struct BlockingService : CountingService
+    {
+        std::promise<void> &entered;
+        std::shared_future<void> resume;
+        BlockingService(std::atomic<int> &count, std::promise<void> &entered, std::shared_future<void> resume)
+            : CountingService(count), entered(entered), resume(resume) {}
+        std::chrono::steady_clock::time_point dispatch() override
+        {
+            if (!called) { entered.set_value(); resume.wait(); }
+            return CountingService::dispatch();
+        }
+    };
+
+    struct NotifyingService : CountingService
+    {
+        using CountingService::CountingService;
+        std::chrono::steady_clock::time_point dispatch() override
+        {
+            if (++count == 1) notify();
+            return std::chrono::steady_clock::time_point::max();
+        }
+    };
+}
+
+void test_service_registration_during_dispatch()
+{
+    std::atomic<int> count{0};
+    std::promise<void> entered, resume;
+    acul::task::service_dispatch sd;
+    sd.register_service(acul::alloc<BlockingService>(count, entered, resume.get_future().share()));
+    sd.register_service(acul::alloc<CountingService>(count));
+    sd.run();
+    entered.get_future().wait();
+    // Force registry reallocations while the worker is inside its first service.
+    for (int i = 0; i < 128; ++i) sd.register_service(acul::alloc<CountingService>(count));
+    resume.set_value();
+    assert(wait_count(count, 130));
+}
+
+void test_service_notification_during_dispatch()
+{
+    std::atomic<int> count{0};
+    acul::task::service_dispatch sd;
+    sd.register_service(acul::alloc<NotifyingService>(count));
+    sd.run();
+    assert(wait_count(count, 2));
+}
 
 void test_task_simple()
 {
@@ -100,6 +172,8 @@ void test_shedule_service_order()
 
 void test_task()
 {
+    test_service_registration_during_dispatch();
+    test_service_notification_during_dispatch();
     test_task_simple();
     test_task_void();
     test_thread_dispatch_simple();

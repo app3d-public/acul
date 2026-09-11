@@ -45,6 +45,46 @@ void test_bin_stream_list()
     for (int v : l2) assert(v == expected++);
 }
 
+void test_bin_stream_vector()
+{
+    {
+        const acul::vector<u8> values = {1u, 2u, 3u, 4u};
+        acul::bin_stream stream;
+        stream.write(values);
+
+        acul::vector<u8> output;
+        stream.read(output);
+        assert(output.size() == values.size());
+        for (size_t i = 0u; i < values.size(); ++i) assert(output[i] == values[i]);
+    }
+    {
+        const acul::vector<u32> values = {10u, 20u, 30u};
+        acul::bin_stream stream;
+        stream.write(values);
+
+        acul::vector<u32> output;
+        stream.read(output);
+        assert(output.size() == values.size());
+        assert(output[0] == 10u && output[1] == 20u && output[2] == 30u);
+    }
+    {
+        acul::bin_stream stream;
+        stream.write(static_cast<acul::bin_stream::ss_type>(2u)).write(static_cast<u32>(10u));
+
+        acul::vector<u32> output;
+        bool caught = false;
+        try
+        {
+            stream.read(output);
+        }
+        catch (const acul::runtime_error &)
+        {
+            caught = true;
+        }
+        assert(caught);
+    }
+}
+
 void test_bin_stream_raw_data()
 {
     char raw[] = "bin_test";
@@ -132,6 +172,7 @@ void test_stream()
     test_bin_stream_basic_types();
     test_bin_stream_string();
     test_bin_stream_list();
+    test_bin_stream_vector();
     test_bin_stream_raw_data();
     test_bin_stream_positioning();
     test_bin_stream_temporary_size();

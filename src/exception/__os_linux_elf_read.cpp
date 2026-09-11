@@ -15,7 +15,7 @@ namespace acul
         string_view_pool<char> lines;
         lines.reserve(content.size() / 96);
         fill_line_buffer(content.data(), content.size(), lines);
-        hashmap<string, int> path_map;
+        hashmap<string, size_t> path_map;
         for (const auto line : lines)
         {
             uintptr_t lo = 0, hi = 0, file_offset = 0;

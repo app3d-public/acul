@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "../ctype.hpp"
 #include "../detail/isa/dispatch.hpp"
 #include "../fwd/string_view_pool.hpp"
 #include "../vector.hpp"
@@ -41,82 +42,14 @@ namespace acul
         return std::numeric_limits<T>::digits10 + 2; // Numbers + -/+ + \0
     }
 
-    /**
-     * @brief Converts the integer to the C-style string
-     * @param value Source value
-     * @param buffer Destination buffer
-     * @return The number of characters written
-     */
-    template <typename T>
-    int to_string(T value, char *buffer)
-    {
-        size_t buffer_size = num_to_strbuf_size<T>();
-        char *ptr = buffer;
-
-        // Sign
-        if (value < 0)
-        {
-            *ptr = '-';
-            value = -value;
-            ptr++;
-            buffer_size--;
-        }
-
-        // If zero
-        if (value == 0)
-        {
-            if (buffer_size >= 2)
-            {
-                *ptr = '0';
-                ++ptr;
-                return 1;
-            }
-            else return 0;
-        }
-
-        size_t num_digits = 0;
-        int tmp = value;
-        while (tmp > 0)
-        {
-            num_digits++;
-            tmp /= 10;
-        }
-        if (num_digits > buffer_size - 1) return 0;
-
-#ifdef __clang__
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wvla-cxx-extension"
-#endif
-        // Reverse order array for storing digits
-        char reverse_order[num_digits];
-#ifdef __clang__
-    #pragma clang diagnostic pop
-#endif
-        int i = 0;
-        do
-        {
-            reverse_order[i++] = value % 10;
-            value /= 10;
-        } while (value);
-
-        // Writing digits to the buffer in the correct order
-        while (i--)
-        {
-            *ptr = '0' + reverse_order[i];
-            ptr++;
-        }
-        return ptr - buffer;
-    }
-
-    /**
-     * @brief Converts the float to the C-style string
-     * @param value Source value
-     * @param buffer Destination buffer
-     * @param buffer_size Buffer size
-     * @param precision Precision
-     * @return The number of characters written
-     **/
+    ACUL_EXPORT int to_string(int value, char *buffer);
+    ACUL_EXPORT int to_string(unsigned value, char *buffer);
+    ACUL_EXPORT int to_string(long value, char *buffer);
+    ACUL_EXPORT int to_string(unsigned long value, char *buffer);
+    ACUL_EXPORT int to_string(long long value, char *buffer);
+    ACUL_EXPORT int to_string(unsigned long long value, char *buffer);
     ACUL_EXPORT int to_string(f32 value, char *buffer, size_t buffer_size, int precision);
+    ACUL_EXPORT int to_string(f64 value, char *buffer, size_t buffer_size, int precision);
 
     template <typename T>
     inline auto to_string(T value) -> std::enable_if_t<std::is_integral_v<T>, acul::string>
@@ -202,9 +135,9 @@ namespace acul
     inline S trim(const S &s)
     {
         size_t a = 0;
-        while (a < s.size() && isspace((unsigned char)s[a])) ++a;
+        while (a < s.size() && is_space((unsigned char)s[a])) ++a;
         size_t b = s.size();
-        while (b > a && isspace((unsigned char)s[b - 1])) --b;
+        while (b > a && is_space((unsigned char)s[b - 1])) --b;
         return s.substr(a, b - a);
     }
 
@@ -216,7 +149,7 @@ namespace acul
     {
         if (!str) return "";
         const char *begin = str, *end = str + len;
-        while (begin < end && isspace((unsigned char)*begin)) ++begin;
+        while (begin < end && is_space((unsigned char)*begin)) ++begin;
         return string(begin, end - begin);
     }
 
@@ -236,7 +169,10 @@ namespace acul
             size_t j = 0;
             for (; j < m; ++j)
             {
-                if (lower((unsigned char)str[i + j]) != lower((unsigned char)find[j])) { break; }
+                if (lower((unsigned char)str[i + j]) != lower((unsigned char)find[j]))
+                {
+                    break;
+                }
             }
             if (j == m) return i;
         }
@@ -287,7 +223,7 @@ namespace acul
     {
         if (!str) return "";
         const char *end = str + len;
-        while (end != str && isspace(*(end - 1))) --end;
+        while (end != str && is_space(*(end - 1))) --end;
         return string(str, end);
     }
 
@@ -373,22 +309,6 @@ namespace acul
             pos = found + 1;
         }
         return result;
-    }
-
-    inline string to_lower(const string &s)
-    {
-        string out;
-        out.resize(s.size());
-        for (size_t i = 0; i < s.size(); ++i) { out[i] = tolower(s[i]); }
-        return out;
-    }
-
-    inline string to_upper(const string &s)
-    {
-        string out;
-        out.resize(s.size());
-        for (size_t i = 0; i < s.size(); ++i) { out[i] = toupper(s[i]); }
-        return out;
     }
 
     inline void fill_line_buffer(const char *data, size_t size, string_view_pool<char> &dst)

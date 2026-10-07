@@ -175,6 +175,12 @@ void test_utils()
     acul::string num_str = acul::to_string(42);
     assert(num_str == "42");
 
+    char decimal_buffer[64];
+    int decimal_size = acul::to_string(350.65f, decimal_buffer, sizeof(decimal_buffer), 5);
+    assert(acul::string(decimal_buffer, decimal_size) == "350.64999");
+    decimal_size = acul::to_string(350.65, decimal_buffer, sizeof(decimal_buffer), 5);
+    assert(acul::string(decimal_buffer, decimal_size) == "350.65000");
+
     // to_u16string
     acul::u16string num_u16 = acul::to_u16string(42);
     assert(acul::utf16_to_utf8(num_u16) == "42");
@@ -220,6 +226,7 @@ void test_utils()
     // Negative
     acul::string negative = acul::to_string(-12345);
     assert(negative == "-12345");
+
 }
 
 void test_string()

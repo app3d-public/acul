@@ -1,7 +1,6 @@
 #include <acul/string/utils.hpp>
+#include <cassert>
 #include <cmath>
-#include <cstdarg>
-#include <cstring>
 
 #ifdef _WIN32
     #include <winnls.h>
@@ -16,16 +15,11 @@ namespace acul
         for (size_t i = 0; i < src.size();)
         {
             unsigned char ch = static_cast<unsigned char>(src[i]);
-            if (ch <= 0x7f)
-                codepoint = ch;
-            else if (ch <= 0xbf)
-                codepoint = (codepoint << 6) | (ch & 0x3f);
-            else if (ch <= 0xdf)
-                codepoint = ch & 0x1f;
-            else if (ch <= 0xef)
-                codepoint = ch & 0x0f;
-            else
-                codepoint = ch & 0x07;
+            if (ch <= 0x7f) codepoint = ch;
+            else if (ch <= 0xbf) codepoint = (codepoint << 6) | (ch & 0x3f);
+            else if (ch <= 0xdf) codepoint = ch & 0x1f;
+            else if (ch <= 0xef) codepoint = ch & 0x0f;
+            else codepoint = ch & 0x07;
             i++;
             if (((src[i] & 0xc0) != 0x80) && (codepoint <= 0x10ffff))
             {
@@ -35,8 +29,7 @@ namespace acul
                                   static_cast<c16>((codepoint & 0x03ff) + 0xdc00)};
                     out.append(buf, 2);
                 }
-                else if (codepoint < 0xd800 || codepoint >= 0xe000)
-                    out.push_back(codepoint);
+                else if (codepoint < 0xd800 || codepoint >= 0xe000) out.push_back(codepoint);
             }
         }
         return out;
@@ -47,8 +40,7 @@ namespace acul
         string result;
         for (auto cp : src)
         {
-            if (cp < 0x80)
-                result.push_back(static_cast<u8>(cp));
+            if (cp < 0x80) result.push_back(static_cast<u8>(cp));
             else if (cp < 0x800)
             {
                 u8 chs[] = {static_cast<u8>((cp >> 6) | 0xc0), static_cast<u8>((cp & 0x3f) | 0x80)};
@@ -102,7 +94,7 @@ namespace acul
         int size = vsnprintf(nullptr, 0, format, args_copy) + 1;
         va_end(args_copy);
 
-        if (size <= 1) { result = ""; }
+        if (size <= 1) result = "";
         else
         {
             char buf[size];
@@ -121,8 +113,7 @@ namespace acul
         va_copy(args_copy, args);
         int size = vsnprintf(nullptr, 0, format, args_copy) + 1;
         va_end(args_copy);
-        if (size <= 1)
-            result = "";
+        if (size <= 1) result = "";
         else
         {
             char buf[size];
@@ -134,103 +125,129 @@ namespace acul
         return result;
     }
 
-    int to_string(f32 value, char *buffer, size_t buffer_size, int precision)
+    template <typename T>
+    int float_to_string(T value, char *buffer, size_t buffer_size, int precision)
     {
-        if (buffer_size < 2) return 0;
+        assert(buffer != nullptr && "buffer must not be null");
+        assert(precision >= 0 && precision <= 9 && "precision must be between 0 and 9");
+        if (buffer_size < 2 || !std::isfinite(value)) return 0;
 
         char *ptr = buffer;
-        if (value < 0)
+        char *end = buffer + buffer_size;
+
+        // Sign
+        if (value < static_cast<T>(0))
         {
-            *ptr = '-';
+            if (ptr == end) return 0;
+
+            *ptr++ = '-';
             value = -value;
-            ptr++;
-            buffer_size--;
         }
 
-        if (fabs(value) < pow(10, -precision))
+        if (static_cast<long double>(value) > static_cast<long double>(UINT64_MAX)) return 0;
+
+        static constexpr u64 powers_of_10[] = {1ULL,           10ULL,           100ULL,       1'000ULL,
+                                               10'000ULL,      100'000ULL,      1'000'000ULL, 10'000'000ULL,
+                                               100'000'000ULL, 1'000'000'000ULL};
+
+        const u64 scale = powers_of_10[precision];
+
+        u64 integer = static_cast<u64>(value);
+        T fraction = value - static_cast<T>(integer);
+        u64 fractional = static_cast<u64>(fraction * static_cast<T>(scale) + static_cast<T>(0.5));
+
+        if (fractional >= scale && precision != 0)
         {
-            if (buffer_size >= 2)
-            {
-                *ptr = '0';
-                ptr++;
-                --buffer_size;
-                if (precision > 0 && buffer_size > static_cast<size_t>(precision + 1))
-                {
-                    *ptr = '.';
-                    ptr++;
-
-                    for (int i = 0; i < precision; i++)
-                    {
-                        *ptr = '0';
-                        ptr++;
-                    }
-
-                    return ptr - buffer;
-                }
-                return ptr - buffer - 1;
-            }
-            else
-                return 0;
+            fractional = 0;
+            ++integer;
         }
+        else if (precision == 0 && fraction >= static_cast<T>(0.5)) ++integer;
 
-        f32 temp_value = value;
-        int num_digits = 0;
-        if (temp_value >= 1)
+        // Integer part.
+        char reverse[32];
+        int digits = 0;
+
+        do
         {
-            while (temp_value >= 1)
-            {
-                ++num_digits;
-                temp_value /= 10;
-            }
-        }
-        int int_value = (int)value;
-        if (num_digits < 0 || (size_t)num_digits > buffer_size - 1) return 0;
+            reverse[digits++] = static_cast<char>('0' + integer % 10);
+            integer /= 10;
+        } while (integer != 0);
 
-        // Reverse order array for storing digits
-        char reverse_order[num_digits];
+        if (static_cast<size_t>(end - ptr) < static_cast<size_t>(digits)) return 0;
 
-        int i = 0;
-        do {
-            reverse_order[i++] = int_value % 10;
-            int_value /= 10;
-        } while (int_value);
+        while (digits != 0) *ptr++ = reverse[--digits];
 
-        // Writing digits to the buffer in the correct order
-        while (i--)
+        if (precision == 0) return static_cast<int>(ptr - buffer);
+        if (static_cast<size_t>(end - ptr) < static_cast<size_t>(precision + 1)) return 0;
+        *ptr++ = '.';
+
+        char *fraction_begin = ptr;
+        ptr += precision;
+
+        for (int i = 0; i < precision; ++i)
         {
-            *ptr = '0' + reverse_order[i];
-            ptr++;
+            *--ptr = static_cast<char>('0' + fractional % 10);
+            fractional /= 10;
         }
 
-        if (value - (int)value > 0 || precision > 0)
+        ptr = fraction_begin + precision;
+        return static_cast<int>(ptr - buffer);
+    }
+
+    template <typename T>
+    int decimal_to_string(T value, char *buffer)
+    {
+        static_assert(std::is_integral_v<T>);
+
+        using U = std::make_unsigned_t<T>;
+
+        constexpr size_t max_digits = std::numeric_limits<U>::digits10 + 1;
+
+        U unsigned_value;
+        bool negative = false;
+
+        if constexpr (std::is_signed_v<T>)
         {
-            if (buffer_size - num_digits - 2 < 0) return 0;
-
-            *ptr = '.';
-            ptr++;
-
-            f32 fraction = value - (int)value;
-
-            int num_fractional_digits = 0;
-            while (fraction > 0 && (num_fractional_digits < precision || precision == 0) && buffer_size > 2)
+            if (value < 0)
             {
-                fraction *= 10;
-                int digit = (int)(fraction + 0.5f);
-                fraction -= digit;
-                *ptr = '0' + digit;
-                ptr++;
-                ++num_fractional_digits;
+                negative = true;
+                unsigned_value = U(0) - static_cast<U>(value);
             }
-
-            while (num_fractional_digits < precision)
-            {
-                *ptr = '0';
-                ++ptr;
-                ++num_fractional_digits;
-            }
+            else unsigned_value = static_cast<U>(value);
         }
+        else unsigned_value = value;
 
-        return ptr - buffer;
+        char *end = buffer + max_digits;
+        char *ptr = end;
+
+        do
+        {
+            *--ptr = static_cast<char>('0' + unsigned_value % 10);
+            unsigned_value /= 10;
+        } while (unsigned_value != 0);
+
+        if (negative) *--ptr = '-';
+
+        const size_t length = static_cast<size_t>(end - ptr);
+        std::memmove(buffer, ptr, length);
+        return static_cast<int>(length);
+    }
+
+    int to_string(int value, char *buffer) { return decimal_to_string(value, buffer); }
+    int to_string(unsigned value, char *buffer) { return decimal_to_string(value, buffer); }
+    int to_string(long value, char *buffer) { return decimal_to_string(value, buffer); }
+    int to_string(unsigned long value, char *buffer) { return decimal_to_string(value, buffer); }
+    int to_string(long long value, char *buffer) { return decimal_to_string(value, buffer); }
+    int to_string(unsigned long long value, char *buffer) { return decimal_to_string(value, buffer); }
+
+    int to_string(f32 value, char *buffer, size_t buffer_size, int precision)
+    {
+        return float_to_string(value, buffer, buffer_size, precision);
+    }
+
+    int to_string(f64 value, char *buffer, size_t buffer_size, int precision)
+    {
+        return float_to_string(value, buffer, buffer_size, precision);
     }
 #if defined(__clang__)
     #pragma clang diagnostic pop
@@ -241,18 +258,15 @@ namespace acul
         const char *ptr = str;
         int sign = 1;
 
-        // Skip white spaces
-        while (isspace(*ptr)) ++ptr;
+        while (is_space(*ptr)) ++ptr;
 
-        // Check sign
         if (*ptr == '-' || *ptr == '+') sign = (*ptr++ == '-') ? -1 : 1;
 
-        // Parse integer part
         int result = 0;
-        while (isdigit(*ptr)) result = (result * 10) + (*ptr++ - '0');
+        while (is_digit(*ptr)) result = (result * 10) + (*ptr++ - '0');
 
         value = result * sign;
-        str = ptr; // Update the input pointer
+        str = ptr;
         return (sign == 1) ? (result != 0) : true;
     }
 
@@ -261,11 +275,11 @@ namespace acul
         const char *ptr = str;
 
         // Skip white spaces
-        while (isspace(*ptr)) ++ptr;
+        while (is_space(*ptr)) ++ptr;
 
         // Parse integer part
         unsigned long long result = 0;
-        while (isdigit(*ptr)) result = (result * 10) + (*ptr++ - '0');
+        while (is_digit(*ptr)) result = (result * 10) + (*ptr++ - '0');
 
         value = result;
         str = ptr;
@@ -276,7 +290,7 @@ namespace acul
     {
         const char *ptr = str;
 
-        while (isspace(*ptr)) ++ptr;
+        while (is_space(*ptr)) ++ptr;
 
         if (ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X')) ptr += 2;
         if (!isxdigit(*ptr)) return false;
@@ -287,12 +301,9 @@ namespace acul
         {
             unsigned long long digit = 0;
 
-            if (*ptr >= '0' && *ptr <= '9')
-                digit = *ptr - '0';
-            else if (*ptr >= 'a' && *ptr <= 'f')
-                digit = 10 + (*ptr - 'a');
-            else if (*ptr >= 'A' && *ptr <= 'F')
-                digit = 10 + (*ptr - 'A');
+            if (*ptr >= '0' && *ptr <= '9') digit = *ptr - '0';
+            else if (*ptr >= 'a' && *ptr <= 'f') digit = 10 + (*ptr - 'a');
+            else if (*ptr >= 'A' && *ptr <= 'F') digit = 10 + (*ptr - 'A');
 
             if (result > (ULLONG_MAX - digit) / 16) return false;
 
@@ -311,82 +322,92 @@ namespace acul
         bool negative = false;
 
         // Skip white spaces
-        while (isspace(*ptr)) ptr++;
+        while (is_space(static_cast<unsigned char>(*ptr))) ++ptr;
 
         // Check optional sign
         if (*ptr == '+')
-            ptr++;
+        {
+            ++ptr;
+        }
         else if (*ptr == '-')
         {
             negative = true;
-            ptr++;
+            ++ptr;
         }
 
         // Parse integer part
-        if (!isdigit(*ptr)) return false; // At least one digit is required
+        if (!is_digit(static_cast<unsigned char>(*ptr))) return false;
 
-        f32 integer_part = 0.0;
-        while (isdigit(*ptr))
+        f32 result = 0.0f;
+
+        while (is_digit(static_cast<unsigned char>(*ptr)))
         {
-            integer_part *= 10.0;
-            integer_part += *ptr - '0';
-            ptr++;
+            result *= 10.0f;
+            result += static_cast<f32>(*ptr - '0');
+            ++ptr;
         }
 
         // Parse fractional part
-        f32 fractional_part = 0.0;
-        f32 fractional_div = 1.0;
         if (*ptr == '.')
         {
-            ptr++;
-            while (isdigit(*ptr))
+            ++ptr;
+
+            f32 scale = 0.1f;
+
+            while (is_digit(static_cast<unsigned char>(*ptr)))
             {
-                fractional_part *= 10.0;
-                fractional_part += *ptr - '0';
-                fractional_div *= 10.0;
-                ptr++;
+                result += static_cast<f32>(*ptr - '0') * scale;
+                scale *= 0.1f;
+                ++ptr;
             }
         }
 
         // Parse exponential part
-        int exponent_part = 0;
         if (*ptr == 'e' || *ptr == 'E')
         {
-            ptr++;
+            ++ptr;
+
             bool exponent_negative = false;
+
             if (*ptr == '+')
-                ptr++;
+            {
+                ++ptr;
+            }
             else if (*ptr == '-')
             {
                 exponent_negative = true;
-                ptr++;
+                ++ptr;
             }
 
-            if (!isdigit(*ptr)) return false; // At least one digit is required
+            if (!is_digit(static_cast<unsigned char>(*ptr))) return false;
 
-            while (isdigit(*ptr))
+            int exponent_part = 0;
+
+            while (is_digit(static_cast<unsigned char>(*ptr)))
             {
                 exponent_part *= 10;
                 exponent_part += *ptr - '0';
-                ptr++;
+                ++ptr;
             }
 
-            if (exponent_negative) exponent_part = -exponent_part;
+            const f32 exponent_scale = std::pow(10.0f, static_cast<f32>(exponent_part));
+
+            if (exponent_negative) result /= exponent_scale;
+            else result *= exponent_scale;
         }
 
-        f32 result = (integer_part + fractional_part / fractional_div) * pow(10.0, exponent_part);
         value = negative ? -result : result;
 
-        str = ptr; // Update the input pointer
+        str = ptr;
         return true;
     }
 
     string read_word(const char *&str)
     {
         const char *begin = str;
-        while (isspace(*begin)) ++begin;
+        while (is_space(*begin)) ++begin;
         const char *end = begin;
-        while (*end && !isspace(*end)) ++end;
+        while (*end && !is_space(*end)) ++end;
         str = end;
         return string(begin, end);
     }

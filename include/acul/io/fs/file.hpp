@@ -6,6 +6,7 @@
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include "../../op_result.hpp"
+#include "../../string/utils.hpp"
 #include "../../vector.hpp"
 
 #ifdef _WIN32
@@ -76,9 +77,17 @@ namespace acul::fs
 
     inline bool exists(const char *path) noexcept
     {
+        if (!path || !*path) return false;
 #ifdef _WIN32
-        DWORD file_attr = GetFileAttributesA(path);
-        return (file_attr != INVALID_FILE_ATTRIBUTES);
+        try
+        {
+            const u16string wide = utf8_to_utf16(path);
+            return GetFileAttributesW(reinterpret_cast<LPCWSTR>(wide.c_str())) != INVALID_FILE_ATTRIBUTES;
+        }
+        catch (...)
+        {
+            return false;
+        }
 #else
         struct stat buffer;
         return (stat(path, &buffer) == 0);
@@ -236,6 +245,10 @@ namespace acul::fs
      * @return Returns a status code indicating the success or failure of the directory creation operation.
      */
     ACUL_EXPORT op_result create_directory(const char *path);
+    /// Create missing parent directories as well. Paths use UTF-8.
+    ACUL_EXPORT op_result create_directories(const string &path);
+    /// Atomically replace a file on the same filesystem.
+    ACUL_EXPORT op_result replace_file(const string &source, const string &destination);
 
     /**
      * @brief Removes an empty directory at the specified path.

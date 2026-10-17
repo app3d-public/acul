@@ -1,4 +1,5 @@
 #include <acul/io/fs/file.hpp>
+#include <acul/io/path.hpp>
 #include <acul/log.hpp>
 #include <zstd.h>
 
@@ -8,7 +9,12 @@ namespace acul::fs
 {
     size_t read_binary_fd(const string &filename, FILE *&fd)
     {
+#ifdef _WIN32
+        const u16string wide = utf8_to_utf16(filename);
+        fd = _wfopen(reinterpret_cast<LPCWSTR>(wide.c_str()), L"rb");
+#else
         fd = fopen(filename.c_str(), "rb");
+#endif
         if (!fd) return 0;
         if (fs::fseek(fd, 0, SEEK_END) != 0)
         {
@@ -30,7 +36,11 @@ namespace acul::fs
     {
         FILE *fd;
         size_t file_size = read_binary_fd(filename, fd);
-        if (file_size == 0) return false;
+        if (file_size == 0)
+        {
+            if (fd) fclose(fd);
+            return false;
+        }
 
         buffer.resize(file_size);
         if (fread(buffer.data(), 1, file_size, fd) != file_size)
@@ -71,12 +81,24 @@ namespace acul::fs
 
     bool write_binary(const string &filename, const char *buffer, size_t size)
     {
-        std::ofstream file(filename.c_str(), std::ios::binary | std::ios::trunc);
+#ifdef _WIN32
+        const u16string wide = utf8_to_utf16(filename);
+        FILE *file = _wfopen(reinterpret_cast<LPCWSTR>(wide.c_str()), L"wb");
+#else
+        FILE *file = fopen(filename.c_str(), "wb");
+#endif
         if (!file) return false;
+        const bool written = fwrite(buffer, 1, size, file) == size && fflush(file) == 0;
+        return fclose(file) == 0 && written;
+    }
 
-        file.write(buffer, size);
-        file.close();
-        return file.good();
+    op_result create_directories(const string &name)
+    {
+        if (name.empty()) return make_op_error(ACUL_OP_INVALID_SIZE);
+        if (is_directory(name.c_str())) return make_op_success();
+        const path parent = path(name).parent_path();
+        if (!parent.empty() && parent.str() != name) ACUL_TRY(create_directories(parent.str()));
+        return create_directory(name.c_str());
     }
 
 #ifdef ACUL_ZSTD_ENABLE

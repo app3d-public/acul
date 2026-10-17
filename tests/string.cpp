@@ -1,12 +1,11 @@
+#include <acul/set.hpp>
 #include <acul/string/refstring.hpp>
 #include <acul/string/sstream.hpp>
 #include <acul/string/string.hpp>
 #include <acul/string/string_view.hpp>
 #include <acul/string/string_view_pool.hpp>
 #include <acul/string/utils.hpp>
-#include <acul/set.hpp>
 #include <cassert>
-
 
 void test_basic_string()
 {
@@ -159,6 +158,40 @@ void test_utils()
     acul::u16string utf16 = acul::utf8_to_utf16(utf8);
     acul::string back_to_utf8 = acul::utf16_to_utf8(utf16);
     assert(utf8 == back_to_utf8);
+    const acul::string unicode = "Привет 世界 🧪";
+    const auto unicode16 = acul::utf8_to_utf16(unicode);
+    assert(unicode16 == u"Привет 世界 🧪");
+    assert(acul::utf16_to_utf8(unicode16) == unicode);
+    const acul::u16string boundaries = u"\x007F\x0080\x07FF\x0800\xD7FF\xE000\xFFFF\U00010000\U0010FFFF";
+    assert(acul::utf8_to_utf16(acul::utf16_to_utf8(boundaries)) == boundaries);
+    const acul::string embedded_zero("a\0b", 3);
+    assert(acul::utf16_to_utf8(acul::utf8_to_utf16(embedded_zero)) == embedded_zero);
+    for (const char *invalid : {"\x80", "\xC0\xAF", "\xF0\x9F", "\xED\xA0\x80", "\xF4\x90\x80\x80"})
+    {
+        bool rejected = false;
+        try
+        {
+            acul::utf8_to_utf16(invalid);
+        }
+        catch (const acul::runtime_error &)
+        {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    for (const char16_t *invalid : {u"\xD800", u"\xDC00", u"\xD800x"})
+    {
+        bool rejected = false;
+        try
+        {
+            acul::utf16_to_utf8(invalid);
+        }
+        catch (const acul::runtime_error &)
+        {
+            rejected = true;
+        }
+        assert(rejected);
+    }
 
     // trim
     acul::string trimmed = acul::trim(acul::string("  hello world   "));

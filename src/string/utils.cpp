@@ -12,31 +12,46 @@ namespace acul
     u16string utf8_to_utf16(const string &src)
     {
         u16string out;
-        unsigned int codepoint;
         for (size_t i = 0; i < src.size();)
         {
-            unsigned char ch = static_cast<unsigned char>(src[i]);
-            if (ch <= 0x7f)
-                codepoint = ch;
-            else if (ch <= 0xbf)
-                codepoint = (codepoint << 6) | (ch & 0x3f);
-            else if (ch <= 0xdf)
-                codepoint = ch & 0x1f;
-            else if (ch <= 0xef)
-                codepoint = ch & 0x0f;
-            else
-                codepoint = ch & 0x07;
-            i++;
-            if (((src[i] & 0xc0) != 0x80) && (codepoint <= 0x10ffff))
+            const auto first = static_cast<u8>(src[i++]);
+            u32 cp = first;
+            size_t count = 0;
+            u32 minimum = 0;
+            if (first >= 0xC2 && first <= 0xDF)
             {
-                if (codepoint > 0xffff)
-                {
-                    c16 buf[2] = {static_cast<c16>((codepoint >> 10) + 0xd800),
-                                  static_cast<c16>((codepoint & 0x03ff) + 0xdc00)};
-                    out.append(buf, 2);
-                }
-                else if (codepoint < 0xd800 || codepoint >= 0xe000)
-                    out.push_back(codepoint);
+                cp = first & 0x1F;
+                count = 1;
+                minimum = 0x80;
+            }
+            else if (first >= 0xE0 && first <= 0xEF)
+            {
+                cp = first & 0x0F;
+                count = 2;
+                minimum = 0x800;
+            }
+            else if (first >= 0xF0 && first <= 0xF4)
+            {
+                cp = first & 0x07;
+                count = 3;
+                minimum = 0x10000;
+            }
+            else if (first >= 0x80) throw runtime_error("Invalid UTF-8 string.");
+            if (count > src.size() - i) throw runtime_error("Invalid UTF-8 string.");
+            for (size_t j = 0; j < count; ++j)
+            {
+                const auto next = static_cast<u8>(src[i++]);
+                if ((next & 0xC0) != 0x80) throw runtime_error("Invalid UTF-8 string.");
+                cp = (cp << 6) | (next & 0x3F);
+            }
+            if (cp < minimum || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+                throw runtime_error("Invalid UTF-8 string.");
+            if (cp < 0x10000) out.push_back(static_cast<char16_t>(cp));
+            else
+            {
+                cp -= 0x10000;
+                out.push_back(static_cast<char16_t>(0xD800 + (cp >> 10)));
+                out.push_back(static_cast<char16_t>(0xDC00 + (cp & 0x3FF)));
             }
         }
         return out;
@@ -44,24 +59,38 @@ namespace acul
 
     string utf16_to_utf8(const u16string &src)
     {
-        string result;
-        for (auto cp : src)
+        string out;
+        for (size_t i = 0; i < src.size(); ++i)
         {
-            if (cp < 0x80)
-                result.push_back(static_cast<u8>(cp));
+            u32 cp = src[i];
+            if (cp >= 0xD800 && cp <= 0xDBFF)
+            {
+                if (++i >= src.size() || src[i] < 0xDC00 || src[i] > 0xDFFF)
+                    throw runtime_error("Invalid UTF-16 string.");
+                cp = 0x10000 + ((cp - 0xD800) << 10) + (src[i] - 0xDC00);
+            }
+            else if (cp >= 0xDC00 && cp <= 0xDFFF) throw runtime_error("Invalid UTF-16 string.");
+            if (cp < 0x80) out.push_back(static_cast<char>(cp));
             else if (cp < 0x800)
             {
-                u8 chs[] = {static_cast<u8>((cp >> 6) | 0xc0), static_cast<u8>((cp & 0x3f) | 0x80)};
-                result.append(std::begin(chs), std::end(chs));
+                out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+            }
+            else if (cp < 0x10000)
+            {
+                out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
             }
             else
             {
-                u8 chs[] = {static_cast<u8>((cp >> 12) | 0xe0), static_cast<u8>(((cp >> 6) & 0x3f) | 0x80),
-                            static_cast<u8>((cp & 0x3f) | 0x80)};
-                result.append(std::begin(chs), std::end(chs));
+                out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
             }
         }
-        return result;
+        return out;
     }
 
     string strip_controls(const string &input_str, size_t max)

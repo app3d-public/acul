@@ -154,7 +154,7 @@ namespace acul
             return *this;
         }
 
-        R operator()(A... args) const noexcept
+        R operator()(A... args) const
         {
             assert(_vt);
             return _vt->invoke((void *)_storage, std::forward<A>(args)...);

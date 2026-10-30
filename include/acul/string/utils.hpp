@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdarg>
 #include <cstdint>
 #include "../ctype.hpp"
 #include "../detail/isa/dispatch.hpp"

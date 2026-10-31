@@ -1,5 +1,6 @@
 #include <acul/string/utils.hpp>
 #include <cassert>
+#include <cstdarg>
 #include <cmath>
 
 #ifdef _WIN32

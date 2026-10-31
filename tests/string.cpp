@@ -174,6 +174,18 @@ void test_utils()
     // to_string
     acul::string num_str = acul::to_string(42);
     assert(num_str == "42");
+    assert(acul::to_string(std::numeric_limits<int>::min()) == "-2147483648");
+    assert(acul::to_string(-1000000000) == "-1000000000");
+    assert(acul::to_string(std::numeric_limits<long long>::min()) == "-9223372036854775808");
+    assert(acul::to_string(std::numeric_limits<unsigned long long>::max()) == "18446744073709551615");
+    assert(acul::to_string(u8{255}) == "255");
+    assert(acul::to_string(u16{65535}) == "65535");
+    assert(acul::to_string(i8{-128}) == "-128");
+    assert(acul::to_string(i16{-32768}) == "-32768");
+    char guarded[13];
+    std::memset(guarded, '#', sizeof(guarded));
+    const int guarded_size = acul::to_string(std::numeric_limits<int>::min(), guarded + 1);
+    assert(guarded_size == 11 && guarded[0] == '#' && guarded[12] == '#');
 
     char decimal_buffer[64];
     int decimal_size = acul::to_string(350.65f, decimal_buffer, sizeof(decimal_buffer), 5);

@@ -217,7 +217,8 @@ namespace acul
         }
         else unsigned_value = value;
 
-        char *end = buffer + max_digits;
+        char reverse[max_digits + (std::is_signed_v<T> ? 1 : 0)];
+        char *end = reverse + sizeof(reverse);
         char *ptr = end;
 
         do
@@ -229,7 +230,7 @@ namespace acul
         if (negative) *--ptr = '-';
 
         const size_t length = static_cast<size_t>(end - ptr);
-        std::memmove(buffer, ptr, length);
+        std::memcpy(buffer, ptr, length);
         return static_cast<int>(length);
     }
 

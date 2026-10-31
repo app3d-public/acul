@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdarg>
 #include "../ctype.hpp"
 #include "../detail/isa/dispatch.hpp"
 #include "../fwd/string_view_pool.hpp"

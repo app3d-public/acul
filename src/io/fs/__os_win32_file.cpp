@@ -33,9 +33,16 @@ namespace acul::fs
     bool is_directory(const char *path) noexcept
     {
         if (!path || !*path) return false;
-        u16string w_path = utf8_to_utf16(path);
-        DWORD file_attr = GetFileAttributesW((LPCWSTR)w_path.c_str());
-        return file_attr != INVALID_FILE_ATTRIBUTES && (file_attr & FILE_ATTRIBUTE_DIRECTORY);
+        try
+        {
+            const u16string wide = utf8_to_utf16(path);
+            const DWORD attributes = GetFileAttributesW(reinterpret_cast<LPCWSTR>(wide.c_str()));
+            return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY);
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 
     fd_lock lock_file(const string &filename)
@@ -82,8 +89,9 @@ namespace acul::fs
 
     op_result write_by_block(const string &filename, const char *buffer, size_t block_size)
     {
-        HANDLE file_handle =
-            CreateFile(filename.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        const u16string wide = utf8_to_utf16(filename);
+        HANDLE file_handle = CreateFileW(reinterpret_cast<LPCWSTR>(wide.c_str()), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
+                                         FILE_ATTRIBUTE_NORMAL, NULL);
         if (file_handle == INVALID_HANDLE_VALUE) return make_op_error(ACUL_OP_WRITE_ERROR, GetLastError());
 
         size_t buffer_size = null_terminated_length(buffer);
@@ -108,23 +116,31 @@ namespace acul::fs
     }
 
     op_result copy_file(const char *src, const char *dst, bool overwrite) noexcept
+    try
     {
-        if (CopyFileA(src, dst, !overwrite)) return make_op_success();
+        const u16string from = utf8_to_utf16(src), to = utf8_to_utf16(dst);
+        if (CopyFileW(reinterpret_cast<LPCWSTR>(from.c_str()), reinterpret_cast<LPCWSTR>(to.c_str()), !overwrite))
+            return make_op_success();
         DWORD err = GetLastError();
         if (!overwrite && err == ERROR_FILE_EXISTS)
             return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
         return make_op_error(ACUL_OP_WRITE_ERROR, err);
     }
+    catch (...)
+    {
+        return make_op_error(ACUL_OP_INVALID_SIZE);
+    }
 
     op_result create_directory(const char *path)
     {
-        if (CreateDirectoryA(path, NULL)) return make_op_success();
+        const u16string wide = utf8_to_utf16(path);
+        if (CreateDirectoryW(reinterpret_cast<LPCWSTR>(wide.c_str()), NULL)) return make_op_success();
         else
         {
             DWORD error = GetLastError();
             if (error == ERROR_ALREADY_EXISTS)
             {
-                DWORD dw_attrib = GetFileAttributesA(path);
+                DWORD dw_attrib = GetFileAttributesW(reinterpret_cast<LPCWSTR>(wide.c_str()));
                 if (dw_attrib != INVALID_FILE_ATTRIBUTES && (dw_attrib & FILE_ATTRIBUTE_DIRECTORY))
                     return op_result(ACUL_OP_SUCCESS, ACUL_OP_DOMAIN, ACUL_OP_CODE_SKIPPED);
             }
@@ -134,12 +150,27 @@ namespace acul::fs
 
     op_result remove_file(const char *path)
     {
-        return DeleteFileA(path) ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
+        const u16string wide = utf8_to_utf16(path);
+        return DeleteFileW(reinterpret_cast<LPCWSTR>(wide.c_str()))
+                   ? make_op_success()
+                   : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
+    }
+
+    op_result replace_file(const string &source, const string &destination)
+    {
+        const u16string from = utf8_to_utf16(source), to = utf8_to_utf16(destination);
+        return MoveFileExW(reinterpret_cast<LPCWSTR>(from.c_str()), reinterpret_cast<LPCWSTR>(to.c_str()),
+                           MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)
+                   ? make_op_success()
+                   : make_op_error(ACUL_OP_WRITE_ERROR, GetLastError());
     }
 
     op_result remove_directory(const char *path)
     {
-        return RemoveDirectoryA(path) ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
+        const u16string wide = utf8_to_utf16(path);
+        return RemoveDirectoryW(reinterpret_cast<LPCWSTR>(wide.c_str()))
+                   ? make_op_success()
+                   : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
     }
 
     op_result list_files(const string &base_path, vector<string> &dst, bool recursive)
@@ -196,8 +227,8 @@ namespace acul::fs
             CloseHandle(file);
             return make_op_error(ACUL_OP_MAP_ERROR, error);
         }
-        const auto *bytes = static_cast<const char *>(MapViewOfFile(mapping, FILE_MAP_READ, 0, 0,
-                                                                   static_cast<size_t>(length.QuadPart)));
+        const auto *bytes = static_cast<const char *>(
+            MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, static_cast<size_t>(length.QuadPart)));
         const DWORD error = bytes ? ERROR_SUCCESS : GetLastError();
         // The view retains the mapping until UnmapViewOfFile; these handles are no longer needed.
         CloseHandle(mapping);

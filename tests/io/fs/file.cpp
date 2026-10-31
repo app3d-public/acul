@@ -67,6 +67,26 @@ void test_file()
         assert(remove_file(empty_file.str().c_str()).success());
     }
 
+    // UTF-8 paths, recursive creation and atomic replacement of an existing file.
+    const path unicode_parent = data / "профиль-🧪";
+    const path unicode_dir = unicode_parent / "nested";
+    assert(create_directories(unicode_dir.str()).success());
+    assert(create_directories(unicode_dir.str()).success());
+    const path source = unicode_dir / "новый.bin", destination = unicode_dir / "данные.bin";
+    assert(write_binary(source.str(), "new", 3));
+    assert(write_binary(destination.str(), "old", 3));
+    assert(replace_file(source.str(), destination.str()).success());
+    assert(!exists(source.str().c_str()) && exists(destination.str().c_str()));
+    vector<char> unicode_bytes;
+    assert(read_binary(destination.str(), unicode_bytes));
+    assert(unicode_bytes.size() == 3 && std::memcmp(unicode_bytes.data(), "new", 3) == 0);
+    assert(!create_directories((destination / "child").str()).success());
+    assert(!replace_file(source.str(), destination.str()).success());
+    assert(read_binary(destination.str(), unicode_bytes) && unicode_bytes.size() == 3);
+    assert(remove_file(destination.str().c_str()).success());
+    assert(remove_directory(unicode_dir.str().c_str()).success());
+    assert(remove_directory(unicode_parent.str().c_str()).success());
+
     // --- fill_line_buffer
     string_view_pool<char> pool;
     pool.reserve(256);

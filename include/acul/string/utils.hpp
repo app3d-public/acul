@@ -20,10 +20,12 @@ namespace acul
 {
 
     /// @brief Convert string in UTF-8 encoding to string in UTF-16 encoding
+    /// @throws runtime_error on malformed Unicode input.
     /// @param src String in UTF-8 encoding
     ACUL_EXPORT u16string utf8_to_utf16(const string &src);
 
     /// @brief Convert string in UTF-16 encoding to string in UTF-8 encoding
+    /// @throws runtime_error on malformed Unicode input.
     /// @param src String in UTF-16 encoding
     ACUL_EXPORT string utf16_to_utf8(const u16string &src);
 

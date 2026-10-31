@@ -162,6 +162,12 @@ namespace acul::fs
         return unlink(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);
     }
 
+    op_result replace_file(const string &source, const string &destination)
+    {
+        return rename(source.c_str(), destination.c_str()) == 0 ? make_op_success()
+                                                                : make_op_error(ACUL_OP_WRITE_ERROR, errno);
+    }
+
     op_result remove_directory(const char *path)
     {
         return rmdir(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);

@@ -341,10 +341,18 @@ namespace acul
     ACUL_EXPORT bool create_mini_dump(HANDLE hProcess, HANDLE hThread, EXCEPTION_RECORD &exception_record,
                                      CONTEXT &context, vector<char> &buffer)
     {
-        HANDLE hFile = CreateFileA(".memory.dmp", GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+        // Install directories may be read-only. Keep the transient dump in the user's Temp.
+        wchar_t temp_path[MAX_PATH + 1], temp_file[MAX_PATH + 1];
+        const DWORD path_length = GetTempPathW(MAX_PATH + 1, temp_path);
+        if (!path_length || path_length > MAX_PATH || !GetTempFileNameW(temp_path, L"acd", 0, temp_file))
+            return false;
+        HANDLE hFile = CreateFileW(temp_file, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
                                    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
-
-        if (hFile == INVALID_HANDLE_VALUE) return false;
+        if (hFile == INVALID_HANDLE_VALUE)
+        {
+            DeleteFileW(temp_file);
+            return false;
+        }
 
         EXCEPTION_POINTERS exception_pointers;
         exception_pointers.ExceptionRecord = &exception_record;
@@ -356,7 +364,7 @@ namespace acul
         mdei.ClientPointers = FALSE;
 
         BOOL success =
-            MiniDumpWriteDump(hProcess, GetProcessId(hProcess), hFile, MiniDumpWithFullMemory, &mdei, nullptr, nullptr);
+            MiniDumpWriteDump(hProcess, GetProcessId(hProcess), hFile, static_cast<MINIDUMP_TYPE>(MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules), &mdei, nullptr, nullptr);
 
         if (!success)
         {
@@ -364,17 +372,24 @@ namespace acul
             return false;
         }
 
-        SetFilePointer(hFile, 0, nullptr, FILE_BEGIN);
+        LARGE_INTEGER beginning{};
+        if (!SetFilePointerEx(hFile, beginning, nullptr, FILE_BEGIN))
+        {
+            CloseHandle(hFile);
+            return false;
+        }
 
         char temp_buffer[4096];
         DWORD bytes_read = 0;
         buffer.clear();
 
-        while (ReadFile(hFile, temp_buffer, sizeof(temp_buffer), &bytes_read, nullptr) && bytes_read > 0)
+        BOOL read_ok;
+        while ((read_ok = ReadFile(hFile, temp_buffer, sizeof(temp_buffer), &bytes_read, nullptr)) && bytes_read > 0)
             buffer.insert(buffer.end(), temp_buffer, temp_buffer + bytes_read);
 
         CloseHandle(hFile);
-        return true;
+        if (!read_ok) buffer.clear();
+        return read_ok && !buffer.empty();
     }
 
     void capture_stack_trace(except_info &except_info)

@@ -2,6 +2,7 @@
 #include <acul/io/path.hpp>
 #include <acul/log.hpp>
 #include <zstd.h>
+#include <zstd_errors.h>
 
 #define FILE_READ_STREAM_CHUNK_SIZE 4096
 

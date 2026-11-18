@@ -111,7 +111,7 @@ namespace acul
         else
         {
             begin_parse(start, end);
-            if (_flags & FLAG_PROTO_CALC) begin_parse(start, end);
+            if ((_flags & FLAG_PROTO_CALC) && !(_flags & FLAG_PROTO_EXTERNAL)) begin_parse(start, end);
         }
 
         // Parse contents

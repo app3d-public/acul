@@ -173,7 +173,7 @@ namespace acul::fs
         return rmdir(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);
     }
 
-    op_result list_files(const string &base_path, vector<string> &dst, bool recursive)
+    op_result list_files(const string &base_path, vector<string> &dst, bool recursive, bool include_directories)
     {
         assert(!base_path.empty() && "base_path is null");
 
@@ -193,7 +193,8 @@ namespace acul::fs
 
             if (S_ISDIR(st.st_mode))
             {
-                if (recursive) list_files(full_path, dst, true);
+                if (include_directories) dst.push_back(full_path);
+                if (recursive) list_files(full_path, dst, true, include_directories);
             }
             else { dst.push_back(full_path); }
         }

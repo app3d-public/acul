@@ -173,7 +173,7 @@ namespace acul::fs
                    : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
     }
 
-    op_result list_files(const string &base_path, vector<string> &dst, bool recursive)
+    op_result list_files(const string &base_path, vector<string> &dst, bool recursive, bool include_directories)
     {
         assert(!base_path.empty() && "base_path is null");
         u16string search_path = utf8_to_utf16(base_path + "\\*");
@@ -187,7 +187,8 @@ namespace acul::fs
             string full_path = base_path + '/' + utf16_to_utf8((const c16 *)name);
             if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
-                if (recursive) list_files(full_path, dst, true);
+                if (include_directories) dst.push_back(full_path);
+                if (recursive) list_files(full_path, dst, true, include_directories);
             }
             else dst.push_back(full_path);
 

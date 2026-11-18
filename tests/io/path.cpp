@@ -57,6 +57,18 @@ void test_construct()
     assert(http_path.is_scheme_external());
     assert(http_path.back() == "file.txt");
 
+    // External schemes must survive when the URL has no path separator after the host.
+    path https_root("https://app3d.com");
+    assert(https_root.scheme() == "https");
+    assert(https_root.front() == "app3d.com");
+    assert(https_root.str() == "https://app3d.com");
+    path https_query("https://example.com?x=1");
+    assert(https_query.scheme() == "https");
+    assert(https_query.str() == "https://example.com?x=1");
+    path http_port("http://localhost:8080");
+    assert(http_port.scheme() == "http");
+    assert(http_port.str() == "http://localhost:8080");
+
     // SMB URL
     path smb_path("smb://server/share/folder");
     assert(smb_path.scheme() == "smb");

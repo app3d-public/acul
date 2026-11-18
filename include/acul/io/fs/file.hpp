@@ -260,7 +260,8 @@ namespace acul::fs
     ACUL_EXPORT op_result remove_directory(const char *path);
 
     ACUL_EXPORT op_result remove_file(const char *path);
-    ACUL_EXPORT op_result list_files(const acul::string &base_path, vector<acul::string> &dst, bool recursive = false);
+    ACUL_EXPORT op_result list_files(const string &base_path, vector<string> &dst, bool recursive = false,
+                                     bool include_directories = false);
 
     /**
      * @brief Compresses the given data using zstd.

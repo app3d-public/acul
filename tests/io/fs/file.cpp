@@ -118,6 +118,18 @@ void test_file()
     assert(list_result.success());
     assert(!files.empty());
 
+    const path listing_dir = data / "listing_directory";
+    assert(create_directory(listing_dir.str().c_str()).success());
+    vector<string> files_only, with_directories;
+    assert(list_files(data.str(), files_only).success());
+    assert(list_files(data.str(), with_directories, false, true).success());
+    bool found_directory = false;
+    for (const auto &entry : files_only) assert(!is_directory(entry.c_str()));
+    for (const auto &entry : with_directories)
+        if (path(entry) == listing_dir) found_directory = true;
+    assert(found_directory);
+    assert(remove_directory(listing_dir.str().c_str()).success());
+
     // --- remove_file
     assert(remove_file(copy_file2.str().c_str()).success());
     assert(!exists(copy_file2.str().c_str()));

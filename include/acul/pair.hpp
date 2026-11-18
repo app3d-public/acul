@@ -10,6 +10,10 @@ namespace acul
 
         bool operator==(const pair<F, S> &other) const { return first == other.first && second == other.second; }
 
+        bool operator>(const pair<F, S> &other) const
+        {
+            return first > other.first || (first == other.first && second > other.second);
+        }
         bool operator!=(const pair<F, S> &other) const { return !(*this == other); }
     };
 } // namespace acul

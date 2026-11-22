@@ -1,10 +1,10 @@
-#ifndef APP_ACUL_FILE_H
-#define APP_ACUL_FILE_H
+#pragma once
 
 #include <cassert>
 #include <cstdio>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
+#include "../../enum.hpp"
 #include "../../op_result.hpp"
 #include "../../string/utils.hpp"
 #include "../../vector.hpp"
@@ -260,8 +260,74 @@ namespace acul::fs
     ACUL_EXPORT op_result remove_directory(const char *path);
 
     ACUL_EXPORT op_result remove_file(const char *path);
-    ACUL_EXPORT op_result list_files(const string &base_path, vector<string> &dst, bool recursive = false,
-                                     bool include_directories = false);
+    struct file_search_flag_bits
+    {
+        enum enum_type : u8
+        {
+            include_directories = 0x01,
+            recursive = 0x02,
+            regular_files_only = 0x04,
+            follow_symlinks = 0x08
+        };
+        using flag_bitmask = std::true_type;
+    };
+    using file_search_flags = flags<file_search_flag_bits>;
+
+    class file_iterator;
+    ACUL_EXPORT file_iterator list_files(const string &base_path, file_search_flags flags = {});
+
+    namespace detail
+    {
+        struct file_end {};
+        class file_cursor;
+    }
+
+    // Single-pass directory traversal. Paths retain the base path's relative or absolute form.
+    // Recursive traversal skips inaccessible descendants and never revisits a directory on its current path.
+    class file_iterator
+    {
+    public:
+        ACUL_EXPORT ~file_iterator();
+        file_iterator(const file_iterator &) = delete;
+        file_iterator &operator=(const file_iterator &) = delete;
+
+        explicit operator bool() const noexcept { return !_current.empty(); }
+        const string &operator*() const noexcept { return _current; }
+        ACUL_EXPORT file_iterator &operator++();
+        const op_result &result() const noexcept { return _result; }
+
+        detail::file_cursor begin() noexcept;
+        detail::file_end end() const noexcept { return {}; }
+
+    private:
+        friend ACUL_EXPORT file_iterator list_files(const string &base_path, file_search_flags flags);
+        explicit file_iterator(const string &base_path, file_search_flags options);
+        struct traversal;
+        traversal *_walk = nullptr;
+        string _current;
+        op_result _result = make_op_success();
+    };
+
+    namespace detail
+    {
+        class file_cursor
+        {
+        public:
+            explicit file_cursor(file_iterator &files) noexcept : _files(files) {}
+            const string &operator*() const noexcept { return *_files; }
+            file_cursor &operator++()
+            {
+                ++_files;
+                return *this;
+            }
+            bool operator==(file_end) const noexcept { return !_files; }
+
+        private:
+            file_iterator &_files;
+        };
+    }
+
+    inline detail::file_cursor file_iterator::begin() noexcept { return detail::file_cursor(*this); }
 
     /**
      * @brief Compresses the given data using zstd.
@@ -296,5 +362,3 @@ namespace acul::fs
     ACUL_EXPORT op_result decompress(const char *data, size_t size, vector<char> &decompressed);
 
 } // namespace acul::fs
-
-#endif

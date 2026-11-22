@@ -3,13 +3,74 @@
 #include <acul/string/string.hpp>
 #include <cassert>
 #include <cerrno>
-#include <dirent.h>
 #include <fcntl.h>
 #include <limits>
 #include <sys/file.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include "directory_cursor.hpp"
+
+namespace acul::fs::detail
+{
+    directory_cursor::directory_cursor(directory_cursor &&other) noexcept
+        : prefix(std::move(other.prefix)), volume(other.volume), id(other.id),
+          handle(std::exchange(other.handle, nullptr))
+    {
+    }
+
+    directory_cursor::~directory_cursor()
+    {
+        if (handle) closedir(handle);
+    }
+
+    int directory_cursor::open(const string &path, bool identify)
+    {
+        handle = opendir(path.c_str());
+        if (!handle) return errno;
+        if (identify)
+        {
+            struct stat info;
+            if (fstat(dirfd(handle), &info) != 0) return errno;
+            volume = info.st_dev;
+            id = info.st_ino;
+        }
+        prefix = path;
+        if (prefix.back() != '/') prefix += '/';
+        return 0;
+    }
+
+    bool directory_cursor::next(string &path, directory_entry_type &type, bool follow_links)
+    {
+        while (const auto *entry = readdir(handle))
+        {
+            const char *name = entry->d_name;
+            if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
+            auto kind = entry->d_type;
+            if (kind == DT_UNKNOWN)
+            {
+                struct stat info;
+                if (fstatat(dirfd(handle), name, &info, AT_SYMLINK_NOFOLLOW) != 0) continue;
+                if (S_ISDIR(info.st_mode)) kind = DT_DIR;
+                else if (S_ISREG(info.st_mode)) kind = DT_REG;
+                else if (S_ISLNK(info.st_mode)) kind = DT_LNK;
+            }
+            if (kind == DT_LNK && follow_links)
+            {
+                struct stat info;
+                if (fstatat(dirfd(handle), name, &info, 0) != 0) continue;
+                if (S_ISDIR(info.st_mode)) kind = DT_DIR;
+                else if (S_ISREG(info.st_mode)) kind = DT_REG;
+            }
+            type = kind == DT_DIR ? directory_entry_type::directory :
+                   kind == DT_REG ? directory_entry_type::regular : directory_entry_type::other;
+            path = prefix + name;
+            return true;
+        }
+        return false;
+    }
+}
 
 namespace acul::fs
 {
@@ -171,36 +232,6 @@ namespace acul::fs
     op_result remove_directory(const char *path)
     {
         return rmdir(path) == 0 ? make_op_success() : make_op_error(ACUL_OP_DELETE_ERROR, errno);
-    }
-
-    op_result list_files(const string &base_path, vector<string> &dst, bool recursive, bool include_directories)
-    {
-        assert(!base_path.empty() && "base_path is null");
-
-        DIR *dir = opendir(base_path.c_str());
-        if (!dir) return make_op_error(ACUL_OP_READ_ERROR, errno);
-
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != nullptr)
-        {
-            const char *name = entry->d_name;
-            if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
-
-            string full_path = base_path + "/" + name;
-
-            struct stat st;
-            if (stat(full_path.c_str(), &st) != 0) continue;
-
-            if (S_ISDIR(st.st_mode))
-            {
-                if (include_directories) dst.push_back(full_path);
-                if (recursive) list_files(full_path, dst, true, include_directories);
-            }
-            else { dst.push_back(full_path); }
-        }
-
-        closedir(dir);
-        return make_op_success();
     }
 
     op_result mapped_file::open(const string &filename)

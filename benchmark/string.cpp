@@ -248,12 +248,21 @@ static void BM_to_string_u64_std(benchmark::State &state)
 }
 BENCHMARK(BM_to_string_u64_std)->Arg(5'000'000)->UseManualTime();
 
+static std::vector<std::string> gen_decimal_strings(size_t count, size_t length)
+{
+    auto data = gen_std_strings(count, length, 424242);
+    for (auto &s : data)
+        for (auto &ch : s) ch = char('0' + (ch % 10));
+    return data;
+}
+
 static void BM_stoull_acul(benchmark::State &state)
 {
     const size_t N = state.range(0);
-    auto data = gen_std_strings(N, 12, 424242);
+    const size_t length = state.range(1);
+    const auto data = gen_decimal_strings(N, length);
     const size_t OPS = N;
-    const size_t BYTES = 12;
+    const size_t BYTES = length;
     RUN_BENCHMARK(
         state, OPS, BYTES, { (void)0; },
         {
@@ -268,16 +277,15 @@ static void BM_stoull_acul(benchmark::State &state)
             benchmark::DoNotOptimize(sum);
         });
 }
-BENCHMARK(BM_stoull_acul)->Arg(1'000'000)->UseManualTime();
+BENCHMARK(BM_stoull_acul)->Args({1'000'000, 7})->Args({1'000'000, 12})->UseManualTime();
 
 static void BM_stoull_std(benchmark::State &state)
 {
     const size_t N = state.range(0);
-    auto data = gen_std_strings(N, 12, 424242);
-    for (auto &s : data)
-        for (auto &ch : s) ch = char('0' + (ch % 10));
+    const size_t length = state.range(1);
+    const auto data = gen_decimal_strings(N, length);
     const size_t OPS = N;
-    const size_t BYTES = 12;
+    const size_t BYTES = length;
     RUN_BENCHMARK(
         state, OPS, BYTES, { (void)0; },
         {
@@ -286,7 +294,7 @@ static void BM_stoull_std(benchmark::State &state)
             benchmark::DoNotOptimize(sum);
         });
 }
-BENCHMARK(BM_stoull_std)->Arg(1'000'000)->UseManualTime();
+BENCHMARK(BM_stoull_std)->Args({1'000'000, 7})->Args({1'000'000, 12})->UseManualTime();
 
 static void BM_sstream_write_acul(benchmark::State &state)
 {

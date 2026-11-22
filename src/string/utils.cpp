@@ -311,13 +311,30 @@ namespace acul
     bool stoull(const char *&str, unsigned long long &value)
     {
         const char *ptr = str;
-
-        // Skip white spaces
         while (is_space(*ptr)) ++ptr;
+        if (!is_digit(*ptr)) return false;
 
-        // Parse integer part
-        unsigned long long result = 0;
-        while (is_digit(*ptr)) result = (result * 10) + (*ptr++ - '0');
+        const char *digits = ptr;
+        unsigned long long result = *ptr++ - '0';
+        while (is_digit(*ptr)) result = result * 10 + (*ptr++ - '0');
+
+        // Keep the hot loop unchanged for short numbers. Unsigned wraparound
+        // is well-defined, so only long inputs need validation before publishing.
+        using bounds = std::numeric_limits<unsigned long long>;
+        if (ptr - digits > bounds::digits10)
+        {
+            while (digits != ptr && *digits == '0') ++digits;
+            if (ptr - digits > bounds::digits10 + 1) return false;
+            if (ptr - digits == bounds::digits10 + 1)
+            {
+                unsigned long long prefix = 0;
+                const char *last = ptr - 1;
+                while (digits != last) prefix = prefix * 10 + (*digits++ - '0');
+                if (prefix > bounds::max() / 10 ||
+                    (prefix == bounds::max() / 10 && static_cast<unsigned>(*last - '0') > bounds::max() % 10))
+                    return false;
+            }
+        }
 
         value = result;
         str = ptr;

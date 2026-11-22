@@ -112,23 +112,63 @@ void test_file()
     assert(copy_result.success());
     assert(exists(copy_file2.str().c_str()));
 
-    // --- list_files
-    vector<string> files;
-    op_result list_result = list_files(".", files, false);
-    assert(list_result.success());
-    assert(!files.empty());
+    // --- file_iterator
+    {
+        auto files = list_files(".");
+        assert(files.result().success() && files);
+        auto start = files.begin();
+        const auto end = files.end();
+        assert(start != end && !path(*start).is_absolute());
+    }
 
     const path listing_dir = data / "listing_directory";
     assert(create_directory(listing_dir.str().c_str()).success());
-    vector<string> files_only, with_directories;
-    assert(list_files(data.str(), files_only).success());
-    assert(list_files(data.str(), with_directories, false, true).success());
+    const path nested_file = listing_dir / "nested.txt";
+    assert(write_binary(nested_file.str(), "x", 1));
+#ifndef _WIN32
+    const path link_file = listing_dir / "link.txt";
+    const path link_dir = listing_dir / "loop";
+    assert(symlink("nested.txt", link_file.str().c_str()) == 0);
+    assert(symlink(".", link_dir.str().c_str()) == 0);
+#endif
+
+    for (const auto &file : list_files(data.str())) assert(!is_directory(file.c_str()));
     bool found_directory = false;
-    for (const auto &entry : files_only) assert(!is_directory(entry.c_str()));
-    for (const auto &entry : with_directories)
-        if (path(entry) == listing_dir) found_directory = true;
+    for (const auto &file : list_files(data.str(), file_search_flag_bits::include_directories))
+        if (path(file) == listing_dir) found_directory = true;
     assert(found_directory);
+
+    file_search_flags recursive_files = file_search_flag_bits::recursive;
+    recursive_files |= file_search_flag_bits::regular_files_only;
+    bool found_nested = false;
+    for (const auto &file : list_files(data.str(), recursive_files))
+    {
+        const path entry(file);
+        assert(entry != listing_dir);
+#ifndef _WIN32
+        assert(entry != link_file && entry != link_dir);
+#endif
+        if (entry == nested_file) found_nested = true;
+    }
+    assert(found_nested);
+
+#ifndef _WIN32
+    size_t matches = 0;
+    auto followed_files = recursive_files;
+    followed_files |= file_search_flag_bits::follow_symlinks;
+    for (const auto &file : list_files(listing_dir.str(), followed_files))
+    {
+        assert(path(file) == nested_file || path(file) == link_file);
+        assert(++matches <= 2);
+    }
+    assert(matches == 2);
+    assert(remove_file(link_file.str().c_str()).success());
+    assert(remove_file(link_dir.str().c_str()).success());
+#endif
+    assert(remove_file(nested_file.str().c_str()).success());
     assert(remove_directory(listing_dir.str().c_str()).success());
+    const auto missing = list_files(listing_dir.str());
+    assert(!missing.result().success() && !missing);
 
     // --- remove_file
     assert(remove_file(copy_file2.str().c_str()).success());

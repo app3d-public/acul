@@ -3,6 +3,99 @@
 #include <acul/string/utils.hpp>
 #include <cassert>
 
+#include "directory_cursor.hpp"
+
+namespace acul::fs::detail
+{
+    static bool read_target(const u16string &path, BY_HANDLE_FILE_INFORMATION &info)
+    {
+        const auto file = CreateFileW(reinterpret_cast<LPCWSTR>(path.c_str()), FILE_READ_ATTRIBUTES,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+                                      FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        if (file == INVALID_HANDLE_VALUE) return false;
+        const bool success = GetFileInformationByHandle(file, &info) != FALSE;
+        const DWORD error = success ? ERROR_SUCCESS : GetLastError();
+        CloseHandle(file);
+        if (!success) SetLastError(error);
+        return success;
+    }
+
+    directory_cursor::directory_cursor(directory_cursor &&other) noexcept
+        : prefix(std::move(other.prefix)), volume(other.volume), id(other.id),
+          handle(std::exchange(other.handle, INVALID_HANDLE_VALUE)), first(other.first), has_first(other.has_first)
+    {
+    }
+
+    directory_cursor::~directory_cursor()
+    {
+        if (handle != INVALID_HANDLE_VALUE) FindClose(handle);
+    }
+
+    int directory_cursor::open(const string &path, bool identify)
+    {
+        if (path.empty()) return ERROR_PATH_NOT_FOUND;
+        if (identify)
+        {
+            BY_HANDLE_FILE_INFORMATION info;
+            if (!read_target(utf8_to_utf16(path), info)) return GetLastError();
+            if (!(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) return ERROR_DIRECTORY;
+            volume = info.dwVolumeSerialNumber;
+            id = (static_cast<u64>(info.nFileIndexHigh) << 32) | info.nFileIndexLow;
+        }
+        prefix = path;
+        const bool drive_relative = prefix.size() == 2 && prefix[1] == ':';
+        if (!drive_relative && prefix.back() != '\\' && prefix.back() != '/') prefix += '\\';
+        const auto pattern = utf8_to_utf16(prefix + '*');
+        handle = FindFirstFileW(reinterpret_cast<LPCWSTR>(pattern.c_str()), &first);
+        if (handle != INVALID_HANDLE_VALUE)
+        {
+            has_first = true;
+            return 0;
+        }
+        const DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND) return error;
+        const auto wide = utf8_to_utf16(path);
+        const DWORD attributes = GetFileAttributesW(reinterpret_cast<LPCWSTR>(wide.c_str()));
+        if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY)) return 0;
+        return error;
+    }
+
+    bool directory_cursor::next(string &path, directory_entry_type &type, bool follow_links)
+    {
+        if (handle == INVALID_HANDLE_VALUE) return false;
+        WIN32_FIND_DATAW entry;
+        while (has_first || FindNextFileW(handle, &entry))
+        {
+            if (has_first)
+            {
+                entry = first;
+                has_first = false;
+            }
+            const auto *name = entry.cFileName;
+            if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0) continue;
+            path = prefix + utf16_to_utf8(reinterpret_cast<const c16 *>(name));
+            DWORD attributes = entry.dwFileAttributes;
+            bool link = (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+            if (link && follow_links)
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!read_target(utf8_to_utf16(path), info)) continue;
+                attributes = info.dwFileAttributes;
+                link = false;
+            }
+            if (link || (attributes & FILE_ATTRIBUTE_DEVICE)) type = directory_entry_type::other;
+            else if (attributes & FILE_ATTRIBUTE_DIRECTORY) type = directory_entry_type::directory;
+            else type = directory_entry_type::regular;
+            // Verbatim paths retain their native separators.
+            if (strncmp(path.c_str(), R"(\\?\)", 4) != 0)
+                for (char &c : path)
+                    if (c == '\\') c = '/';
+            return true;
+        }
+        return false;
+    }
+}
+
 namespace acul::fs
 {
     namespace
@@ -171,30 +264,6 @@ namespace acul::fs
         return RemoveDirectoryW(reinterpret_cast<LPCWSTR>(wide.c_str()))
                    ? make_op_success()
                    : make_op_error(ACUL_OP_DELETE_ERROR, GetLastError());
-    }
-
-    op_result list_files(const string &base_path, vector<string> &dst, bool recursive, bool include_directories)
-    {
-        assert(!base_path.empty() && "base_path is null");
-        u16string search_path = utf8_to_utf16(base_path + "\\*");
-        WIN32_FIND_DATAW find_data;
-        HANDLE handle = FindFirstFileW((LPCWSTR)search_path.c_str(), &find_data);
-        if (handle == INVALID_HANDLE_VALUE) return make_op_error(ACUL_OP_READ_ERROR, GetLastError());
-        do
-        {
-            const wchar_t *name = find_data.cFileName;
-            if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0) continue;
-            string full_path = base_path + '/' + utf16_to_utf8((const c16 *)name);
-            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            {
-                if (include_directories) dst.push_back(full_path);
-                if (recursive) list_files(full_path, dst, true, include_directories);
-            }
-            else dst.push_back(full_path);
-
-        } while (FindNextFileW(handle, &find_data) != 0);
-        FindClose(handle);
-        return make_op_success();
     }
 
     op_result mapped_file::open(const string &filename)

@@ -1,13 +1,87 @@
 #include <acul/io/fs/file.hpp>
 #include <acul/io/path.hpp>
 #include <acul/log.hpp>
+#include <acul/memory/smart_ptr.hpp>
 #include <zstd.h>
 #include <zstd_errors.h>
+#include "directory_cursor.hpp"
 
 #define FILE_READ_STREAM_CHUNK_SIZE 4096
 
 namespace acul::fs
 {
+    struct file_iterator::traversal
+    {
+        file_search_flags options;
+        vector<detail::directory_cursor> stack;
+
+        int open(const string &path)
+        {
+            const bool identify =
+                (options & file_search_flag_bits::recursive) && (options & file_search_flag_bits::follow_symlinks);
+            detail::directory_cursor directory;
+            if (const int error = directory.open(path, identify)) return error;
+            if (identify)
+                for (const auto &parent : stack)
+                    if (parent.volume == directory.volume && parent.id == directory.id) return 0;
+            stack.push_back(std::move(directory));
+            return 0;
+        }
+    };
+
+    file_iterator list_files(const string &base_path, file_search_flags flags)
+    {
+        return file_iterator(base_path, flags);
+    }
+
+    file_iterator::file_iterator(const string &base_path, file_search_flags options)
+    {
+        auto walk = acul::make_unique<traversal>();
+        walk->options = options;
+        if (const int error = walk->open(base_path))
+        {
+            _result = make_op_error(ACUL_OP_READ_ERROR, error);
+            return;
+        }
+        _walk = walk.get();
+        ++*this;
+        walk.release();
+    }
+
+    file_iterator::~file_iterator()
+    {
+        if (_walk) acul::release(_walk);
+    }
+
+    file_iterator &file_iterator::operator++()
+    {
+        _current.clear();
+        if (!_walk) return *this;
+        const auto options = _walk->options;
+        const bool follow_links = bool(options & file_search_flag_bits::follow_symlinks);
+        string path;
+        while (!_walk->stack.empty())
+        {
+            detail::directory_entry_type type;
+            if (!_walk->stack.back().next(path, type, follow_links))
+            {
+                _walk->stack.pop_back();
+                continue;
+            }
+            if (type == detail::directory_entry_type::directory)
+            {
+                if (options & file_search_flag_bits::recursive) _walk->open(path);
+                if (!(options & file_search_flag_bits::include_directories)) continue;
+            }
+            else if ((options & file_search_flag_bits::regular_files_only) &&
+                     type != detail::directory_entry_type::regular)
+                continue;
+            _current = std::move(path);
+            break;
+        }
+        return *this;
+    }
+
     size_t read_binary_fd(const string &filename, FILE *&fd)
     {
 #ifdef _WIN32

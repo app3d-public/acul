@@ -241,6 +241,16 @@ void test_utils()
     unsigned long long uvalue = 0;
     ok = acul::stoull(str2, uvalue);
     assert(ok && uvalue == 123456789ull);
+    const char *max_uvalue = " 00018446744073709551615/";
+    assert(acul::stoull(max_uvalue, uvalue));
+    assert(uvalue == std::numeric_limits<unsigned long long>::max() && *max_uvalue == '/');
+    for (const char *input : {"18446744073709551616", "184467440737095516150", "  /", ""})
+    {
+        const char *cursor = input;
+        uvalue = 42;
+        assert(!acul::stoull(cursor, uvalue));
+        assert(cursor == input && uvalue == 42);
+    }
 
     // stoull_hex (ptr)
     const char *strP = "0xDEADBEEF";

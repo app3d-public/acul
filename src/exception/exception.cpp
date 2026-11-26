@@ -1,3 +1,4 @@
+#include <acul/assert.hpp>
 #include <acul/exception/exception.hpp>
 #include <acul/hash/utils.hpp>
 #include <acul/string/utils.hpp>
@@ -7,6 +8,11 @@
 
 namespace acul
 {
+    void detail::throw_requirement_failure(const char *condition, const char *file, int line)
+    {
+        throw runtime_error(format("Required condition failed: %s\n%s:%d", condition, file, line));
+    }
+
     runtime_error::runtime_error(const string &message) noexcept : exception(), _message(message.c_str()) {}
     bad_cast::bad_cast(const string &message) noexcept : exception(), _message(message.c_str()) {}
 
